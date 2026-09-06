@@ -1,0 +1,15 @@
+-- Local development seed. Runs only on `supabase db reset` against the LOCAL
+-- stack; it is never executed against a hosted project.
+--
+-- Intentionally empty of candidate data.
+--
+-- Every table here is keyed to auth.users(id) and protected by RLS, so seeding
+-- would require inventing auth users and their rows. That would mean fake
+-- personal data in version control and rows that only exist locally, which is
+-- exactly the sort of thing that later gets mistaken for real. The automated
+-- tests create their own throwaway users at runtime instead, and nothing they
+-- create is written to this file.
+--
+-- If local fixtures ever become necessary: mark them clearly as local-only,
+-- use obviously synthetic values, and never include real names, contact
+-- details, credentials or tokens.
