@@ -1,0 +1,136 @@
+
+        /* Design tokens, reset, nav, mobile menu, fade-up, footer, grain and the
+           floating widgets now live in /Assets/site.css. Below is about-specific only. */
+        html { overflow-x: hidden; }
+        @media (prefers-reduced-motion: no-preference) { html:focus-within { scroll-behavior: smooth; } }
+        body { background-color: var(--bg); color: var(--text-main); font-family: var(--font-body); overflow-x: hidden; font-size: 18px; }
+
+        /* --- Typography --- */
+        .kicker { font-family: var(--font-body); font-weight: 600; color: var(--accent); font-size: 0.85rem; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 2rem; display: inline-block; border: 1px solid var(--accent-dim); padding: 0.6rem 1.5rem; border-radius: 50px; background: rgba(216, 180, 254, 0.05); }
+        h2 { font-family: var(--font-head); font-size: clamp(2rem, 5vw, 4.5rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; text-transform: uppercase; }
+        section { padding: 15vh 6vw; display: flex; flex-direction: column; justify-content: center; position: relative; }
+
+        /* --- Page Hero --- */
+        .page-hero { min-height: 75vh; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 6vw 8vh; position: relative; padding-top: 12vh; overflow: hidden; }
+        .page-hero::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse 70% 55% at 50% 42%, rgba(139,92,246,0.1) 0%, transparent 68%); pointer-events:none; z-index: 2; }
+        .page-hero::after { content:''; position:absolute; inset:0; background: linear-gradient(180deg, rgba(2,2,4,0.45) 0%, transparent 30%, transparent 50%, rgba(2,2,4,0.85) 100%); pointer-events:none; z-index: 2; }
+        .page-hero > * { position: relative; z-index: 3; }
+        .page-hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.22; z-index: 1; pointer-events: none; filter: grayscale(0.15) contrast(1.05) brightness(0.9); }
+        .page-hero h1 { font-family: var(--font-head); font-size: clamp(2.5rem, 6vw, 6rem); font-weight: 700; text-transform: uppercase; letter-spacing: -0.02em; line-height: 1.1; }
+        .page-desc { font-family: var(--font-body); font-size: clamp(1rem, 1.4vw, 1.2rem); color: var(--text-muted); font-weight: 500; max-width: 600px; line-height: 1.7; margin-top: 1.5rem; }
+        .breadcrumb { font-family: var(--font-body); font-size: 0.78rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 2rem; }
+        .breadcrumb a { color: var(--accent); text-decoration: none; }
+
+        /* --- Story Section --- */
+        .story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6vw; align-items: center; margin-top: 4rem; }
+        .story-text { font-size: 1.15rem; line-height: 1.8; color: #ddd; font-weight: 500; }
+        .story-text p { margin-bottom: 1.5rem; }
+        .story-image { width: 100%; aspect-ratio: 4/3; background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(99,102,241,0.1)); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .story-image img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.8s ease; }
+        .story-image:hover img { transform: scale(1.04); }
+
+        /* --- Values Section --- */
+        .values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-top: 4rem; }
+        .value-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 2.5rem; transition: background 0.4s, border-color 0.4s; }
+        .value-card:hover { background: rgba(255,255,255,0.04); border-color: var(--accent-dim); }
+        .value-num { font-family: var(--font-num); font-size: 0.85rem; color: var(--accent); letter-spacing: 0.2em; font-weight: 700; margin-bottom: 1.5rem; }
+        .value-card h3 { font-family: var(--font-head); font-size: clamp(1rem, 1.5vw, 1.4rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; }
+        .value-card p { color: var(--text-muted); line-height: 1.7; font-size: 1rem; font-weight: 500; }
+
+        /* --- Founder Section --- */
+        .founder-grid { display: grid; grid-template-columns: 0.75fr 1.25fr; gap: 5rem; margin-top: 4rem; align-items: center; }
+        .founder-image-wrap { position: relative; aspect-ratio: 4/5; border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background: radial-gradient(ellipse at 50% 40%, rgba(139,92,246,0.1) 0%, rgba(2,2,4,0.4) 70%, rgba(2,2,4,0.8) 100%); max-width: 440px; }
+        .founder-image-wrap::after { content:''; position: absolute; inset: 0; border-radius: 20px; box-shadow: inset 0 0 80px rgba(168,85,247,0.12); z-index: 3; pointer-events: none; }
+        .founder-image { width: 100%; height: 100%; object-fit: contain; object-position: center bottom; display: block; backface-visibility: hidden; will-change: transform, opacity, filter; }
+        .founder-badge { position: absolute; bottom: 1.5rem; left: 1.5rem; z-index: 4; background: rgba(0,0,0,0.55); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.12); padding: 0.7rem 1.2rem; border-radius: 100px; font-family: var(--font-num); font-size: 0.7rem; letter-spacing: 0.2em; color: var(--accent); font-weight: 700; text-transform: uppercase; opacity: 0; transition: opacity 0.6s 0.8s ease; }
+        .founder-image-wrap.revealed .founder-badge { opacity: 1; }
+        .founder-info { will-change: transform, opacity; }
+        /* Glow line that sweeps across the founder image */
+        .founder-image-wrap::before { content:''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 40%, rgba(216,180,254,0.15) 50%, transparent 60%); z-index: 5; pointer-events: none; transform: translateX(-100%); }
+        .founder-image-wrap.revealed::before { animation: founderSweep 1.8s 0.5s cubic-bezier(0.16,1,0.3,1) forwards; }
+        @keyframes founderSweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+        /* Stagger reveal for founder stats */
+        .founder-stat { opacity: 0; transform: translateY(20px); }
+        .founder-info.revealed .founder-stat { opacity: 1; transform: translateY(0); transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out); }
+        .founder-info.revealed .founder-stat:nth-child(1) { transition-delay: 0.6s; }
+        .founder-info.revealed .founder-stat:nth-child(2) { transition-delay: 0.75s; }
+        .founder-info.revealed .founder-stat:nth-child(3) { transition-delay: 0.9s; }
+
+        /* Value card stagger */
+        .value-card { opacity: 0; transform: translateY(30px); transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out), background 0.4s, border-color 0.4s; }
+        .value-card.in-view { opacity: 1; transform: translateY(0); }
+
+        /* Timeline item animations */
+        .timeline-item { opacity: 0; }
+        .timeline-item:nth-child(odd) { transform: translateX(-40px); }
+        .timeline-item:nth-child(even) { transform: translateX(40px); }
+        .timeline-item.in-view { opacity: 1; transform: translateX(0); transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out); }
+        .timeline-item::before { transform: scale(0); transition: transform 0.5s 0.3s var(--ease-out); }
+        .timeline-item.in-view::before { transform: scale(1); }
+        .founder-info .founder-label { font-family: var(--font-num); font-size: 0.8rem; color: var(--accent); letter-spacing: 0.25em; font-weight: 700; text-transform: uppercase; margin-bottom: 1.5rem; display: block; }
+        .founder-info h3 { font-family: var(--font-head); font-size: clamp(1.8rem, 3vw, 2.8rem); font-weight: 700; text-transform: uppercase; letter-spacing: -0.01em; line-height: 1.05; margin-bottom: 0.5rem; }
+        .founder-info .founder-role { font-family: var(--font-body); font-size: 0.9rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 2rem; }
+        .founder-info p { color: var(--text-muted); font-size: 1.05rem; line-height: 1.75; font-weight: 500; margin-bottom: 1.2rem; }
+        .founder-info p strong { color: #fff; font-weight: 700; }
+        .founder-signature { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 2.5rem; flex-wrap: wrap; }
+        .founder-stat { display: flex; flex-direction: column; }
+        .founder-stat-num { font-family: var(--font-num); font-size: 1.8rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+        .founder-stat-label { font-family: var(--font-body); font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.2em; font-weight: 600; text-transform: uppercase; margin-top: 0.3rem; }
+
+        /* --- Timeline (centered zig-zag) --- */
+        .timeline { margin-top: 5rem; position: relative; padding: 2rem 0; }
+        .timeline::before { content:''; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: linear-gradient(to bottom, transparent 0%, var(--accent) 10%, var(--accent-dim) 90%, transparent 100%); transform: translateX(-50%); }
+        .timeline-item { position: relative; width: 50%; padding: 0 3.5rem 5rem; box-sizing: border-box; }
+        .timeline-item:nth-child(odd) { left: 0; text-align: right; }
+        .timeline-item:nth-child(even) { left: 50%; text-align: left; }
+        .timeline-item::before { content:''; position: absolute; top: 0.5rem; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgba(2,2,4,1), 0 0 20px rgba(168,85,247,0.8); z-index: 2; }
+        .timeline-item:nth-child(odd)::before { right: -7px; }
+        .timeline-item:nth-child(even)::before { left: -7px; }
+        .timeline-item::after { content:''; position: absolute; top: 0.9rem; width: 2.5rem; height: 1px; background: linear-gradient(to right, var(--accent-dim), transparent); }
+        .timeline-item:nth-child(odd)::after { right: 0; background: linear-gradient(to left, var(--accent-dim), transparent); }
+        .timeline-item:nth-child(even)::after { left: 0; }
+        .timeline-year { font-family: var(--font-num); font-size: 0.85rem; color: var(--accent); letter-spacing: 0.25em; font-weight: 700; margin-bottom: 0.6rem; }
+        .timeline-item h3 { font-family: var(--font-head); font-size: clamp(1.1rem, 1.6vw, 1.4rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 0.7rem; }
+        .timeline-item p { color: var(--text-muted); font-size: 1rem; line-height: 1.7; font-weight: 500; }
+
+        /* --- CTA --- */
+        .page-cta { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2rem; padding: 12vh 6vw; }
+        .page-cta::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(139,92,246,0.06) 0%, transparent 70%); pointer-events:none; }
+        .cta-btn { display: inline-flex; align-items: center; gap: 12px; background: #fff; color: #000; padding: 1.2rem 3rem; border: none; border-radius: 100px; font-family: var(--font-body); font-weight: 700; font-size: 1rem; letter-spacing: 0.2em; text-transform: uppercase; text-decoration: none; transition: transform 0.3s, box-shadow 0.3s; position: relative; z-index: 1; }
+        .cta-btn:hover { transform: scale(1.05); box-shadow: 0 8px 40px rgba(168,85,247,0.3); }
+
+        /* --- Responsive --- */
+        @media (max-width: 1024px) {
+            .story-grid { grid-template-columns: 1fr; }
+            .values-grid { grid-template-columns: 1fr; }
+            .founder-grid { grid-template-columns: 1fr; gap: 3rem; }
+            .founder-image-wrap { max-width: 420px; margin: 0 auto; }
+            section { padding: 10vh 5vw; }
+            /* Timeline: collapse to single-column left rail on mobile */
+            .timeline::before { left: 10px; }
+            .timeline-item { width: 100%; padding: 0 0 3rem 3rem; text-align: left !important; }
+            .timeline-item:nth-child(odd),
+            .timeline-item:nth-child(even) { left: 0; text-align: left; }
+            /* Reveal vertically on mobile, not horizontally. The desktop effect slides items in
+               from alternating sides (translateX ±40px), which works while they are 50% wide and
+               inset — but here they are full width, so the un-revealed state hangs 40px past both
+               screen edges. overflow-x:clip hides it and the items are opacity:0, so nothing is
+               visible, but it is still real overflow sitting against the only guard that stops the
+               page scrolling sideways. translateY matches .value-card and reads better on a narrow
+               screen anyway, where a horizontal slide is mostly off-screen. */
+            .timeline-item:nth-child(odd),
+            .timeline-item:nth-child(even) { transform: translateY(24px); }
+            .timeline-item.in-view { transform: translateY(0); }
+            .timeline-item:nth-child(odd)::before,
+            .timeline-item:nth-child(even)::before { left: 3px; right: auto; }
+            .timeline-item:nth-child(odd)::after,
+            .timeline-item:nth-child(even)::after { left: 17px; right: auto; background: linear-gradient(to right, var(--accent-dim), transparent); width: 1.3rem; }
+        }
+        @media (max-width: 600px) {
+            .page-hero h1 { font-size: clamp(1.8rem, 8vw, 3rem); }
+            .founder-signature { gap: 1rem; flex-wrap: nowrap; justify-content: space-between; }
+            .founder-stat-num { font-size: 1.3rem; }
+            .founder-stat-label { font-size: 0.58rem; letter-spacing: 0.12em; }
+        }
+    

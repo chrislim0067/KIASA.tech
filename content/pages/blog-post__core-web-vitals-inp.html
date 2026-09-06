@@ -1,0 +1,187 @@
+
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W8BKMGHG"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="grain"></div>
+<nav>
+    <a href="/" class="logo">KIASA</a>
+    <button class="hamburger" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu">
+    <button class="mobile-close" id="mobileClose" aria-label="Close menu">&times;</button>
+    <div class="mobile-menu-brand">KIASA</div>
+    <div class="mobile-menu-links">
+        <a href="/" class="m-link">Home</a>
+        <a href="/about" class="m-link">About</a>
+        <a href="/gallery" class="m-link">Infinite Gallery</a>
+        <a href="/case-studies" class="m-link">Case Studies</a>
+        <a href="/blog" class="m-link active">Blog</a>
+        <a href="/pricing" class="m-link">Services</a>
+        <a href="/contact" class="m-link">Contact</a>
+    </div>
+    <div class="mobile-menu-footer">
+        <div class="mobile-menu-socials">
+            <a href="https://www.instagram.com/webtactics/" target="_blank">Instagram</a>
+            <a href="https://www.linkedin.com/company/79060249/" target="_blank">LinkedIn</a>
+        </div>
+        <a href="https://wa.me/971509027130" target="_blank" class="mobile-menu-whatsapp">WhatsApp Us</a>
+    </div>
+</div>
+
+<div class="post-hero">
+    <div class="breadcrumb"><a href="/">Home</a> &mdash; <a href="/blog">Blog</a> &mdash; Article</div>
+    <div class="post-meta">
+        <span>Web Dev</span>
+        <span>Aug 2026</span>
+        <span>8 Min Read</span>
+    </div>
+    <h1 class="fade-up">Core Web Vitals: Why INP Fails Sites That Passed Every Other Test</h1>
+</div>
+
+<div class="post-banner">
+    <img class="post-banner-bg" src="/Assets/blog/core-web-vitals-inp-banner.webp" alt="Core Web Vitals: Why INP Fails Sites That Passed Every Other Test" loading="eager">
+</div>
+
+<article class="post-content">
+    <a href="/blog" class="back-link">&larr; Back to Blog</a>
+    <p class="lead">Plenty of sites that score well on loading speed still fail Core Web Vitals, and the reason is usually the metric that gets the least attention. Interaction to Next Paint measures something the older tests did not, and it is unforgiving of a specific kind of sloppiness that never showed up before.</p>
+
+<h2>The three metrics, and the numbers that matter</h2>
+
+<p>According to <a href="https://web.dev/articles/vitals" target="_blank" rel="noopener">Google's own documentation</a>, the current Core Web Vitals and their "good" thresholds are:</p>
+
+<ul>
+  <li><strong>Largest Contentful Paint (LCP)</strong> — loading. Good is <strong>2.5 seconds or under</strong></li>
+  <li><strong>Interaction to Next Paint (INP)</strong> — responsiveness. Good is <strong>200 milliseconds or under</strong></li>
+  <li><strong>Cumulative Layout Shift (CLS)</strong> — visual stability. Good is <strong>0.1 or under</strong></li>
+</ul>
+
+<p>The detail almost everyone misses sits underneath those numbers. Google assesses them at the <strong>75th percentile of page loads</strong>, split between mobile and desktop. Your typical visit is not what is being graded. The slowest quarter of your real audience is — which on most sites means older phones on patchy connections, not the developer's laptop on office fibre.</p>
+
+<h2>What changed when INP replaced First Input Delay</h2>
+
+<p>INP became a stable Core Web Vital in 2024, taking over from First Input Delay. That was not a rename. The two measure genuinely different things, and the swap made the test considerably harder to pass.</p>
+
+<p>First Input Delay only looked at the <strong>first</strong> interaction on the page, and only at the <strong>delay before</strong> the browser started responding. A site could pass by being quick off the mark once and sluggish forever afterwards.</p>
+
+<p>INP watches <a href="https://web.dev/articles/inp" target="_blank" rel="noopener">every click, tap and keypress for the whole visit</a>, and measures each one all the way through to the next frame actually appearing on screen. Not "did we start handling it" — "did the user see something change".</p>
+
+<h2>The three phases, and why the last one catches people out</h2>
+
+<p>Google breaks each interaction into three parts:</p>
+
+<ul>
+  <li><strong>Input delay</strong> — time before your event handlers begin running, usually because the main thread is already busy with something else</li>
+  <li><strong>Processing duration</strong> — time for your handler code to run</li>
+  <li><strong>Presentation delay</strong> — time from your code finishing until the next frame is painted</li>
+</ul>
+
+<p>Most optimisation effort goes into the middle one, because that is the part that looks like "your code". Teams profile their handlers, make them faster, and are surprised when the score barely moves.</p>
+
+<p>The other two are frequently the larger share. Input delay is not caused by the interaction at all — it is caused by whatever was already running. And presentation delay is dominated by how much work the browser has to do to draw the result: <a href="https://web.dev/articles/optimize-inp" target="_blank" rel="noopener">large or complex layouts, layout thrashing, expensive style recalculation, an oversized DOM, and rendering HTML on the client</a>.</p>
+
+<p>That last list is worth reading twice, because none of those items is a slow event handler. You can write perfect handler code and still fail.</p>
+
+<h2>A concrete example from our own site</h2>
+
+<p>While instrumenting our 3D gallery this month, we found a wheel event listener that had been registered permanently, was marked non-passive, and whose handler body did nothing at all.</p>
+
+<p>An empty function is free to run. The cost was elsewhere: marking a listener non-passive tells the browser that the handler <em>might</em> cancel the default scroll, so the browser cannot begin scrolling until the handler has finished. Every wheel event was being routed through the main thread and waited on, to run a function that did nothing.</p>
+
+<p>That is a textbook input-delay problem, and it is invisible in a profiler that only shows you where time is spent inside your own functions — because no time was being spent there. We fixed it by registering the listener only while the lightbox is actually open. Nothing about the handler changed; only when it exists.</p>
+
+<p>The general lesson: <strong>look for work the browser is forced to wait on, not just work that is slow.</strong> Non-passive scroll and touch listeners are the most common example, and a great many of them are attached by third-party scripts nobody has audited.</p>
+
+<h2>Where to actually start</h2>
+
+<p>Google's own recommended order is field data first, lab testing second — find which real interactions are slow before diagnosing why. That ordering matters more than it sounds. Lab tools tell you what <em>could</em> be slow on a simulated device; field data tells you what <em>is</em> slow for the people who actually visit you.</p>
+
+<p>Practical starting points, roughly in order of how often they pay off:</p>
+
+<ul>
+  <li><strong>Audit your third-party scripts.</strong> Chat widgets, analytics, heat-mapping and consent banners all attach listeners and run on the main thread. This is usually the single biggest lever, and the least popular one</li>
+  <li><strong>Check for non-passive scroll and touch listeners</strong>, including ones you did not write</li>
+  <li><strong>Break up long tasks.</strong> Anything holding the main thread for a long stretch delays every interaction that lands during it</li>
+  <li><strong>Reduce DOM size</strong> where a page has grown organically. Presentation delay scales with how much the browser has to recompute</li>
+  <li><strong>Be careful with client-side rendering.</strong> Building HTML in the browser moves work to exactly the device least able to do it</li>
+</ul>
+
+<p>One thing we will not do is quote a figure for how many sites currently fail INP. Those numbers circulate widely and we could not trace them to a primary source, so they are not in this article.</p>
+
+<h2>Why this matters commercially</h2>
+
+<p>Responsiveness is the part of performance a visitor feels most directly. A page that loads quickly and then hesitates for half a second every time someone taps something reads as broken in a way that a slightly slower load does not. On mobile — which for most GCC audiences is the majority of traffic — that hesitation is where enquiries are lost.</p>
+
+<p>If your site was built before 2024, it was very likely optimised against First Input Delay, which no longer exists. That is worth a look, not a panic.</p>
+
+<p>We cover this as part of every build in our <a href="/service?s=custom-websites">custom website service</a>, and it is one of the more common reasons clients come to us about an existing <a href="/service?s=wordpress">WordPress site</a> that has accumulated plugins over the years. For more on why mobile is the deciding case, see <a href="/blog-post?slug=mobile-first-design">Mobile-First Design</a>. If you want someone to look at your current numbers, <a href="/start">get in touch</a>.</p></article>
+
+<section class="post-cta fade-up">
+    <span class="kicker">Work With Us</span>
+    <h2>Ready to Elevate<br>Your Brand?</h2>
+    <a href="/contact" class="cta-btn">Let's Talk &rarr;</a>
+</section>
+
+<footer>
+    <div class="footer-wm">KIASA</div>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <div class="footer-brand-name">KIASA</div>
+            <p class="footer-brand-desc">A global digital studio — elevating brands through immersive web development, 3D experiences, AI automation, and relentless conversion strategy.</p>
+            <a href="https://wa.me/971509027130" target="_blank" class="footer-whatsapp">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                WhatsApp Us
+            </a>
+        </div>
+        <div class="footer-col">
+            <h4>Pages</h4>
+            <a href="/">Home</a>
+            <a href="/about">About Us</a>
+            <a href="/case-studies">Case Studies</a>
+            <a href="/blog">Blog</a>
+            <a href="/pricing">Pricing</a>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <a href="/#capabilities">Immersive Web</a>
+            <a href="/#capabilities">AI Automations</a>
+            <a href="/#capabilities">Marketing</a>
+            <a href="/#capabilities">UI/UX Design</a>
+        </div>
+        <div class="footer-col">
+            <h4>Connect</h4>
+            <a href="https://www.instagram.com/webtactics/" target="_blank">Instagram</a>
+            <a href="https://www.linkedin.com/company/79060249/" target="_blank">LinkedIn</a>
+            <a href="https://www.youtube.com/@Webtacticsorg" target="_blank">YouTube</a>
+            <a href="mailto:info@kiasa.tech">Email</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <div class="footer-copy">© 2026 KIASA. All Rights Reserved.</div>
+        <a href="#" class="footer-top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">
+            <span>Back to Top</span>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 14V4M9 4L4 9M9 4L14 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="footer-bottom-links">
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Use</a>
+        </div>
+    </div>
+</footer>
+
+
+
+<!-- ===== KIASA Shared: Audio + Page Transition ===== -->
+
+<!-- Package builder float, replicated by hand: standalone page, no partials. -->
+<a id="wt-calc-float" href="/estimate" class="interactable" aria-label="Build your package and see the price"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="2.5" width="16" height="19" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M8 7h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18.5h.01M12 18.5h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span class="wt-calc-label">Build a package</span></a>
+
+<button id="sound-toggle" class="muted" aria-label="Toggle ambient sound">
+    <div class="sound-bars"><div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div></div>
+    <span class="sound-label">SFX</span>
+</button>
+<audio id="ambient-audio" src="/Assets/KIASA%20Audio.mp3" loop preload="auto"></audio>
+<div id="wt-page-wipe"></div>
+

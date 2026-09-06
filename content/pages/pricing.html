@@ -1,0 +1,728 @@
+
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W8BKMGHG"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+    <div class="grain"></div>
+
+    <nav>
+        <a href="/" class="logo">KIASA</a>
+        <div class="nav-right">
+            <div class="nav-clock" id="nav-clock"><span class="nav-clock-label">DUBAI</span><span id="dubai-time">--:--</span></div>
+            <button class="hamburger" id="hamburger" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="mobile-menu" id="mobile-menu">
+        <button class="mobile-close" aria-label="Close menu">&#x2715;</button>
+        <div class="mobile-menu-brand">KIASA</div>
+        <div class="mobile-menu-links">
+            <a href="/"                   class="m-link">Home</a>
+            <a href="/about"              class="m-link">About</a>
+            <a href="/gallery"            class="m-link">Infinite Gallery</a>
+            <a href="/case-studies"       class="m-link">Case Studies</a>
+            <a href="/blog"               class="m-link">Blog</a>
+            <a href="/pricing"            class="m-link active">Services</a>
+            <a href="/contact"            class="m-link">Contact</a>
+        </div>
+        <div class="mobile-menu-footer">
+            <div class="mobile-menu-socials">
+                <a href="https://www.instagram.com/webtactics/" target="_blank" rel="noopener">Instagram</a>
+                <a href="https://www.linkedin.com/company/79060249/" target="_blank" rel="noopener">LinkedIn</a>
+                <a href="https://www.youtube.com/@Webtacticsorg" target="_blank" rel="noopener">YouTube</a>
+            </div>
+            <a href="https://wa.me/971509027130" target="_blank" rel="noopener" class="mobile-menu-whatsapp">WhatsApp Us</a>
+        </div>
+    </div>
+
+    <!-- ═══ HERO ═══ -->
+    <section class="mkt-hero glow-wrap">
+        <div class="mkt-hero-copy">
+            <div class="breadcrumb"><a href="/">Home</a> &mdash; Services &amp; Pricing</div>
+            <h1 class="fade-up">Start With Clarity.<br>Build Something <em>Worth Remembering</em></h1>
+            <p class="page-desc fade-up">Immersive web, custom platforms, brand systems and growth — scoped precisely to your goals, never sold from a price list. Tell us what you're building and get a tailored, itemised estimate within 24 hours.</p>
+            <!-- .magnetic wrappers: bound by the shared block in Assets/site.js. Desktop only, and
+                 skipped entirely under prefers-reduced-motion, so the buttons stay ordinary links. -->
+            <div class="hero-cta-row fade-up">
+                <div class="magnetic"><a href="/start" class="pricing-btn pricing-btn-primary interactable">Get an estimate</a></div>
+                <div class="magnetic"><a href="https://wa.me/971509027130" target="_blank" rel="noopener" class="pricing-btn pricing-btn-secondary interactable">Book a call</a></div>
+            </div>
+            <div class="hero-trust fade-up">
+                <span class="stars">★★★★★</span>
+                <span>Trusted by <b>300+ brands</b> across <b>10+ countries</b> · <b>100%</b> retention</span>
+            </div>
+        </div>
+        <div class="mkt-hero-art fade-up">
+                        <!-- The showcase is interactive as of 10 Aug 2026.
+                 IT DELIBERATELY DOES NOT LINK ANYWHERE. It briefly deep-linked to /gallery#<slug>,
+                 which works — Gallery.html reads the hash on load and matches on `src` — but the
+                 destination is the heaviest page on the site, its own deep-link handler allows a
+                 six-second retry budget for textures, and a visitor who clicked a screenshot on a
+                 pricing page arrived inside a WebGL corridor they never chose to enter. Closing the
+                 lightbox left them there rather than back here. On a conversion page that is a worse
+                 trade than a click that stays put.
+                 Desktop click now simply advances to the next project. The dots below are the real
+                 navigation and the only part exposed to assistive tech; the case click is a pointer
+                 convenience, so there is no <a> and no <button> adding a duplicate tab stop. -->
+            <div class="hero-shots" id="hero-shots">
+                <div class="hero-shots-glow" aria-hidden="true"></div>
+                <div class="hero-shots-frame">
+                                                            <img src="/Assets/Pieces/web/designers-hub-website.webp" alt="" aria-hidden="true" decoding="async" class="hero-shot on" data-tag="Designers Hub — Website" fetchpriority="high">
+                                                            <img data-src="/Assets/Pieces/web/brand-booster-website.webp" alt="" aria-hidden="true" decoding="async" class="hero-shot" data-tag="Brand Booster — Website">
+                                                            <img data-src="/Assets/Pieces/web/istarahat-ae-website.webp" alt="" aria-hidden="true" decoding="async" class="hero-shot" data-tag="Istarahat.ae — Website">
+                                                            <img data-src="/Assets/Pieces/web/axe-capital-website.webp" alt="" aria-hidden="true" decoding="async" class="hero-shot" data-tag="Axe Capital — Website">
+                                                            <img data-src="/Assets/Pieces/web/new-world-technologies-website.webp" alt="" aria-hidden="true" decoding="async" class="hero-shot" data-tag="New World Technologies — Website">
+                                                            <img data-src="/Assets/Pieces/web/bite-bloom-website.webp" alt="" aria-hidden="true" decoding="async" class="hero-shot" data-tag="Bite Bloom — Website">
+                                                            <img data-src="/Assets/Pieces/web/selas-official-website.webp" alt="" aria-hidden="true" decoding="async" class="hero-shot" data-tag="Selas — Website">
+                                    </div>
+                <span class="hero-shots-tag" id="hero-shots-tag">Designers Hub — Website</span>
+            </div>
+            <!-- OUTSIDE .hero-shots on purpose. That element is aspect-ratio sized and its .frame child
+                 is position:absolute inset:0, so a static child renders at the top of the box and
+                 paints UNDERNEATH the positioned frame — the dots were invisible and unclickable there,
+                 and a click aimed at them landed on the stretched link instead.
+                 Plain buttons with aria-current, not role=tablist: there are no tabpanels here, and
+                 borrowing tab semantics would promise a keyboard model that does not exist. -->
+            <div class="hero-dots" id="hero-dots" aria-label="Featured projects">
+                                <button type="button" class="hero-dot on" data-i="0" aria-current="true" aria-label="Show Designers Hub — Website"></button>
+                                <button type="button" class="hero-dot" data-i="1" aria-label="Show Brand Booster — Website"></button>
+                                <button type="button" class="hero-dot" data-i="2" aria-label="Show Istarahat.ae — Website"></button>
+                                <button type="button" class="hero-dot" data-i="3" aria-label="Show Axe Capital — Website"></button>
+                                <button type="button" class="hero-dot" data-i="4" aria-label="Show New World Technologies — Website"></button>
+                                <button type="button" class="hero-dot" data-i="5" aria-label="Show Bite Bloom — Website"></button>
+                                <button type="button" class="hero-dot" data-i="6" aria-label="Show Selas — Website"></button>
+                            </div>
+        </div>
+    </section>
+
+    <!-- ═══ CLIENT STRIP (marquee) ═══ -->
+    <section class="ctr" style="padding-top:4vh; padding-bottom:4vh;">
+        <span class="kicker fade-up">Trusted by ambitious brands</span>
+        <div class="fade-up" style="width:100%;"><div class="client-marquee" aria-label="Selected clients"><div class="client-marquee-track"><span class="lw">Gazien</span><span class="lw">Two Pieces</span><span class="lw">Judran</span><span class="lw">Al Fidaa</span><span class="lw">Labaih</span><span class="lw">Brand Booster</span><span class="lw">NASCO</span><span class="lw">Axe Capital</span><span class="lw">Crown Circle</span><span class="lw">Designers Hub</span><span class="lw">Kahramana</span><span class="lw">Rosa Couture</span><span class="lw">New World Technologies</span><span class="lw">Zumra Group</span><span class="lw">Timeline Travel</span><span class="lw">Selas</span><span class="lw">Bite Bloom</span><span class="lw">Parametric Design</span><span class="lw" aria-hidden="true" style="opacity:.001">·</span><span class="lw">Gazien</span><span class="lw">Two Pieces</span><span class="lw">Judran</span><span class="lw">Al Fidaa</span><span class="lw">Labaih</span><span class="lw">Brand Booster</span><span class="lw">NASCO</span><span class="lw">Axe Capital</span><span class="lw">Crown Circle</span><span class="lw">Designers Hub</span><span class="lw">Kahramana</span><span class="lw">Rosa Couture</span><span class="lw">New World Technologies</span><span class="lw">Zumra Group</span><span class="lw">Timeline Travel</span><span class="lw">Selas</span><span class="lw">Bite Bloom</span><span class="lw">Parametric Design</span></div></div></div>
+    </section>
+
+    <!-- ═══ RESULTS STRIP ═══ -->
+    <section class="ctr" style="padding-top:0; padding-bottom:6vh;">
+        <div class="results-band fade-up">
+            <span class="rb"><b>$2M<span>+</span></b> managed ad spend</span>
+            <span class="rb-dot"></span>
+            <span class="rb"><b>300<span>+</span></b> projects delivered</span>
+            <span class="rb-dot"></span>
+            <span class="rb"><b>10<span>+</span></b> countries</span>
+            <span class="rb-dot"></span>
+            <span class="rb"><b>100<span>%</span></b> client retention</span>
+        </div>
+    </section>
+
+    <!-- ═══ HOW WE WORK ═══ -->
+    <section>
+        <span class="kicker fade-up">How we work</span>
+        <h2 class="fade-up">From Brief<br>to Build</h2>
+        <p class="svc-intro-p fade-up">No calculators, no template packages. Every engagement is scoped to your goals — which is exactly why you won't find a price tag on this page.</p>
+        <div class="steps">
+            <div class="step fade-up"><div class="step-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.6"/><path d="M14 4v5h5M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><div class="step-n">STEP 01</div><h4>Share the Brief</h4><p>Fill the form or message me directly. Tell me what you're building and what success looks like.</p></div>
+            <div class="step fade-up"><div class="step-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 15.5a8 8 0 1 0-4.5 4.5L20 21l-1-4.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 10.5c0 3 2.5 5 5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><div class="step-n">STEP 02</div><h4>Discovery Call</h4><p>A free, no-obligation session to pressure-test the idea, scope, and timeline together.</p></div>
+            <div class="step fade-up"><div class="step-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M9 4h6v3H9z" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 12l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="step-n">STEP 03</div><h4>Tailored Proposal</h4><p>An itemised estimate — deliverables, timeline, and a fixed price for your exact scope. Within 24 hours.</p></div>
+            <div class="step fade-up"><div class="step-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 3l7 7-9 9-3 1 1-3 9-9-2-2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 21l3-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><div class="step-n">STEP 04</div><h4>We Build</h4><p>Hands-on, founder-led execution with clear milestones — until it ships and performs.</p></div>
+        </div>
+    </section>
+
+    <!-- ═══ WHAT WE DO (services — scoped, not priced) ═══ -->
+    <section>
+        <span class="kicker fade-up">What we do</span>
+        <h2 class="fade-up">Capabilities</h2>
+        <!-- Count is hand-written; the grid below loops $WT_SERVICES. Update both together. -->
+        <p class="svc-intro-p fade-up">Eight ways we help ambitious brands lead — each scoped to fit. Explore any capability, then send your brief for a tailored estimate.</p>
+    </section>
+        <section class="svc-section">
+        <div class="svc-head svc-head--media">
+            <div class="svc-head-text">
+                <span class="kicker fade-up">01 — The Differentiator</span>
+                <h2 class="fade-up">Immersive 3D Web Experiences</h2>
+                <p class="svc-tagline fade-up">Sites that don’t just load — they land.</p>
+                <!-- The arrow is its own span so it can move on hover. As one text run with the
+                     label, the `gap` transition on .svc-detail-link had nothing to animate. -->
+                <a class="svc-detail-link fade-up interactable" href="/service?s=immersive-3d">Full details <span class="arw" aria-hidden="true">&rarr;</span></a>
+            </div>
+            <!-- The image scales on hover, so it already reads as clickable — it just was not.
+                 aria-hidden + tabindex -1: the "Full details" link above is the same destination
+                 and already in the tab order, so this must not become a second stop for keyboard
+                 or screen-reader users. Pointer affordance only.
+                 NO data-wt-manual-track here. That attribute means "this element fires its own
+                 event", and wt-track.js:252 bails out of the click delegate unconditionally when it
+                 sees it — with no onclick of its own, the largest target in each capability block
+                 would report nothing at all instead of the ViewContent it now sends. -->
+            <a class="svc-head-media fade-up" href="/service?s=immersive-3d" aria-hidden="true" tabindex="-1">
+                <img src="/Assets/generated/service-web.webp" alt="Immersive 3D Web Experiences — KIASA" loading="lazy">
+            </a>
+        </div>
+        <div class="pricing-grid">    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Signature Moment</div>
+            <p class="tier-pos">One unforgettable 3D moment on an otherwise clean site.</p>
+            <ul class="pricing-features">
+                <li>1–2 WebGL / Three.js scenes or a scroll-linked 3D hero</li><li>Asset pipeline + performance budget, mobile fallback</li><li>Build: 3–8 weeks</li>            </ul>
+            <a href="/start?s=immersive-3d" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up popular">
+        <div class="pricing-card-body" style="padding-top:3.2rem;">
+            <div class="pricing-name">Immersive Brand Site</div>
+            <p class="tier-pos">A site where the 3D experience is the brand.</p>
+            <ul class="pricing-features">
+                <li>Multiple scenes, custom shaders, interaction states</li><li>Asset streaming, analytics, bilingual EN / AR</li><li>Build: 8–16+ weeks</li>            </ul>
+            <a href="/start?s=immersive-3d" class="pricing-btn pricing-btn-primary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Flagship Experience</div>
+            <p class="tier-pos">A multi-scene, category-defining brand world.</p>
+            <ul class="pricing-features">
+                <li>Complex logic, custom rendering, integrations</li><li>Award-level ambition · scoped case-by-case</li><li>Build: 16–28+ weeks</li>            </ul>
+            <a href="/start?s=immersive-3d" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+</div>    </section>
+        <section class="svc-section">
+        <div class="svc-head svc-head--media svc-head--flip">
+            <div class="svc-head-text">
+                <span class="kicker fade-up">02 — Custom Code</span>
+                <h2 class="fade-up">Custom-Coded Websites</h2>
+                <p class="svc-tagline fade-up">Hand-coded, fast, unmistakably custom.</p>
+                <!-- The arrow is its own span so it can move on hover. As one text run with the
+                     label, the `gap` transition on .svc-detail-link had nothing to animate. -->
+                <a class="svc-detail-link fade-up interactable" href="/service?s=custom-websites">Full details <span class="arw" aria-hidden="true">&rarr;</span></a>
+            </div>
+            <!-- The image scales on hover, so it already reads as clickable — it just was not.
+                 aria-hidden + tabindex -1: the "Full details" link above is the same destination
+                 and already in the tab order, so this must not become a second stop for keyboard
+                 or screen-reader users. Pointer affordance only.
+                 NO data-wt-manual-track here. That attribute means "this element fires its own
+                 event", and wt-track.js:252 bails out of the click delegate unconditionally when it
+                 sees it — with no onclick of its own, the largest target in each capability block
+                 would report nothing at all instead of the ViewContent it now sends. -->
+            <a class="svc-head-media fade-up" href="/service?s=custom-websites" aria-hidden="true" tabindex="-1">
+                <img src="/Assets/generated/service-uiux.webp" alt="Custom-Coded Websites — KIASA" loading="lazy">
+            </a>
+        </div>
+        <div class="pricing-grid">    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Signature Build</div>
+            <p class="tier-pos">Hand-coded, fast, unmistakably custom.</p>
+            <ul class="pricing-features">
+                <li>Bespoke front-end (React / Next.js)</li><li>Motion + CMS</li><li>Performance-first, Core Web Vitals</li>            </ul>
+            <a href="/start?s=custom-websites" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up popular">
+        <div class="pricing-card-body" style="padding-top:3.2rem;">
+            <div class="pricing-name">Signature+</div>
+            <p class="tier-pos">A custom site with depth.</p>
+            <ul class="pricing-features">
+                <li>Multi-section build + integrations</li><li>Bilingual EN / AR</li><li>Advanced interaction design</li>            </ul>
+            <a href="/start?s=custom-websites" class="pricing-btn pricing-btn-primary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Flagship</div>
+            <p class="tier-pos">A flagship marketing site built like a product.</p>
+            <ul class="pricing-features">
+                <li>Complex front-end + design system</li><li>Integrations</li><li>Post-launch support window</li>            </ul>
+            <a href="/start?s=custom-websites" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+</div>    </section>
+        <section class="svc-section">
+        <div class="svc-head svc-head--media">
+            <div class="svc-head-text">
+                <span class="kicker fade-up">03 — WordPress</span>
+                <h2 class="fade-up">Signature WordPress</h2>
+                <p class="svc-tagline fade-up">Premium WordPress, built to convert — no templates.</p>
+                <!-- The arrow is its own span so it can move on hover. As one text run with the
+                     label, the `gap` transition on .svc-detail-link had nothing to animate. -->
+                <a class="svc-detail-link fade-up interactable" href="/service?s=wordpress">Full details <span class="arw" aria-hidden="true">&rarr;</span></a>
+            </div>
+            <!-- The image scales on hover, so it already reads as clickable — it just was not.
+                 aria-hidden + tabindex -1: the "Full details" link above is the same destination
+                 and already in the tab order, so this must not become a second stop for keyboard
+                 or screen-reader users. Pointer affordance only.
+                 NO data-wt-manual-track here. That attribute means "this element fires its own
+                 event", and wt-track.js:252 bails out of the click delegate unconditionally when it
+                 sees it — with no onclick of its own, the largest target in each capability block
+                 would report nothing at all instead of the ViewContent it now sends. -->
+            <a class="svc-head-media fade-up" href="/service?s=wordpress" aria-hidden="true" tabindex="-1">
+                <img src="/Assets/generated/shop-hero.webp" alt="Signature WordPress — KIASA" loading="lazy">
+            </a>
+        </div>
+        <div class="pricing-grid">    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Presence</div>
+            <p class="tier-pos">A premium WordPress presence built to convert.</p>
+            <ul class="pricing-features">
+                <li>Up to 5 pages, custom design (no templates)</li><li>CMS, on-page SEO, Core Web Vitals</li><li>Lead capture</li>            </ul>
+            <a href="/start?s=wordpress" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up popular">
+        <div class="pricing-card-body" style="padding-top:3.2rem;">
+            <div class="pricing-name">Signature</div>
+            <p class="tier-pos">A content-rich platform with the backend to run it.</p>
+            <ul class="pricing-features">
+                <li>Up to 12 pages, advanced UX</li><li>Custom post types / backend logic</li><li>Bilingual EN / AR, structured data</li>            </ul>
+            <a href="/start?s=wordpress" class="pricing-btn pricing-btn-primary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Flagship</div>
+            <p class="tier-pos">A WordPress build engineered to scale.</p>
+            <ul class="pricing-features">
+                <li>Complex functionality</li><li>CRM / booking / payments integrations</li><li>Performance hardening</li>            </ul>
+            <a href="/start?s=wordpress" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+</div>    </section>
+        <section class="svc-section">
+        <div class="svc-head svc-head--media svc-head--flip">
+            <div class="svc-head-text">
+                <span class="kicker fade-up">04 — Brand</span>
+                <h2 class="fade-up">Brand Identity</h2>
+                <p class="svc-tagline fade-up">An ownable mark — and the system to scale it.</p>
+                <!-- The arrow is its own span so it can move on hover. As one text run with the
+                     label, the `gap` transition on .svc-detail-link had nothing to animate. -->
+                <a class="svc-detail-link fade-up interactable" href="/service?s=brand-identity">Full details <span class="arw" aria-hidden="true">&rarr;</span></a>
+            </div>
+            <!-- The image scales on hover, so it already reads as clickable — it just was not.
+                 aria-hidden + tabindex -1: the "Full details" link above is the same destination
+                 and already in the tab order, so this must not become a second stop for keyboard
+                 or screen-reader users. Pointer affordance only.
+                 NO data-wt-manual-track here. That attribute means "this element fires its own
+                 event", and wt-track.js:252 bails out of the click delegate unconditionally when it
+                 sees it — with no onclick of its own, the largest target in each capability block
+                 would report nothing at all instead of the ViewContent it now sends. -->
+            <a class="svc-head-media fade-up" href="/service?s=brand-identity" aria-hidden="true" tabindex="-1">
+                <img src="/Assets/generated/service-branding.webp" alt="Brand Identity — KIASA" loading="lazy">
+            </a>
+        </div>
+        <div class="pricing-grid">    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Essence</div>
+            <p class="tier-pos">A confident, ownable mark and the essentials to launch.</p>
+            <ul class="pricing-features">
+                <li>Logo suite, colour palette, type system</li><li>Mini usage guide, social avatars</li><li>All file formats</li>            </ul>
+            <a href="/start?s=brand-identity" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up popular">
+        <div class="pricing-card-body" style="padding-top:3.2rem;">
+            <div class="pricing-name">Signature Identity System</div>
+            <p class="tier-pos">A complete, scalable visual language, built bilingual.</p>
+            <ul class="pricing-features">
+                <li>Everything in Essence + full guidelines</li><li>EN + AR lockups, stationery, launch collateral</li><li>2 directions</li>            </ul>
+            <a href="/start?s=brand-identity" class="pricing-btn pricing-btn-primary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Flagship Brand World</div>
+            <p class="tier-pos">Strategy-led identity for brands that intend to lead.</p>
+            <ul class="pricing-features">
+                <li>Strategy / positioning workshop</li><li>Naming support (optional), full system</li><li>Logo motion, art direction</li>            </ul>
+            <a href="/start?s=brand-identity" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+</div>    </section>
+        <section class="svc-section">
+        <div class="svc-head svc-head--media">
+            <div class="svc-head-text">
+                <span class="kicker fade-up">05 — Retainers</span>
+                <h2 class="fade-up">Marketing Retainers</h2>
+                <p class="svc-tagline fade-up">Monthly, scoped, and accountable — not &quot;unlimited&quot;.</p>
+                <!-- The arrow is its own span so it can move on hover. As one text run with the
+                     label, the `gap` transition on .svc-detail-link had nothing to animate. -->
+                <a class="svc-detail-link fade-up interactable" href="/service?s=marketing">Full details <span class="arw" aria-hidden="true">&rarr;</span></a>
+            </div>
+            <!-- The image scales on hover, so it already reads as clickable — it just was not.
+                 aria-hidden + tabindex -1: the "Full details" link above is the same destination
+                 and already in the tab order, so this must not become a second stop for keyboard
+                 or screen-reader users. Pointer affordance only.
+                 NO data-wt-manual-track here. That attribute means "this element fires its own
+                 event", and wt-track.js:252 bails out of the click delegate unconditionally when it
+                 sees it — with no onclick of its own, the largest target in each capability block
+                 would report nothing at all instead of the ViewContent it now sends. -->
+            <a class="svc-head-media fade-up" href="/service?s=marketing" aria-hidden="true" tabindex="-1">
+                <img src="/Assets/generated/service-marketing.webp" alt="Marketing Retainers — KIASA" loading="lazy">
+            </a>
+        </div>
+        <div class="pricing-grid">    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Presence <span class="tier-cadence">Monthly</span></div>
+            <p class="tier-pos">One channel, done properly.</p>
+            <ul class="pricing-features">
+                <li>One channel (social OR SEO OR paid)</li><li>Defined monthly deliverables</li><li>Monthly report</li>            </ul>
+            <a href="/start?s=marketing" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up popular">
+        <div class="pricing-card-body" style="padding-top:3.2rem;">
+            <div class="pricing-name">Signature Growth <span class="tier-cadence">Monthly</span></div>
+            <p class="tier-pos">Two channels plus connecting strategy.</p>
+            <ul class="pricing-features">
+                <li>Two channels + content calendar</li><li>Strategy, bi-weekly reporting</li><li>Capped revisions</li>            </ul>
+            <a href="/start?s=marketing" class="pricing-btn pricing-btn-primary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Flagship Category <span class="tier-cadence">Monthly</span></div>
+            <p class="tier-pos">Multi-channel growth for brands playing to win.</p>
+            <ul class="pricing-features">
+                <li>Up to 3 channels + paid media mgmt (ad spend billed separately)</li><li>CRO input</li><li>Quarterly strategy</li>            </ul>
+            <a href="/start?s=marketing" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+</div>    </section>
+        <section class="svc-section">
+        <div class="svc-head svc-head--media svc-head--flip">
+            <div class="svc-head-text">
+                <span class="kicker fade-up">06 — Platforms</span>
+                <h2 class="fade-up">Custom Web Platforms</h2>
+                <p class="svc-tagline fade-up">Portals, tools and SaaS — scoped as a partnership.</p>
+                <!-- The arrow is its own span so it can move on hover. As one text run with the
+                     label, the `gap` transition on .svc-detail-link had nothing to animate. -->
+                <a class="svc-detail-link fade-up interactable" href="/service?s=platforms">Full details <span class="arw" aria-hidden="true">&rarr;</span></a>
+            </div>
+            <!-- The image scales on hover, so it already reads as clickable — it just was not.
+                 aria-hidden + tabindex -1: the "Full details" link above is the same destination
+                 and already in the tab order, so this must not become a second stop for keyboard
+                 or screen-reader users. Pointer affordance only.
+                 NO data-wt-manual-track here. That attribute means "this element fires its own
+                 event", and wt-track.js:252 bails out of the click delegate unconditionally when it
+                 sees it — with no onclick of its own, the largest target in each capability block
+                 would report nothing at all instead of the ViewContent it now sends. -->
+            <a class="svc-head-media fade-up" href="/service?s=platforms" aria-hidden="true" tabindex="-1">
+                <img src="/Assets/generated/service-platforms.webp" alt="Custom Web Platforms — KIASA" loading="lazy">
+            </a>
+        </div>
+        <div class="pricing-grid">    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Foundation Platform</div>
+            <p class="tier-pos">A scoped portal or internal tool that replaces spreadsheets.</p>
+            <ul class="pricing-features">
+                <li>Single-purpose portal / tool</li><li>Auth + roles + dashboard</li><li>Scoped case-by-case</li>            </ul>
+            <a href="/start?s=platforms" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up popular">
+        <div class="pricing-card-body" style="padding-top:3.2rem;">
+            <div class="pricing-name">Signature Platform</div>
+            <p class="tier-pos">A multi-role platform or SaaS product.</p>
+            <ul class="pricing-features">
+                <li>Multi-role, billing, integrations</li><li>Product design + architecture</li><li>Scoped case-by-case</li>            </ul>
+            <a href="/start?s=platforms" class="pricing-btn pricing-btn-primary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Flagship Platform</div>
+            <p class="tier-pos">A production SaaS or enterprise portal.</p>
+            <ul class="pricing-features">
+                <li>Production-grade SaaS / enterprise</li><li>Scale, security, support</li><li>Scoped case-by-case</li>            </ul>
+            <a href="/start?s=platforms" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+</div>    </section>
+        <section class="svc-section">
+        <div class="svc-head svc-head--media">
+            <div class="svc-head-text">
+                <span class="kicker fade-up">07 — Mobile</span>
+                <h2 class="fade-up">Mobile App MVP</h2>
+                <p class="svc-tagline fade-up">A real, shippable product — not a prototype.</p>
+                <!-- The arrow is its own span so it can move on hover. As one text run with the
+                     label, the `gap` transition on .svc-detail-link had nothing to animate. -->
+                <a class="svc-detail-link fade-up interactable" href="/service?s=mobile-app">Full details <span class="arw" aria-hidden="true">&rarr;</span></a>
+            </div>
+            <!-- The image scales on hover, so it already reads as clickable — it just was not.
+                 aria-hidden + tabindex -1: the "Full details" link above is the same destination
+                 and already in the tab order, so this must not become a second stop for keyboard
+                 or screen-reader users. Pointer affordance only.
+                 NO data-wt-manual-track here. That attribute means "this element fires its own
+                 event", and wt-track.js:252 bails out of the click delegate unconditionally when it
+                 sees it — with no onclick of its own, the largest target in each capability block
+                 would report nothing at all instead of the ViewContent it now sends. -->
+            <a class="svc-head-media fade-up" href="/service?s=mobile-app" aria-hidden="true" tabindex="-1">
+                <img src="/Assets/generated/service-mobile.webp" alt="Mobile App MVP — KIASA" loading="lazy">
+            </a>
+        </div>
+        <div class="pricing-grid" style="grid-template-columns:1fr;max-width:460px;margin-left:auto;margin-right:auto;">    <div class="pricing-card fade-up popular">
+        <div class="pricing-card-body" style="padding-top:3.2rem;">
+            <div class="pricing-name">Production MVP</div>
+            <p class="tier-pos">A real, shippable product: auth, payments, backend, iOS + Android.</p>
+            <ul class="pricing-features">
+                <li>Offered selectively · scoped case-by-case</li><li>Structured as a product partnership</li><li>iOS + Android, backend + payments</li>            </ul>
+            <a href="/start?s=mobile-app" class="pricing-btn pricing-btn-primary interactable">Discuss this level</a>
+        </div>
+    </div>
+</div>    </section>
+        <section class="svc-section">
+        <div class="svc-head svc-head--media svc-head--flip">
+            <div class="svc-head-text">
+                <span class="kicker fade-up">08 — AI &amp; Automation</span>
+                <h2 class="fade-up">AI &amp; Automation</h2>
+                <p class="svc-tagline fade-up">Automate the right things — and put a human signature on the rest.</p>
+                <!-- The arrow is its own span so it can move on hover. As one text run with the
+                     label, the `gap` transition on .svc-detail-link had nothing to animate. -->
+                <a class="svc-detail-link fade-up interactable" href="/service?s=ai-automation">Full details <span class="arw" aria-hidden="true">&rarr;</span></a>
+            </div>
+            <!-- The image scales on hover, so it already reads as clickable — it just was not.
+                 aria-hidden + tabindex -1: the "Full details" link above is the same destination
+                 and already in the tab order, so this must not become a second stop for keyboard
+                 or screen-reader users. Pointer affordance only.
+                 NO data-wt-manual-track here. That attribute means "this element fires its own
+                 event", and wt-track.js:252 bails out of the click delegate unconditionally when it
+                 sees it — with no onclick of its own, the largest target in each capability block
+                 would report nothing at all instead of the ViewContent it now sends. -->
+            <a class="svc-head-media fade-up" href="/service?s=ai-automation" aria-hidden="true" tabindex="-1">
+                <img src="/Assets/generated/service-ai-automation.webp" alt="AI &amp; Automation — KIASA" loading="lazy">
+            </a>
+        </div>
+        <div class="pricing-grid">    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Automation Assessment</div>
+            <p class="tier-pos">A map of what to automate now, what to stage for later, and what should always carry a human signature.</p>
+            <ul class="pricing-features">
+                <li>AI-readiness review across sales, service and operations</li><li>Scored shortlist — effort, risk and payback per candidate</li><li>Written governance plan · credited in full toward a booked build</li>            </ul>
+            <a href="/start?s=ai-automation" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up popular">
+        <div class="pricing-card-body" style="padding-top:3.2rem;">
+            <div class="pricing-name">Signature Automation</div>
+            <p class="tier-pos">Governed agents, built into the tools you already run.</p>
+            <ul class="pricing-features">
+                <li>Lead qualification, support triage or morning reporting</li><li>Scoped permissions, approval thresholds, full audit trail</li><li>Integrated with your CRM, inbox and site · team handover</li>            </ul>
+            <a href="/start?s=ai-automation" class="pricing-btn pricing-btn-primary interactable">Discuss this level</a>
+        </div>
+    </div>
+    <div class="pricing-card fade-up">
+        <div class="pricing-card-body" style="padding-top:2.6rem;">
+            <div class="pricing-name">Managed Automation <span class="tier-cadence">Monthly</span></div>
+            <p class="tier-pos">We run it, watch it, and tune it as the business changes.</p>
+            <ul class="pricing-features">
+                <li>Monitoring, escalation review and threshold tuning</li><li>Monthly performance and exception report</li><li>Prompt, model and integration updates as tools change</li>            </ul>
+            <a href="/start?s=ai-automation" class="pricing-btn pricing-btn-secondary interactable">Discuss this level</a>
+        </div>
+    </div>
+</div>    </section>
+    
+    <!-- ═══ COMPARISON TABLE ═══ -->
+    <section class="svc-section">
+        <span class="kicker fade-up">A clear breakdown</span>
+        <h2 class="fade-up">Why Work<br>With Us</h2>
+        <p class="svc-intro-p fade-up">Compare a freelancer, a typical agency, and a founder-led studio. The differences in craft, speed and ownership show up fast.</p>
+                <div class="cmp-wrap fade-up">
+            <table class="cmp">
+                <thead>
+                    <tr>
+                        <th scope="col" style="text-align:left;">Feature</th>
+                        <th scope="col" class="cmp-us"><span class="cmp-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="currentColor"/></svg></span><span class="cmp-hlabel">KIASA</span></th>
+                        <th scope="col"><span class="cmp-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="cmp-hlabel">Freelancer</span></th>
+                        <th scope="col"><span class="cmp-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="cmp-hlabel">Typical Agency</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                                        <tr>
+                        <th scope="row">Senior, founder-led craft</th>
+                        <td class="cmp-us"><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                        <td class=""><span class="part">Sometimes</span></td>                        <td class=""><span class="no" role="img" aria-label="Not included"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span></td>                    </tr>
+                                        <tr>
+                        <th scope="row">Immersive 3D / WebGL capability</th>
+                        <td class="cmp-us"><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                        <td class=""><span class="no" role="img" aria-label="Not included"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span></td>                        <td class=""><span class="part">Sometimes</span></td>                    </tr>
+                                        <tr>
+                        <th scope="row">Clear scope, timeline &amp; fixed price up front</th>
+                        <td class="cmp-us"><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                        <td class=""><span class="part">Sometimes</span></td>                        <td class=""><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                    </tr>
+                                        <tr>
+                        <th scope="row">You work directly with the maker</th>
+                        <td class="cmp-us"><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                        <td class=""><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                        <td class=""><span class="no" role="img" aria-label="Not included"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span></td>                    </tr>
+                                        <tr>
+                        <th scope="row">Brand + web + growth under one roof</th>
+                        <td class="cmp-us"><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                        <td class=""><span class="no" role="img" aria-label="Not included"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span></td>                        <td class=""><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                    </tr>
+                                        <tr>
+                        <th scope="row">Bilingual EN / AR delivery</th>
+                        <td class="cmp-us"><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                        <td class=""><span class="part">Sometimes</span></td>                        <td class=""><span class="part">Sometimes</span></td>                    </tr>
+                                        <tr>
+                        <th scope="row">Replies within 24 hours</th>
+                        <td class="cmp-us"><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                        <td class=""><span class="part">Sometimes</span></td>                        <td class=""><span class="no" role="img" aria-label="Not included"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span></td>                    </tr>
+                                        <tr>
+                        <th scope="row">Post-launch care &amp; support</th>
+                        <td class="cmp-us"><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                        <td class=""><span class="no" role="img" aria-label="Not included"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span></td>                        <td class=""><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                    </tr>
+                                        <tr>
+                        <th scope="row">100% client retention</th>
+                        <td class="cmp-us"><span class="yes" role="img" aria-label="Included"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>                        <td class=""><span class="part">Sometimes</span></td>                        <td class=""><span class="part">Sometimes</span></td>                    </tr>
+                                    </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ═══ TESTIMONIALS ═══ -->
+    <section class="svc-section">
+        <span class="kicker fade-up">In their words</span>
+        <h2 class="fade-up">What Clients Say</h2>
+        <div class="testi-grid">
+                        <figure class="testi-card fade-up">
+                <blockquote class="testi-quote">KIASA completely transformed our business. We went from 7–8 attendees at our events to building an international ecosystem — now people from across the GCC join our classes. Their website and strategy made it all possible.</blockquote>
+                <figcaption class="testi-author"><strong>Designers Hub</strong><span>Fashion Education · UAE</span></figcaption>
+            </figure>
+                        <figure class="testi-card fade-up">
+                <blockquote class="testi-quote">KIASA played a vital role in bringing The Crown Circle to life — from event documents and socials to building the website and ensuring a flawless launch at Dubai World Islands. They delivered excellence at every level.</blockquote>
+                <figcaption class="testi-author"><strong>The Crown Circle</strong><span>Luxury Events · Dubai</span></figcaption>
+            </figure>
+                        <figure class="testi-card fade-up">
+                <blockquote class="testi-quote">We were a small clothing manufacturer with big ambitions. KIASA built our website, designed our catalogue and logo, and ran our ads — turning Labaih into a thriving company with real market presence.</blockquote>
+                <figcaption class="testi-author"><strong>Labaih Fashion</strong><span>Clothing Manufacturing · UAE</span></figcaption>
+            </figure>
+                    </div>
+    </section>
+
+    <!-- ═══ METRICS ═══ -->
+    <section class="ctr">
+        <span class="kicker fade-up">The numbers</span>
+        <div class="trust-band">
+            <div class="metric fade-up"><div class="metric-num">300<span>+</span></div><div class="metric-label">Projects Delivered</div></div>
+            <div class="metric fade-up"><div class="metric-num">10<span>+</span></div><div class="metric-label">Countries</div></div>
+            <div class="metric fade-up"><div class="metric-num">100<span>%</span></div><div class="metric-label">Client Retention</div></div>
+            <div class="metric fade-up"><div class="metric-num">24<span>h</span></div><div class="metric-label">Reply Time</div></div>
+        </div>
+    </section>
+
+    <!-- ═══ FAQ ═══ -->
+    <section class="svc-section">
+        <span class="kicker fade-up">Common questions</span>
+        <h2 class="fade-up">Before You Ask</h2>
+        <div class="faq-list">
+                        <div class="faq-item fade-up">
+                <button type="button" class="faq-question interactable" aria-expanded="false">How much does a project cost?<span class="faq-icon">+</span></button>
+                <div class="faq-answer"><div class="faq-answer-inner">Every project is scoped to your goals, so we don&#039;t publish fixed prices — a price list sells you a package, not your project. Most engagements begin around $3,000; send your brief and you&#039;ll have a precise, itemised estimate within 24 hours.</div></div>
+            </div>
+                        <div class="faq-item fade-up">
+                <button type="button" class="faq-question interactable" aria-expanded="false">Do you have a minimum?<span class="faq-icon">+</span></button>
+                <div class="faq-answer"><div class="faq-answer-inner">Yes — we take on projects starting around $3,000. For smaller scopes, a Brand Identity — Essence or a Presence retainer is the best place to start.</div></div>
+            </div>
+                        <div class="faq-item fade-up">
+                <button type="button" class="faq-question interactable" aria-expanded="false">How fast can you start?<span class="faq-icon">+</span></button>
+                <div class="faq-answer"><div class="faq-answer-inner">Usually within a week of an agreed brief. Rush timelines are available when you need to move faster.</div></div>
+            </div>
+                        <div class="faq-item fade-up">
+                <button type="button" class="faq-question interactable" aria-expanded="false">Do you work with brands outside the UAE?<span class="faq-icon">+</span></button>
+                <div class="faq-answer"><div class="faq-answer-inner">Yes — we work with brands across 10+ countries. Everything runs remotely, bilingual EN / AR when you need it.</div></div>
+            </div>
+                        <div class="faq-item fade-up">
+                <button type="button" class="faq-question interactable" aria-expanded="false">Will I work with you directly?<span class="faq-icon">+</span></button>
+                <div class="faq-answer"><div class="faq-answer-inner">Yes. KIASA is founder-led — you work directly with the people building your project, never a chain of account managers.</div></div>
+            </div>
+                    </div>
+    </section>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How much does a project cost?","acceptedAnswer":{"@type":"Answer","text":"Every project is scoped to your goals, so we don't publish fixed prices — a price list sells you a package, not your project. Most engagements begin around $3,000; send your brief and you'll have a precise, itemised estimate within 24 hours."}},{"@type":"Question","name":"Do you have a minimum?","acceptedAnswer":{"@type":"Answer","text":"Yes — we take on projects starting around $3,000. For smaller scopes, a Brand Identity — Essence or a Presence retainer is the best place to start."}},{"@type":"Question","name":"How fast can you start?","acceptedAnswer":{"@type":"Answer","text":"Usually within a week of an agreed brief. Rush timelines are available when you need to move faster."}},{"@type":"Question","name":"Do you work with brands outside the UAE?","acceptedAnswer":{"@type":"Answer","text":"Yes — we work with brands across 10+ countries. Everything runs remotely, bilingual EN / AR when you need it."}},{"@type":"Question","name":"Will I work with you directly?","acceptedAnswer":{"@type":"Answer","text":"Yes. KIASA is founder-led — you work directly with the people building your project, never a chain of account managers."}}]}</script>
+
+    <!-- ═══ FINAL CTA ═══ -->
+    <section class="page-cta glow-wrap">
+        <span class="kicker fade-up">Ready when you are</span>
+        <h2 class="fade-up">Get a Tailored<br><span style="color:var(--accent)">Estimate</span></h2>
+        <p class="page-desc fade-up" style="text-align:center; max-width:520px;">Share your brief and I'll personally reply within 24 hours with a scoped proposal. Or message me directly to set up a call.</p>
+        <div class="hero-cta-row fade-up" style="justify-content:center;">
+            <div class="magnetic"><a href="/start" class="cta-btn interactable">
+                Get an estimate
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 9H14M14 9L9 4M14 9L9 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a></div>
+            <div class="magnetic"><a href="https://wa.me/971509027130" target="_blank" rel="noopener" class="pricing-btn pricing-btn-secondary interactable">Book a call</a></div>
+        </div>
+        <!-- Third option, deliberately quieter than the two above it. Someone not ready to send a
+             brief or take a call previously had nothing on this page to do except leave. -->
+        <a class="svc-detail-link fade-up" href="/estimate" style="margin-top:0.5rem;">Not ready to talk? Build a cost range <span class="arw">&rarr;</span></a>
+    </section>
+
+    <footer>
+        <div class="footer-wm">KIASA</div>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <div class="footer-brand-name">KIASA</div>
+                <p class="footer-brand-desc">A global digital studio — elevating brands through immersive web development, 3D experiences, AI automation, and relentless conversion strategy.</p>
+                <a href="https://wa.me/971509027130" target="_blank" rel="noopener" class="footer-whatsapp interactable">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    WhatsApp Us
+                </a>
+            </div>
+            <div class="footer-col">
+                <h4>Pages</h4>
+                <a href="/" class="interactable">Home</a>
+                <a href="/about" class="interactable">About Us</a>
+                <a href="/case-studies" class="interactable">Case Studies</a>
+                <a href="/blog" class="interactable">Blog</a>
+                <a href="/pricing" class="interactable">Services</a>
+                <a href="/contact" class="interactable">Contact</a>
+            </div>
+            <div class="footer-col">
+                <h4>Services</h4>
+                <a href="/service?s=immersive-3d" class="interactable">Immersive Web</a>
+                <a href="/service?s=platforms" class="interactable">Custom Platforms</a>
+                <a href="/service?s=marketing" class="interactable">Marketing</a>
+                <a href="/service?s=brand-identity" class="interactable">Brand Identity</a>
+                                <a href="/web-design-agency-dubai" class="interactable">Web Design Dubai</a>
+                <a href="/ecommerce-website-dubai" class="interactable">Ecommerce Websites</a>
+                <a href="/arabic-website-design" class="interactable">Arabic Websites</a>
+            </div>
+            <div class="footer-col">
+                <h4>Connect</h4>
+                <a href="https://www.instagram.com/webtactics/" target="_blank" rel="noopener" class="interactable">Instagram</a>
+                <a href="https://www.linkedin.com/company/79060249/" target="_blank" rel="noopener" class="interactable">LinkedIn</a>
+                <a href="https://www.youtube.com/@Webtacticsorg" target="_blank" rel="noopener" class="interactable">YouTube</a>
+                <a href="mailto:info@kiasa.tech" class="interactable">Email</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="footer-copy">© 2026 KIASA. All Rights Reserved.</div>
+            <!-- When Lenis is active, site.js drives this through lenis.scrollTo (native
+                 scrollTo fights Lenis). The inline handler is the no-Lenis fallback. -->
+            <a href="#" class="footer-top interactable" onclick="if(!window.__lenis){window.scrollTo({top:0,behavior:'smooth'})}return false;">
+                <span>Back to Top</span>
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 14V4M9 4L4 9M9 4L14 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <div class="footer-bottom-links">
+                <a href="/privacy" class="interactable">Privacy Policy</a>
+                <a href="/terms" class="interactable">Terms of Use</a>
+            </div>
+        </div>
+    </footer>
+
+    
+
+    <!-- ===== KIASA shared widgets ===== -->
+    <button id="sound-toggle" class="muted" aria-label="Toggle ambient sound">
+        <div class="sound-bars">
+            <div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div>
+            <div class="sound-bar"></div><div class="sound-bar"></div>
+        </div>
+        <span class="sound-label">SFX</span>
+    </button>
+    <audio id="ambient-audio" src="/Assets/KIASA%20Audio.mp3" loop preload="none"></audio>
+    <div id="wt-page-wipe"></div>
+    <div id="wt-cursor-glow"></div>
+    <div id="wt-cursor-dot"></div>
+    <div id="wt-cursor-ring"></div>
+
+    <!-- Package builder. Placed ABOVE the WhatsApp button because it is the cheaper first step for a
+         visitor who is not ready to talk yet; WhatsApp stays the lower, warmer option. /estimate hides
+         all three floats in its own stylesheet — they would sit on top of its progress bar. -->
+    <a id="wt-calc-float" href="/estimate" class="interactable" aria-label="Build your package and see the price">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="2.5" width="16" height="19" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M8 7h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18.5h.01M12 18.5h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="wt-calc-label">Build a package</span>
+    </a>
+
+    <a id="wa-float" href="https://wa.me/971509027130" target="_blank" rel="noopener" class="interactable" aria-label="Chat with us on WhatsApp">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.05 4.91A9.82 9.82 0 0 0 12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.91-7.01zM12.04 20.15h-.01a8.23 8.23 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.24 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.83-.2-.48-.4-.41-.56-.42h-.47c-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.16 1.74 2.66 4.21 3.73.59.25 1.05.41 1.41.52.59.19 1.13.16 1.55.1.47-.07 1.47-.6 1.68-1.18.21-.59.21-1.09.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg>
+    </a>
+
+    

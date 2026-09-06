@@ -1,0 +1,189 @@
+
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W8BKMGHG"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="grain"></div>
+<nav>
+    <a href="/" class="logo">KIASA</a>
+    <button class="hamburger" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu">
+    <button class="mobile-close" id="mobileClose" aria-label="Close menu">&times;</button>
+    <div class="mobile-menu-brand">KIASA</div>
+    <div class="mobile-menu-links">
+        <a href="/" class="m-link">Home</a>
+        <a href="/about" class="m-link">About</a>
+        <a href="/gallery" class="m-link">Infinite Gallery</a>
+        <a href="/case-studies" class="m-link">Case Studies</a>
+        <a href="/blog" class="m-link active">Blog</a>
+        <a href="/pricing" class="m-link">Services</a>
+        <a href="/contact" class="m-link">Contact</a>
+    </div>
+    <div class="mobile-menu-footer">
+        <div class="mobile-menu-socials">
+            <a href="https://www.instagram.com/webtactics/" target="_blank">Instagram</a>
+            <a href="https://www.linkedin.com/company/79060249/" target="_blank">LinkedIn</a>
+        </div>
+        <a href="https://wa.me/971509027130" target="_blank" class="mobile-menu-whatsapp">WhatsApp Us</a>
+    </div>
+</div>
+
+<div class="post-hero">
+    <div class="breadcrumb"><a href="/">Home</a> &mdash; <a href="/blog">Blog</a> &mdash; Article</div>
+    <div class="post-meta">
+        <span>UI/UX</span>
+        <span>Aug 2026</span>
+        <span>9 Min Read</span>
+    </div>
+    <h1 class="fade-up">Arabic-First, Not Arabic-Added: Building RTL Websites That Do Not Break</h1>
+</div>
+
+<div class="post-banner">
+    <img class="post-banner-bg" src="/Assets/blog/arabic-rtl-website-design-banner.webp" alt="Arabic-First, Not Arabic-Added: Building RTL Websites That Do Not Break" loading="eager">
+</div>
+
+<article class="post-content">
+    <a href="/blog" class="back-link">&larr; Back to Blog</a>
+    <p class="lead">Most Arabic versions of GCC business websites are the English site with the text replaced and the whole layout mirrored by a plugin. They usually look acceptable on the homepage and fall apart somewhere on page three — a form that reads backwards, a phone number rendered right to left, a heading whose letters have come unjoined. None of that is unavoidable. It comes from treating Arabic as a translation task rather than a layout one.</p>
+
+<h2>Direction belongs in the markup, not the stylesheet</h2>
+
+<p>The single most common structural mistake is setting text direction in CSS. <a href="https://www.w3.org/International/questions/qa-html-dir" target="_blank" rel="noopener">W3C's guidance is explicit</a>: add <strong><code>dir="rtl"</code> to the <code>html</code> tag</strong> whenever the document's overall direction is right-to-left, and do <em>not</em> use CSS to apply base direction.</p>
+
+<p>The reason is practical rather than doctrinal. Direction is information about the content, not a presentation choice. Set it in markup and paragraph alignment, table column order and form field behaviour all follow automatically. Set it in CSS and it disappears the moment styles fail to load, are overridden, or the content is syndicated somewhere else.</p>
+
+<p>Below the <code>html</code> element you should rarely need <code>dir</code> at all — it cascades. W3C's advice is to use it on structural elements only on the rare occasions the base direction genuinely changes, such as an English quotation inside an Arabic article.</p>
+
+<p>For anything user-generated — reviews, comments, search fields, a name input — <strong><code>dir="auto"</code></strong> is the right tool. The browser looks at the first strongly-typed character and sets the direction from it. A single Arabic form field with <code>dir="auto"</code> handles both languages correctly without you knowing in advance which one someone will type.</p>
+
+<h2>Stop writing left and right</h2>
+
+<p>The highest-leverage change in the entire stylesheet is switching from physical directions to logical ones. Rather than <code>margin-left</code>, you write <code>margin-inline-start</code>: the start of the line, whichever side that happens to be.</p>
+
+<p>The <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_logical_properties_and_values" target="_blank" rel="noopener">mapping documented by MDN</a> covers essentially everything you use daily:</p>
+
+<ul>
+  <li><code>margin-left</code> / <code>margin-right</code> → <code>margin-inline-start</code> / <code>margin-inline-end</code></li>
+  <li><code>padding-left</code> / <code>padding-right</code> → <code>padding-inline-start</code> / <code>padding-inline-end</code></li>
+  <li><code>border-left</code> / <code>border-right</code> → <code>border-inline-start</code> / <code>border-inline-end</code></li>
+  <li><code>left</code> / <code>right</code> → <code>inset-inline-start</code> / <code>inset-inline-end</code></li>
+  <li><code>width</code> / <code>height</code> → <code>inline-size</code> / <code>block-size</code></li>
+  <li><code>border-top-left-radius</code> → <code>border-start-start-radius</code>, and the rest of the corner set</li>
+</ul>
+
+<p>Do this and one stylesheet serves both languages. The alternative — an RTL override sheet that re-declares every offset in reverse — is where the page-three breakages come from, because someone eventually adds a component and forgets the override.</p>
+
+<p>A useful discipline: treat any remaining <code>left</code> or <code>right</code> in your CSS as something that needs a comment explaining why it is deliberately physical. There are legitimate cases. There are far fewer than most codebases contain.</p>
+
+<h2>What must not flip</h2>
+
+<p>Mirroring is not universal, and over-mirroring looks as wrong as under-mirroring. Things that keep their left-to-right order inside otherwise right-to-left text include:</p>
+
+<ul>
+  <li><strong>Numbers</strong>, including prices and quantities</li>
+  <li><strong>Phone numbers, email addresses and URLs</strong></li>
+  <li><strong>Latin brand names</strong> and product codes</li>
+  <li><strong>Code samples</strong></li>
+  <li><strong>Media playback controls</strong>, where the progress bar follows the medium, not the language</li>
+</ul>
+
+<p>Mixing directions in one line is where bidirectional text gets genuinely difficult — a price inside an Arabic sentence, or an English product name in an Arabic heading. The rendering is governed by the Unicode bidirectional algorithm, and the practical consequence is that <strong>you cannot verify this by reading the code</strong>. It has to be checked visually, with real content, by someone who reads Arabic. Testing with placeholder text will not surface it.</p>
+
+<h2>Typography is where it looks amateur or does not</h2>
+
+<p>Arabic is cursive: letters join. That single fact invalidates a habit carried over from Latin type scales.</p>
+
+<p><strong>Do not apply letter-spacing to Arabic text.</strong> W3C's <a href="https://www.w3.org/TR/alreq/" target="_blank" rel="noopener">Text Layout Requirements for the Arabic Script</a> is direct about this: "moving two joined characters closer to or further from each other creates undesirable results." Tracking that gives an English heading a considered, editorial feel will pull Arabic letterforms apart at their joins. It is one of the fastest ways to make a premium brand look careless in its home market.</p>
+
+<p>The same document notes that "Arabic ascenders and descenders extend much further than those of the Latin script, and care must be taken to correctly align text in the different scripts when they appear together." In practice that means vertical spacing tuned for Latin will usually feel cramped in Arabic — but it does not prescribe a multiplier, and we are not going to invent one. Set it against real Arabic text at real sizes and look at it.</p>
+
+<p>Justification is also a richer problem than in Latin. Arabic has six mechanisms available, including kashida — the elongation of the joining stroke between letters — and they are commonly used together. Browsers handle this unevenly, which is a reason to be conservative with justified Arabic body text on the web.</p>
+
+<h2>The parts nobody budgets for</h2>
+
+<p>The layout work is the visible half. The half that overruns:</p>
+
+<ul>
+  <li><strong>Text length changes.</strong> Arabic translations are often a different length from the English. Fixed-height cards and single-line buttons designed around English copy will break, and they break in the language you are least likely to be proofreading</li>
+  <li><strong>Fonts.</strong> Many display faces chosen for a Latin brand have no Arabic coverage at all, or a weak companion. This is a brand decision, not a technical one, and it is best made at identity stage rather than discovered at build stage</li>
+  <li><strong>Icons with direction.</strong> Arrows, back buttons, progress indicators and anything implying "forward" need mirroring. Search, settings and play buttons do not</li>
+  <li><strong>Editing and maintenance.</strong> Whoever updates the site needs to be able to work in Arabic. A CMS that mangles direction in its editor guarantees the site drifts out of sync</li>
+</ul>
+
+<h2>Deciding whether you need it at all</h2>
+
+<p>An Arabic version is not automatically the right call. A poorly maintained one — stale content, machine translation, broken layout — signals less care than having no Arabic version at all, and in a market where your competitors are judged on exactly that kind of detail, it is a real cost.</p>
+
+<p>The question worth asking is not "should we have Arabic" but "who is going to keep it current". If there is a clear answer, build it properly and design it in from the start. If there is not, an English site done well beats two sites done half-way.</p>
+
+<p>Where an Arabic-first build genuinely pays is when the brand is being defined at the same time — the typeface, the tone and the layout system get chosen once, for both languages, instead of one being retrofitted around the other. That is a <a href="/service?s=brand-identity">brand identity</a> conversation as much as a <a href="/service?s=custom-websites">build</a> one, and it is much cheaper before anything is designed than after. Our piece on <a href="/blog-post?slug=premium-brand-identity">building a premium brand identity</a> covers the identity side; if you are weighing up a bilingual build, <a href="/start">tell us about the project</a>.</p></article>
+
+<section class="post-cta fade-up">
+    <span class="kicker">Work With Us</span>
+    <h2>Ready to Elevate<br>Your Brand?</h2>
+    <a href="/contact" class="cta-btn">Let's Talk &rarr;</a>
+</section>
+
+<footer>
+    <div class="footer-wm">KIASA</div>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <div class="footer-brand-name">KIASA</div>
+            <p class="footer-brand-desc">A global digital studio — elevating brands through immersive web development, 3D experiences, AI automation, and relentless conversion strategy.</p>
+            <a href="https://wa.me/971509027130" target="_blank" class="footer-whatsapp">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                WhatsApp Us
+            </a>
+        </div>
+        <div class="footer-col">
+            <h4>Pages</h4>
+            <a href="/">Home</a>
+            <a href="/about">About Us</a>
+            <a href="/case-studies">Case Studies</a>
+            <a href="/blog">Blog</a>
+            <a href="/pricing">Pricing</a>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <a href="/#capabilities">Immersive Web</a>
+            <a href="/#capabilities">AI Automations</a>
+            <a href="/#capabilities">Marketing</a>
+            <a href="/#capabilities">UI/UX Design</a>
+        </div>
+        <div class="footer-col">
+            <h4>Connect</h4>
+            <a href="https://www.instagram.com/webtactics/" target="_blank">Instagram</a>
+            <a href="https://www.linkedin.com/company/79060249/" target="_blank">LinkedIn</a>
+            <a href="https://www.youtube.com/@Webtacticsorg" target="_blank">YouTube</a>
+            <a href="mailto:info@kiasa.tech">Email</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <div class="footer-copy">© 2026 KIASA. All Rights Reserved.</div>
+        <a href="#" class="footer-top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">
+            <span>Back to Top</span>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 14V4M9 4L4 9M9 4L14 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="footer-bottom-links">
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Use</a>
+        </div>
+    </div>
+</footer>
+
+
+
+<!-- ===== KIASA Shared: Audio + Page Transition ===== -->
+
+<!-- Package builder float, replicated by hand: standalone page, no partials. -->
+<a id="wt-calc-float" href="/estimate" class="interactable" aria-label="Build your package and see the price"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="2.5" width="16" height="19" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M8 7h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18.5h.01M12 18.5h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span class="wt-calc-label">Build a package</span></a>
+
+<button id="sound-toggle" class="muted" aria-label="Toggle ambient sound">
+    <div class="sound-bars"><div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div></div>
+    <span class="sound-label">SFX</span>
+</button>
+<audio id="ambient-audio" src="/Assets/KIASA%20Audio.mp3" loop preload="auto"></audio>
+<div id="wt-page-wipe"></div>
+

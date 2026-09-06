@@ -1,0 +1,8 @@
+/*
+ * Global layer for the rebuilt app.
+ *
+ * Per-page styles are NOT here: each extracted page links its own
+ * /generated/<key>/page.css so the original cascade order is preserved exactly.
+ * Shared chrome still comes from /Assets/site.css, exactly as it did before.
+ * Put genuinely new, hand-written global rules here as pages get converted.
+ */

@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+.env*.local
+.DS_Store
+
+# Verification artefacts
+verify-shots/
+.verify-profile/
+
+# Archived copy of the pre-rebrand original. Kept locally as the extraction
+# source (npm run extract reads it); deliberately not published.
+/legacy/

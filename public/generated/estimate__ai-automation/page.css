@@ -1,0 +1,940 @@
+
+        /* ══ /estimate — full-screen, centred, one thing per screen ══════════════════════════════
+           Built from the tokens already in use. The structural rule: NOTHING SCROLLS. Each step is a
+           fixed full-viewport panel with its content centred, and every step is designed to fit —
+           which is also why each question asks for one thing only. */
+
+        html, body { overflow: hidden; height: 100%; }
+
+        /* LOAD-BEARING, same rule as `.wt-cc [hidden]` in Assets/site.css and for the same reason:
+           `el.hidden = true` works only through the UA stylesheet's `[hidden]{display:none}`, which
+           ANY author `display` declaration outranks. Rows below are flex and grid, so without this,
+           hiding one would set the attribute and change nothing on screen. That bug shipped twice on
+           the phone selector in a single day. */
+        .wt-flow [hidden] { display: none !important; }
+
+        /* Brand black, stated explicitly. --bg is already #020204, but .wt-flow is position:fixed
+           over the page, so without its own ground it borrows whatever is behind it. */
+        /* THE FONT. Assets/site.css never sets a family on `body`, and nothing in this page's tree did
+           either, so every rule here that set a size without also setting a family inherited the
+           browser's default — Times New Roman. That was eight live classes rendering in serif on a
+           page built in Rajdhani: .wt-sub (the help text under every single question), .wt-fine,
+           .wt-recap, .wt-err, .wt-chip-d, .wt-path-d, .wt-fig-n and .wt-res-n small. It read as
+           cramped and wrong because a serif at this size sets looser and wider than the sans it sat
+           beside, so the help text ran to five lines and pushed the options into the fold.
+           Declared once on the container: anything inside that does not override it is now correct by
+           default, which is the opposite of the situation above. */
+        .wt-flow { position: fixed; inset: 0; z-index: 1; background: var(--bg);
+                   font-family: var(--font-body);
+            /* THE READING COLOURS, in one place. Every explanatory line in this flow used a
+               different one - --text-muted (#8892b0, 6.70:1), white at 0.44 (4.27:1), at 0.40
+               (3.68:1), at 0.52. The two lowest are below AA for body text at the size they were
+               set in, and the site's muted blue-grey passes on paper while reading dim: it is
+               desaturated, and it sat at 14px on near-black.
+               Declared on the flow rather than in Assets/site.css because the marketing pages set
+               their own tone and are not part of this. */
+            --wt-read: rgba(255,255,255,0.80);     /* 12.8:1 - the explainer under every question */
+            --wt-read-2: rgba(255,255,255,0.70);   /* 10.0:1 - descriptions on a card */
+            --wt-read-3: rgba(255,255,255,0.58);   /*  6.9:1 - hints, footnotes, the quiet line */
+        }
+        /* The ambient glow was 0.16 violet across 70%x60% of the viewport, which read as a grey wash
+           behind every question rather than as atmosphere. Cut to roughly a fifth and moved into the
+           top corner: a hint of depth at the edge, nothing lifting the area under the text. */
+        .wt-flow::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+            background: radial-gradient(ellipse 46% 40% at 88% 6%, rgba(139,92,246,0.035) 0%, rgba(99,102,241,0.014) 42%, transparent 70%); }
+
+        /* display:none when inactive — NOT visibility:hidden. That keeps offsetParent a valid "is
+           this painted?" probe for everything inside, which is the test this codebase relies on. */
+        .wt-step { display: none; }
+        /* THE ESCAPE HATCH IS NOW UNCONDITIONAL, and `safe` is what makes that free.
+           "Nothing scrolls" was the structural rule and `overflow: hidden` enforced it, with an
+           `auto` override only for narrow or short viewports. Two questions can now share a screen,
+           and measured at 1440x900 the SEO screen overflowed by 420px and the backend screen by
+           501px with hidden still in force: the last option of the second question was clipped and
+           there was no way to reach it. At 1920x1080 the backend screen still overflowed by 449px.
+           `place-items: safe center` keeps the centred composition while the step fits and falls
+           back to start alignment the moment it does not — without it, a centred grid overflows
+           equally at BOTH ends and the top can never be scrolled to, which is a worse bug than the
+           one being fixed. When everything fits there is nothing to scroll and nothing changes. */
+        .wt-step.is-active { display: grid; place-items: safe center; position: absolute; inset: 0;
+            /* Clears the fixed nav above and the progress bar below. */
+            padding: max(13vh, 6.5rem) 5vw max(12vh, 6rem);
+            overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+            animation: wtStepIn 0.5s var(--ease-out) both; }
+        @keyframes wtStepIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+        /* THE FLASH. Every selection re-renders the step, because a click can reveal options, block
+           others or drop an answer the engine has pruned — so patching one card in place would be
+           wrong. Rebuilding the markup is cheap; replaying a 0.5s fade-and-rise on it is what the
+           visitor sees as the screen flashing on every single click. This class is applied whenever
+           the render is a same-step update, so the entrance animation plays on arrival at a question
+           and never again while answering it. */
+        .wt-step.wt-step--still { animation: none; }
+
+        /* Everything is centred. */
+        .wt-in { text-align: center; width: 100%; max-width: 820px; margin: 0 auto; }
+        .wt-in--wide { max-width: 1040px; }
+
+        /* Vertical rhythm. Every gap below is a step up on the previous pass, which packed the step
+           number, question, options, note and CTA close enough that the whole thing read as one
+           block. The clamps take the extra room from the space a desktop viewport has spare and give
+           it back on a short one, so nothing starts scrolling. */
+        .wt-num { font-family: var(--font-num); font-size: 0.78rem; font-weight: 700;
+            letter-spacing: 0.22em; color: var(--accent); display: block;
+            margin-bottom: clamp(1.1rem, 2.4vh, 1.9rem); }
+        /* Down from a 3.2rem ceiling, then from 2.45rem on 23 Aug. Syncopate is an extremely wide
+           uppercase face and these are full sentences, not labels: at 2.45rem a question owned the
+           top third of the screen and shouted at a visitor trying to read the options underneath it.
+           The hierarchy that was asked for and now applies: the question is the SHORT one, the line
+           under it does the explaining, and the explaining is legible. */
+        .wt-q { font-family: var(--font-head); font-weight: 700; text-transform: uppercase;
+            letter-spacing: -0.015em; line-height: 1.12; color: #fff;
+            font-size: clamp(1.4rem, 1.75vw, 1.85rem); }
+        .wt-q em { font-family: var(--font-head); font-style: italic; color: var(--accent); text-transform: none; }
+        /* Wider measure, tighter leading, and real space beneath. The help text was set at 52ch with
+           1.65 leading, which turned three sentences into five lines that ended a few pixels above
+           the first option — the collision in the screenshots. */
+        .wt-sub { font-size: clamp(0.95rem, 1.1vw, 1.05rem); line-height: 1.6;
+            color: var(--wt-read); margin: clamp(0.7rem, 1.3vh, 1rem) auto 0; max-width: 62ch; }
+        /* The Enter hint shared the muted blue-grey with body copy, which made it read as disabled.
+           White at 46% keeps it clearly secondary without looking switched off. */
+        /* "Optional — skip if you don't need it", directly under the question. Deliberately quiet:
+           it is permission, not an instruction, and a loud badge on 49 of 87 screens would become
+           wallpaper. Accent-tinted rather than grey so it reads as information about the question
+           rather than as another line of body copy. */
+        .wt-opt-flag { display: inline-block; margin-top: 0.55rem;
+            font-family: var(--font-body); font-size: 0.7rem; font-weight: 700;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--accent); background: rgba(216,180,254,0.10);
+            border: 1px solid rgba(216,180,254,0.22); border-radius: 100px;
+            padding: 0.24rem 0.7rem; }
+        .wt-addon-q + .wt-opt-flag { margin-top: 0.45rem; }
+        @media (max-width: 560px) {
+            .wt-opt-flag { font-size: 0.64rem; padding: 0.2rem 0.6rem; letter-spacing: 0.06em; }
+        }
+
+        .wt-kbd { display: block; font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+            letter-spacing: 0.1em; color: rgba(255,255,255,0.46);
+            margin-top: clamp(1rem, 1.8vh, 1.4rem); }
+        .wt-kbd b { color: #fff; font-weight: 700; }
+
+        /* The heading is focused on a step change so a screen reader announces the question.
+           Assets/site.css:233 (`*:focus-visible`) would then draw a 2px accent box around the
+           headline, which reads as a design element. Suppressed here only — a heading with
+           tabindex="-1" cannot be tabbed to, so nothing keyboard-reachable loses its indicator.
+           (0,3,0) beats the `*` rule's (0,1,0). */
+        .wt-flow .wt-q:focus, .wt-flow .wt-q:focus-visible { outline: none; }
+
+        /* ── One field, centred ── */
+        .wt-one { max-width: 560px; margin: 2.2rem auto 0; }
+        /* Denylist, not an allowlist: the same rule elsewhere on this site was an allowlist of types
+           and shipped visibly broken twice — first for type=tel, then type=url. */
+        .wt-one input:not([type=checkbox]):not([type=hidden]):not(.wt-cc-search) {
+            width: 100%; background: transparent; border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.22); border-radius: 0;
+            padding: 0.6rem 0.2rem; color: #fff; text-align: center;
+            font-family: var(--font-body); font-size: clamp(1.2rem, 2.6vw, 1.7rem);
+            transition: border-color 0.3s; }
+        .wt-one input::placeholder { color: rgba(255,255,255,0.24); }
+        /* The :not() chain is REPEATED, and it is load-bearing. Each :not() adds its argument's
+           specificity, so the rule above is (0,4,1); a plain `.wt-one input:focus` is (0,2,1) and
+           LOSES — measured: a focused field kept rgba(255,255,255,0.22) and showed no indicator at
+           all. Matching the chain makes this (0,5,1). */
+        .wt-one input:not([type=checkbox]):not([type=hidden]):not(.wt-cc-search):focus {
+            outline: none; border-bottom-color: var(--accent); }
+        /* The country selector renders a trigger + the input side by side; centre the pair. */
+        .wt-one .qform-phone { display: flex; gap: 0.6rem; align-items: flex-end; justify-content: center; }
+        .wt-one .qform-phone input[type=tel] { flex: 0 1 320px; min-width: 0; }
+
+        .wt-err { display: none; margin: 1.2rem auto 0; max-width: 480px; padding: 0.7rem 1rem;
+            border-radius: 10px; background: rgba(239,68,68,0.09);
+            border: 1px solid rgba(239,68,68,0.4); color: #fca5a5;
+            font-size: 0.86rem; font-weight: 600; line-height: 1.45; }
+
+        /* ── Buttons ── */
+        .wt-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.65rem;
+            background: #fff; color: #000; border: none; border-radius: 100px; padding: 0.95rem 2.1rem;
+            font-family: var(--font-body); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.15em;
+            text-transform: uppercase; cursor: pointer; text-decoration: none;
+            transition: transform 0.3s, box-shadow 0.3s, opacity 0.25s; }
+        .wt-btn:hover { transform: scale(1.03); box-shadow: 0 10px 40px rgba(168,85,247,0.3); }
+        .wt-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+        /* Disabled, not absent: a button that appears on selection moves the page under the pointer
+           at the moment of the click. aria-disabled so it is announced, not merely dimmed. */
+        .wt-btn[disabled] { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+        .wt-btn--ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+        .wt-btn--ghost:hover { border-color: var(--accent); background: rgba(216,180,254,0.06); }
+        .wt-btn--sm { padding: 0.7rem 1.5rem; font-size: 0.72rem; }
+        .wt-btn .arw { transition: transform 0.3s var(--ease-out); }
+        .wt-btn:hover .arw { transform: translateX(4px); }
+        .wt-acts { margin-top: clamp(1.4rem, 3vh, 2.4rem);
+            display: flex; gap: 0.8rem; justify-content: center; align-items: center;
+            flex-wrap: wrap; margin-top: 2rem; }
+
+        /* ── Service grid: 8 tiles, two rows, no scrolling ── */
+        .wt-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.8rem; margin-top: 2rem; }
+        .wt-tile { position: relative; }
+        .wt-tile input { position: absolute; opacity: 0; pointer-events: none; }
+        .wt-tile > span { display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 0.45rem; height: 100%; min-height: 108px; cursor: pointer; text-align: center;
+            border: 1px solid rgba(255,255,255,0.13); border-radius: 16px; padding: 1rem 0.8rem;
+            transition: border-color 0.25s, background 0.25s, translate 0.25s var(--ease-out); }
+        .wt-tile > span:hover { border-color: var(--accent-dim); background: rgba(216,180,254,0.05); translate: 0 -3px; }
+        .wt-tile input:checked + span { border-color: var(--accent); background: rgba(216,180,254,0.10); }
+        .wt-tile input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 3px; }
+        .wt-tile-k { font-family: var(--font-num); font-size: 0.62rem; font-weight: 700;
+            letter-spacing: 0.1em; color: var(--text-muted); }
+        .wt-tile input:checked + span .wt-tile-k { color: var(--accent); }
+        .wt-tile-n { font-family: var(--font-head); font-size: 0.82rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.01em; color: #fff; line-height: 1.25; }
+
+        /* ── Scope chips ── */
+        .wt-block + .wt-block { margin-top: 1.5rem; }
+        .wt-block-h { font-family: var(--font-body); font-size: 0.64rem; font-weight: 700;
+            letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.8rem; }
+        .wt-chips { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; }
+        .wt-chip { position: relative; }
+        .wt-chip input { position: absolute; opacity: 0; pointer-events: none; }
+        .wt-chip > span { display: block; cursor: pointer; text-align: center;
+            border: 1px solid rgba(255,255,255,0.13); border-radius: 14px; padding: 0.7rem 1.05rem;
+            transition: border-color 0.25s, background 0.25s; }
+        .wt-chip > span:hover { border-color: var(--accent-dim); background: rgba(216,180,254,0.05); }
+        .wt-chip input:checked + span { border-color: var(--accent); background: rgba(216,180,254,0.10); }
+        .wt-chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 3px; }
+        .wt-chip-n { display: block; font-family: var(--font-body); font-size: 0.9rem; font-weight: 700; color: #fff; }
+        .wt-chip-d { display: block; font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; line-height: 1.35; }
+        .wt-chip-p { display: block; font-family: var(--font-num); font-size: 0.72rem; font-weight: 700;
+            color: var(--accent); margin-top: 0.3rem; }
+        .wt-chip-p.is-quoted { font-family: var(--font-body); font-size: 0.62rem; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--text-muted); }
+        /* Compact variant for step 7. The optional parts carry no description line, and the price
+           sits beside the name rather than under it — measured: with descriptions the step needed
+           1360px inside an 844px phone viewport, which is precisely the scrolling this flow forbids. */
+        .wt-chip--tight > span { display: flex; align-items: baseline; gap: 0.55rem;
+            padding: 0.6rem 0.95rem; }
+        .wt-chip--tight .wt-chip-n { font-size: 0.84rem; }
+        .wt-chip--tight .wt-chip-p { margin-top: 0; font-size: 0.7rem; }
+
+        /* ── The number ── */
+        .wt-fig-wrap { margin-top: 2rem; }
+        .wt-fig-l { font-family: var(--font-body); font-size: 0.62rem; font-weight: 700;
+            letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); }
+        .wt-fig { font-family: var(--font-num); font-weight: 700; color: #fff;
+            font-size: clamp(2rem, 5.2vw, 3.4rem); line-height: 1.05; margin-top: 0.5rem;
+            font-variant-numeric: tabular-nums; }
+        /* The number MOVES when it changes — the point of a builder. The class is removed and
+           re-added by script so a repeat change re-triggers it. */
+        .wt-fig.bump { animation: wtBump 0.4s var(--ease-out); }
+        @keyframes wtBump { 0% { transform: none; } 35% { transform: scale(1.05); color: var(--accent); } 100% { transform: none; } }
+        .wt-fig-u { font-family: var(--font-num); font-size: 0.82rem; font-weight: 600;
+            color: var(--text-muted); margin-top: 0.35rem; font-variant-numeric: tabular-nums; }
+        .wt-fig-n { font-size: 0.74rem; line-height: 1.5; color: var(--text-muted);
+            margin: 0.7rem auto 0; max-width: 46ch; }
+
+        /* Provisional-pricing badge. Shown whenever $WT_SCOPE_APPROVED is false, so component
+           figures can never be mistaken for signed-off prices. */
+        .wt-prov { display: inline-block; font-family: var(--font-body); font-size: 0.6rem;
+            font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+            color: #fde68a; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.45);
+            border-radius: 100px; padding: 0.25rem 0.8rem; margin-top: 0.9rem; }
+
+        /* ── Proceed ── */
+        .wt-paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1.8rem; }
+        .wt-path { border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 1.4rem 1.3rem;
+            display: flex; flex-direction: column; text-align: center;
+            transition: border-color 0.3s, background 0.3s, translate 0.3s var(--ease-out); }
+        .wt-path:hover { border-color: var(--accent-dim); background: rgba(216,180,254,0.03); translate: 0 -3px; }
+        .wt-path--pay { border-color: var(--accent); background: rgba(216,180,254,0.06); }
+        .wt-path-h { font-family: var(--font-head); font-size: 0.92rem; font-weight: 700;
+            text-transform: uppercase; color: #fff; }
+        .wt-path-fig { font-family: var(--font-num); font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+            font-weight: 700; color: var(--accent); margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
+        .wt-path-was { font-family: var(--font-num); font-size: 0.78rem; color: var(--text-muted);
+            text-decoration: line-through; margin-top: 0.15rem; }
+        .wt-path-d { font-size: 0.78rem; line-height: 1.5; color: var(--text-muted); margin-top: 0.6rem; flex: 1; }
+        .wt-path .wt-btn { margin-top: 1.1rem; width: 100%; }
+        .wt-save { display: inline-block; font-family: var(--font-body); font-size: 0.58rem; font-weight: 700;
+            letter-spacing: 0.12em; text-transform: uppercase; color: #000; background: var(--accent);
+            border-radius: 100px; padding: 0.15rem 0.6rem; margin-left: 0.4rem; vertical-align: middle; }
+        /* The scope, on one line. A list here would reintroduce scrolling. */
+        .wt-recap { font-size: 0.8rem; line-height: 1.6; color: rgba(255,255,255,0.72);
+            margin: 1.2rem auto 0; max-width: 62ch; }
+        .wt-recap b { color: #fff; font-weight: 700; }
+        /* THE WIDGET HAS TO BE ON TOP OF THE FLOW, NOT UNDER IT.
+           #wt-turnstile is a sibling of .wt-flow and carries no position of its own, so it painted
+           in the block layer BENEATH `.wt-flow { position: fixed; inset: 0; z-index: 1 }` — which is
+           opaque — on a page where `html, body { overflow: hidden }` makes it unscrollable. When
+           Cloudflare passes silently it still writes its hidden response field and everything works,
+           which is exactly why this survived: the failure only appears for the subset escalated to
+           an INTERACTIVE challenge (VPNs, shared IPs, privacy browsers, anyone retrying). Those
+           visitors were told "Please try the check again" with no check anywhere on screen, and
+           send()'s catch called turnstile.reset(), re-arming the same invisible challenge. There was
+           no way through: no token, no lead.
+
+           Fixed above the flow and above the progress bar (z-index 40) and the toolbar (60). It is
+           only shown on the result step — the only screen that submits — because a challenge box
+           floating over question 7 would be worse than the bug. */
+        .cf-turnstile {
+            position: fixed; left: 50%; transform: translateX(-50%);
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 5.5rem);
+            z-index: 61; display: none; justify-content: center;
+            padding: 0.5rem; border-radius: 12px;
+            background: rgba(2,2,4,0.92);
+            -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+            border: 1px solid rgba(216,180,254,0.28);
+        }
+        body.wt-on-result .cf-turnstile { display: flex; }
+        /* AND THE STEP HAS TO END ABOVE IT. The widget is a fixed panel 87px tall sitting 88px off
+           the bottom edge. Measured at 390x844 the moment Pass C's scope list grew: the send button
+           landed at y661 and the widget's top edge at y681, so elementFromPoint on the button
+           returned the widget — painted, enabled, correct in every source check, and not clickable.
+           The same failure Pass A found under the flow layer, one layer up.
+
+           The fix is a BAND, not a cushion. Bottom padding was tried first and is not enough: the
+           step is a scroll container, so padding only clears the button once the visitor has already
+           scrolled to the end. Ending the step's BOX above the widget means no scroll position can
+           put content underneath it.
+
+           Outside any media query, because the widget is fixed on every viewport — but see the
+           short-viewport override below, where 13.5rem is most of the screen. */
+        body.wt-on-result .wt-step.is-active {
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 13.5rem);
+            padding-bottom: 1rem;
+        }
+        /* while the keyboard is up the widget is hidden, so the band would be a hole */
+        body.wt-kb.wt-on-result .wt-step.is-active {
+            bottom: 0; padding-bottom: 1.5rem;
+        }
+        /* A LANDSCAPE PHONE CANNOT AFFORD 13.5rem. Measured at 740x360 with a scope on screen: the
+           site nav is fixed at z-index 1000 over a z-index 1 flow and takes the top 88px, the band
+           takes 216px off the bottom, and the result step is left with a 144px strip holding 590px
+           of content. Scrolled to the end, the send button's centre landed on the NAV — clear of the
+           widget and under the header instead, which is the same bug wearing a different hat.
+           Two changes, because one alone does not do it: the widget moves down to the strip it
+           actually needs (the progress bar is 44px, so 3.2rem clears it), which lets the band shrink
+           to 9rem; and the step's box now STARTS below the nav, so scrolled content cannot pass
+           under the one fixed element that outranks the whole flow. */
+        @media (max-height: 620px) {
+            body.wt-on-result .cf-turnstile {
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 3.2rem);
+            }
+            body.wt-on-result .wt-step.is-active {
+                top: 5.5rem;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 9rem);
+                padding-top: 0.75rem;
+            }
+        }
+        /* While the keyboard is up nothing is being submitted, and the widget would sit on the
+           field. Same rule as the price pill and the progress bar. */
+        body.wt-kb .cf-turnstile { display: none; }
+        @media (max-width: 560px) {
+            .cf-turnstile { bottom: calc(env(safe-area-inset-bottom, 0px) + 4.75rem); }
+        }
+        /* Was 0.7rem in the muted blue-grey, which read as disabled rather than secondary. */
+        .wt-fine { font-size: 0.8rem; line-height: 1.6; color: var(--wt-read-3);
+            margin: clamp(1rem, 1.8vh, 1.5rem) auto 0; max-width: 60ch; }
+        .wt-fine a { color: var(--accent); }
+
+        /* ── Done ── */
+        .wt-check { width: 56px; height: 56px; margin: 0 auto 1.4rem; border-radius: 50%;
+            border: 1px solid var(--accent); display: grid; place-items: center; color: var(--accent);
+            background: rgba(216,180,254,0.08); }
+
+        /* ── Progress bar, bottom right ── */
+        /* PADDING for the safe area, not `bottom:` — the bar is anchored flush to the corner, so
+           offsetting it would open a gap showing the page behind. Padding pushes the buttons above
+           an iPhone's home indicator while the panel still meets the edge. It had none: the nav
+           arrows sat under the gesture bar on every notched device. */
+        .wt-bar { position: fixed; right: 0; bottom: 0; z-index: 40; display: flex; align-items: stretch;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            padding-right: env(safe-area-inset-right, 0px);
+            background: rgba(8,8,14,0.72); backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255,255,255,0.09); border-left: 1px solid rgba(255,255,255,0.09);
+            border-top-left-radius: 12px; overflow: hidden; }
+        .wt-bar-p { display: flex; flex-direction: column; justify-content: center; gap: 0.35rem;
+            padding: 0.55rem 0.95rem; min-width: 140px; }
+        .wt-bar-t { font-family: var(--font-body); font-size: 0.7rem; font-weight: 600;
+            letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+        .wt-bar-track { height: 3px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; }
+        .wt-bar-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 3px;
+            transition: width 0.45s var(--ease-out); }
+        .wt-nav { display: flex; }
+        .wt-nav button { width: 42px; border: none; border-left: 1px solid rgba(255,255,255,0.09);
+            background: transparent; color: #fff; cursor: pointer; display: grid; place-items: center;
+            transition: background 0.25s, color 0.25s, opacity 0.25s; }
+        .wt-nav button:hover:not([disabled]) { background: rgba(216,180,254,0.14); color: var(--accent); }
+        .wt-nav button[disabled] { opacity: 0.25; cursor: not-allowed; }
+        .wt-nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+        /* partials/widgets.php is the ONLY loader of Assets/site.js, so it cannot be dropped — but
+           its two floating buttons sit bottom-right, exactly where the progress bar is. */
+        #wa-float, #sound-toggle, #wt-calc-float { display: none !important; }
+
+        @media (max-width: 900px) {
+            .wt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .wt-tile > span { min-height: 92px; }
+            .wt-paths { grid-template-columns: 1fr; gap: 0.7rem; }
+            .wt-path { padding: 1.1rem 1rem; }
+            .wt-step.is-active { padding: max(12vh, 6rem) max(18px, 5vw) max(13vh, 6.5rem); }
+        }
+        /* Phone: every step still has to FIT, so the vertical rhythm tightens rather than the page
+           gaining a scrollbar. Measured before this block: the proceed step needed 898px in 844. */
+        @media (max-width: 900px) {
+            .wt-q { font-size: clamp(1.25rem, 5.4vw, 1.6rem); }
+            .wt-sub { margin-top: 0.7rem; }
+            .wt-num { margin-bottom: 0.7rem; }
+            .wt-fig-wrap { margin-top: 1.3rem; }
+            .wt-fig { font-size: clamp(1.8rem, 9vw, 2.6rem); }
+            .wt-acts { margin-top: 1.4rem; }
+            .wt-kbd { margin-top: 0.8rem; }
+            .wt-path-d { display: none; }          /* the headline + figure carry it on a phone */
+            /* Step 7's guidance line. Measured at 894px in an 844px viewport with it in place;
+               the chips and their prices already say "optional", so this is the 50px to give up. */
+            #wt-extras-sub { display: none; }
+            .wt-recap { margin-top: 0.9rem; font-size: 0.76rem; }
+            .wt-fine { margin-top: 0.7rem; font-size: 0.66rem; }
+            .cf-turnstile { margin-top: 0.8rem; }
+        }
+        /* TOUCH TARGETS ARE NOT A NARROW-SCREEN CONCERN, which is where this rule used to live —
+           inside `max-width: 420px`, so a 430px iPhone Pro Max and any phone held sideways kept the
+           desktop 42 x 40. Measured at 430x932 and at 740x360 before this: 42 x 40.2 on the two
+           controls every visitor uses on every single step. The height comes from min-height, since
+           the bar is align-items: stretch and previously took its height from the progress panel's
+           padding. Both queries: any phone-width viewport, and any short one, which is a phone
+           in landscape. */
+        @media (max-width: 900px), (max-height: 620px) {
+            .wt-nav button { width: 46px; min-height: 44px; }
+        }
+        @media (max-width: 420px) {
+            .wt-bar-p { min-width: 104px; padding: 0.45rem 0.7rem; }
+            .wt-chips { gap: 0.45rem; }
+            .wt-chip > span { padding: 0.6rem 0.85rem; }
+            .wt-chip-d { display: none; }          /* size notes drop on the narrowest phones */
+        }
+        /* SCROLL WHEN IT DOES NOT FIT — and it does not fit far more often than "every step is
+           designed to fit" assumed.
+
+           This was gated at `max-height: 620px` on the theory that a phone-sized viewport would
+           always hold a whole question. On a real 360x800 phone it does not: a ten-option grid runs
+           past the fold, `overflow: hidden` clips it, and the Next button is simply not reachable —
+           the flow dead-ends with no error and no way forward. Reported from a phone on 20 Aug and
+           reproducible on any question with more than about six options.
+
+           Clipping content the visitor must reach is never the better trade. Any narrow OR short
+           viewport can now scroll the step, starting at the top rather than vertically centred, with
+           enough bottom padding to clear the running-total pill and the progress bar — both fixed,
+           and both previously sitting on top of the last row of options. */
+        @media (max-width: 900px), (max-height: 760px) {
+            .wt-step.is-active {
+                overflow-y: auto; overscroll-behavior: contain; align-content: start;
+                padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 9.5rem);
+                scrollbar-width: thin;
+                scrollbar-color: rgba(216,180,254,0.3) transparent;
+            }
+            .wt-step.is-active::-webkit-scrollbar { width: 5px; }
+            .wt-step.is-active::-webkit-scrollbar-thumb {
+                background: rgba(216,180,254,0.28); border-radius: 100px; }
+        }
+        /* ── WHILE THE KEYBOARD IS OPEN ──────────────────────────────────────────────────────────
+           Set by the visualViewport listener in estimate-flow.js. The keyboard resizes only the
+           visual viewport, so a `position: fixed; inset: 0` step stays full height and centres its
+           content in a box the visitor can see the top half of — with Next behind the keyboard. You
+           could type and then not proceed.
+
+           Bound to the measured visible height instead, so the field and the Next button share the
+           strip that is actually on screen. The two fixed widgets are dropped: the running total and
+           the progress bar both live at the bottom edge, which is precisely where the keyboard is,
+           and neither is needed while someone types their name. Everything tightens so a question, a
+           field and a button fit a ~380px strip without scrolling. */
+        body.wt-kb .wt-flow {
+            top: var(--wt-vvt, 0px); bottom: auto; height: var(--wt-vvh, 100%);
+        }
+        body.wt-kb .wt-step.is-active {
+            padding-top: 1.5rem; padding-bottom: 1.5rem;
+            align-content: center; overflow-y: auto;
+        }
+        body.wt-kb .wt-live { display: none; }
+        /* THE BAR STAYS. Hiding it took the only Back control off the screen the moment the keyboard
+           opened — on the four steps that raise one — so a visitor who mistyped the name two steps
+           back had no way to reach it without dismissing the keyboard first, which is not a thing
+           anyone thinks to do. The running total goes (that is the part which can wait); the
+           navigation does not. It rides the keyboard's top edge rather than hiding under it,
+           which the flow can already express because .wt-flow is bound to the visible viewport. */
+        body.wt-kb .wt-bar {
+            /* 45 = the buttons' 44px floor plus the 1px top border. Pinning `height: 44px` instead
+               measured 43px of button and left the bar one pixel below the strip. */
+            top: calc(var(--wt-vvt, 0px) + var(--wt-vvh, 100%) - 45px);
+            bottom: auto; padding-bottom: 0; height: auto; min-height: 45px;
+        }
+        body.wt-kb .wt-bar-p { display: none; }        /* the percentage is noise while typing */
+        body.wt-kb .wt-nav button { width: 58px; }     /* two controls left — give them the room */
+        body.wt-kb .wt-num { margin-bottom: 0.5rem; }
+        body.wt-kb .wt-q { font-size: clamp(1.15rem, 5.4vw, 1.5rem); }
+        body.wt-kb .wt-sub { margin-top: 0.5rem; font-size: 0.82rem; }
+        body.wt-kb .wt-one { margin-top: 1rem; }
+        body.wt-kb .wt-acts { margin-top: 1rem; }
+        body.wt-kb .wt-kbd { display: none; }   /* "or press Enter" — there is a visible button */
+        body.wt-kb .wt-excl { display: none; }
+
+        @media (prefers-reduced-motion: reduce) {
+            /* Navigation is not motion: steps still change and the figure still updates. */
+            .wt-step.is-active { animation: none; }
+            .wt-fig.bump { animation: none; }
+            .wt-tile > span:hover, .wt-path:hover { translate: none; }
+            .wt-btn:hover, .wt-btn:hover .arw { transform: none; }
+            .wt-bar-fill { transition: none; }
+        }
+    
+
+        /* ══ PASS 2 additions ═════════════════════════════════════════════════════════════════
+           Only what generated rendering needs that hand-written steps did not. Everything above
+           is v1 verbatim, so the page still looks like the page the owner approved.
+
+           The no-scroll rule is unchanged and still the structural constraint: .wt-step fills the
+           viewport and centres one question. What is new is that a GENERATED group can hold 19
+           options (cw.content), which no hand-written step ever had to. Three things absorb that
+           without turning the page into a form:
+             1. option tiles are a responsive auto-fit grid, so they reflow instead of overflowing
+             2. font-size and padding step down as the option count rises (--wt-dense)
+             3. only when even that cannot fit does the tile list get its own inner scroll — the
+                PAGE never scrolls, which is the rule; a bounded list inside a centred card is not
+                the "giant scroll form" that was rejected. */
+
+        .wt-stage { position: absolute; inset: 0; }
+
+        /* Option grid. auto-fit + minmax is what keeps 4 tiles centred and 19 tiles legible
+           without a media query per count. */
+        /* Gaps up from 0.5/0.4rem. Column minimums are untouched, so desktop keeps the same number
+           of columns — the extra air comes from the gap, not from dropping a column. */
+        /* margin-top is the fix for the collision in the screenshots: the help text ended a few
+           pixels above the first card, so the question, its explanation and the options read as one
+           undifferentiated block. Gaps up from 0.7/0.55rem for the same reason. */
+        .wt-opts { display: grid; gap: 0.85rem; width: 100%;
+                   margin-top: clamp(1.5rem, 3.2vh, 2.4rem);
+                   grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); }
+        .wt-opts--dense { grid-template-columns: repeat(auto-fit, minmax(min(168px, 100%), 1fr));
+                          gap: 0.7rem; }
+        .wt-opts--wide  { grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
+        /* The bounded inner scroll of last resort. max-height is in vh so it tracks the viewport,
+           and the fade tells the visitor there is more rather than hiding it. */
+        .wt-opts-wrap { width: 100%; max-height: min(52vh, 430px); overflow-y: auto;
+                        overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+                        scrollbar-width: thin; padding: 2px; margin: -2px; }
+
+        /* THE FADE the comment above promised and the rule never delivered — `::after { content:'' }`
+           was the whole implementation. On a phone there is no scrollbar, so a group of nineteen
+           options looked identical to a group of eight that happened to fit, and everything below
+           the fold was in practice not on the page.
+
+           A mask, not an overlay: the wrap IS the scroller, so an ::after inside it scrolls away
+           with the content and a sibling would have to track its box through every reflow. data-more
+           is set by cueScrollers() in estimate-flow.js and cleared at each end, so the last row is
+           never left permanently dimmed. Height in px, not %, because these boxes range from ~140px
+           to 430px tall and a percentage fade swallows a whole card in the short ones. */
+        .wt-opts-wrap[data-more], .wt-res-list[data-more] { transition: mask-image .18s linear; }
+        .wt-opts-wrap[data-more="bottom"], .wt-res-list[data-more="bottom"] {
+            -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%);
+                    mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%); }
+        .wt-opts-wrap[data-more="top"], .wt-res-list[data-more="top"] {
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 34px);
+                    mask-image: linear-gradient(to bottom, transparent 0, #000 34px); }
+        .wt-opts-wrap[data-more="both"], .wt-res-list[data-more="both"] {
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 34px, #000 calc(100% - 34px), transparent 100%);
+                    mask-image: linear-gradient(to bottom, transparent 0, #000 34px, #000 calc(100% - 34px), transparent 100%); }
+        @media (prefers-reduced-motion: reduce) {
+            .wt-opts-wrap[data-more], .wt-res-list[data-more] { transition: none; }
+        }
+
+        /* One option. A label wrapping a hidden input: the input is the state, the label is the
+           whole hit area, which is why the tap target is the tile and not a 14px circle. */
+        /* Title 0.86rem (~13.8px) -> 1rem (16px), secondary 0.74 -> 0.8rem (~12.8px), both inside
+           the asked-for range. Padding and the label/price gap grow with them so the card scales
+           with its text rather than the text rattling around inside a box sized for smaller type. */
+        /* Centred, not left. Asked for on 20 Aug after driving it on a phone: at two columns on a
+           narrow screen a left rag reads as four ragged edges rather than a grid of choices. */
+        .wt-opt { position: relative; display: flex; flex-direction: column; gap: 0.3rem;
+                  text-align: center; align-items: center;
+                  padding: 0.95rem 1.05rem; border-radius: 13px;
+                  border: 1px solid rgba(255,255,255,0.11); background: rgba(255,255,255,0.025);
+                  cursor: pointer; transition: border-color .18s, background .18s, box-shadow .18s;
+                  min-height: 56px; }
+        .wt-opt:hover { border-color: rgba(255,255,255,0.26); background: rgba(255,255,255,0.05); }
+        .wt-opt:focus-within { border-color: var(--accent); }
+        .wt-opt input { position: absolute; opacity: 0; width: 1px; height: 1px;
+                        pointer-events: none; }
+        /* Selected: three quiet signals rather than one loud fill — full-strength accent border, a
+           5.5% accent surface, and a hairline accent bar down the leading edge done with an inset
+           box-shadow, so there is no extra element and no layout shift. */
+        .wt-opt.is-on { border-color: var(--accent); background: rgba(216,180,254,0.055);
+                        box-shadow: inset 2px 0 0 0 var(--accent); }
+        .wt-opt.is-on .wt-opt-t { color: #fff; }
+        /* The tick sits inline after the label so it reflows with the text instead of being
+           absolutely positioned over a card whose height varies with its description. */
+        .wt-opt-t { display: flex; align-items: baseline; gap: 0.45rem; justify-content: center; }
+        .wt-opt.is-on { box-shadow: inset 0 2px 0 0 var(--accent); }
+
+        /* ── Matrix group: two style cards plus a stepper for how many ────────────────────────
+           cw.sections was ten cards — every combination of style x count. Two decisions asked
+           once each instead. The stepper is the same control as the per-unit quantity, sized up,
+           because the number is the primary thing being set here rather than an afterthought on a
+           card that is already chosen. */
+        .wt-mx { display: flex; flex-direction: column; align-items: center; gap: 0.55rem;
+            margin-top: clamp(1.4rem, 3vh, 2.2rem); }
+        .wt-mx-q { display: block; font-family: var(--font-body); font-size: 0.68rem;
+            font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+            color: rgba(255,255,255,0.42); }
+        .wt-mx-q--2 { margin-top: clamp(1.5rem, 3.2vh, 2.3rem); }
+        .wt-mx-ctl { display: inline-flex; align-items: center; gap: 0.3rem;
+            border: 1px solid rgba(255,255,255,0.14); border-radius: 100px; padding: 0.3rem; }
+        .wt-mx-ctl button { width: 42px; height: 42px; border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04);
+            color: #fff; font-family: var(--font-num); font-size: 1.15rem; line-height: 1;
+            cursor: pointer; transition: background .15s, border-color .15s, opacity .15s; }
+        .wt-mx-ctl button:hover:not(:disabled) { background: rgba(216,180,254,0.16);
+            border-color: var(--accent); }
+        .wt-mx-ctl button:disabled { opacity: 0.28; cursor: default; }
+        .wt-mx-ctl button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .wt-mx-v { min-width: 7.5ch; text-align: center; font-family: var(--font-num);
+            font-size: 1.05rem; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+        .wt-opts--matrix { grid-template-columns: repeat(auto-fit, minmax(min(240px,100%), 1fr));
+            max-width: 620px; margin-left: auto; margin-right: auto; margin-top: 0.85rem; }
+        .wt-opt--matrix { min-height: 92px; justify-content: center; }
+        .wt-opt--matrix .wt-opt-d { display: block; margin-top: 0.15rem; }
+        @media (max-width: 560px) {
+            .wt-mx-ctl button { width: 46px; height: 46px; }
+            .wt-mx-v { font-size: 1rem; }
+        }
+        /* "Also needs Customer logins & saved data — adds $950". Amber, like the removal notice:
+           nothing is wrong, the estimator is doing what it should, and the visitor needs telling
+           before they press rather than after the total moves. */
+        .wt-opt-lift { display: block; margin-top: 0.35rem; font-family: var(--font-body);
+            font-size: 0.72rem; line-height: 1.45; color: #f7d9a0;
+            background: rgba(247,217,160,0.08); border-radius: 8px; padding: 0.3rem 0.5rem; }
+        .wt-opt-lift b { color: #ffe9c2; font-weight: 600; }
+
+        .wt-opt-tick { flex: 0 0 auto; font-size: 0.9em; line-height: 1; color: var(--accent); }
+
+        /* The recommended option. A hairline border lift plus a small badge riding the top edge —
+           enough to draw the eye first in a grid of nineteen, not enough to look pre-selected. The
+           card keeps its own padding-top so the badge never sits on the label, and `is-on` still wins
+           on colour: once the visitor has actually chosen something, THAT is the loud thing on the
+           screen, not our suggestion. */
+        .wt-opt.is-rec { border-color: rgba(216,180,254,0.34); padding-top: 1.35rem; }
+        .wt-opt.is-rec:hover { border-color: rgba(216,180,254,0.55); }
+        .wt-opt.is-rec.is-on { border-color: var(--accent); }
+        .wt-opt-rec { position: absolute; top: -1px; left: 1.05rem;
+            font-family: var(--font-body); font-size: 0.56rem; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase; color: var(--bg);
+            background: var(--accent); padding: 0.16rem 0.42rem;
+            border-radius: 0 0 5px 5px; line-height: 1.25; }
+        @media (max-width: 560px) {
+            .wt-opt.is-rec { padding-top: 1.25rem; }
+            .wt-opt-rec { left: 0.85rem; font-size: 0.52rem; }
+        }
+
+        /* Help text under the question. Wider than .wt-sub's 52ch because these run to two or three
+           sentences and a narrow measure would push the options down. */
+        .wt-in .wt-sub { max-width: 64ch; }
+
+        /* The description of what was just picked, for groups too dense to show all of them. Left
+           aligned and boxed so it reads as a note about the selection rather than more body copy. */
+        .wt-seldesc { margin: 0.85rem auto 0; max-width: 62ch; text-align: left;
+            padding: 0.7rem 0.9rem; border-radius: 11px;
+            border: 1px solid rgba(216,180,254,0.22); background: rgba(216,180,254,0.045); }
+        .wt-seldesc-l { display: block; font-family: var(--font-body); font-size: 0.6rem;
+            font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--accent); opacity: 0.85; margin-bottom: 0.25rem; }
+        .wt-seldesc p { font-family: var(--font-body); font-size: 0.85rem; line-height: 1.55;
+            color: var(--wt-read); margin: 0; }
+        .wt-seldesc p b { color: #fff; font-weight: 600; }
+
+        /* "Tap again to remove" — the smallest thing on the screen that still has to be readable. */
+        .wt-hint { font-family: var(--font-body); font-size: 0.76rem; letter-spacing: 0.02em;
+            color: var(--wt-read-3); margin: 0.7rem 0 0; }
+
+        /* Exclusions. Closed by default; a quiet line that expands rather than a permanent block of
+           caveats, which is what would actually get read on a phone. */
+        /* text-align:center on the wrapper, left on the opened body. <details> is a block box, so
+           the summary pill was sitting hard against the left edge under a centred question while
+           everything else on the step was centred. The paragraph inside still reads left. */
+        .wt-excl { margin: 0.9rem auto 0; max-width: 60ch; text-align: center; }
+        .wt-excl p { text-align: left; }
+        /* min-height 44px: this was a ~26px pill, and it is the control that says what the money
+           does NOT buy — exactly what a careful buyer reaches for on a phone. */
+        .wt-excl summary { min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;
+            list-style: none; font-family: var(--font-body); font-size: 0.74rem; font-weight: 600;
+            letter-spacing: 0.02em; color: rgba(255,255,255,0.5);
+            padding: 0.3rem 0.7rem 0.3rem 0.6rem; border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.12); transition: color .18s, border-color .18s; }
+        .wt-excl summary::-webkit-details-marker { display: none; }
+        .wt-excl summary::before { content: 'i'; flex: 0 0 auto; width: 15px; height: 15px;
+            border-radius: 50%; border: 1px solid currentColor; font-family: var(--font-head);
+            font-size: 0.62rem; font-style: italic; display: grid; place-items: center; }
+        .wt-excl summary:hover { color: rgba(255,255,255,0.8); border-color: rgba(255,255,255,0.28); }
+        .wt-excl[open] summary { color: var(--accent); border-color: var(--accent); }
+        .wt-excl p { font-family: var(--font-body); font-size: 0.76rem; line-height: 1.6;
+            color: rgba(255,255,255,0.5); margin: 0.6rem 0 0; padding-left: 0.15rem; }
+        /* A blocked option stays VISIBLE and says what it needs. Hiding it would leave the visitor
+           wondering where filtering went; showing it enabled and inert would be worse. */
+        .wt-opt.is-blocked { opacity: 0.42; cursor: not-allowed; border-style: dashed; }
+        .wt-opt.is-blocked:hover { border-color: rgba(255,255,255,0.10);
+                                   background: rgba(255,255,255,0.022); }
+        .wt-opt-t { font-family: var(--font-body); font-size: 1rem; font-weight: 500;
+                    color: var(--text-main); line-height: 1.3; }
+        .wt-opt-p { font-family: var(--font-body); font-size: 0.8rem; font-weight: 600;
+                    color: var(--accent); letter-spacing: 0.01em; }
+        .wt-opt-p.is-inc { color: var(--wt-read-3); font-weight: 500; }
+        /* The recurring half of a two-part price. Quieter than the setup figure and on its own line,
+           because it is a different KIND of number — one you pay once against one you pay every
+           month — and running them together as "+$400 · $500/mo" reads as one bigger one-off. */
+        .wt-opt-p2 { font-family: var(--font-body); font-size: 0.74rem; font-weight: 600;
+                     color: rgba(255,255,255,0.62); letter-spacing: 0.01em; }
+        .wt-opt-d { font-family: var(--font-body); font-size: 0.83rem; color: var(--wt-read-2);
+                    line-height: 1.5; }
+        .wt-opts--dense .wt-opt { padding: 0.8rem 0.9rem; min-height: 50px; gap: 0.24rem; }
+        .wt-opts--dense .wt-opt-t { font-size: 0.94rem; }
+        .wt-opts--dense .wt-opt-p { font-size: 0.76rem; }
+        .wt-opts--dense .wt-opt-d { display: none; }   /* descriptions are the first thing to go */
+
+        /* Quantity stepper for per_unit options. Buttons are 34px so they clear the 24px minimum
+           with room, and the field is readonly-by-buttons rather than a free number input, which
+           removes the entire class of "what does 3.5 forms mean" problem. */
+        .wt-qty { display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.35rem; }
+        .wt-qty button { width: 34px; height: 34px; border-radius: 9px; border: 1px solid
+                         rgba(255,255,255,0.16); background: rgba(255,255,255,0.04);
+                         color: var(--text-main); font-size: 1rem; line-height: 1; cursor: pointer; }
+        .wt-qty button:hover { border-color: var(--accent); }
+        .wt-qty output { min-width: 2.1rem; text-align: center; font-family: var(--font-body);
+                         font-size: 0.85rem; font-weight: 600; color: var(--text-main); }
+        .wt-qty-u { font-family: var(--font-body); font-size: 0.7rem; color: rgba(255,255,255,0.46); }
+
+        /* Running total, fixed above the nav bar. Deliberately always visible: the owner's brief
+           was that the price moves as you build, so hiding it until the end defeats the page. */
+        /* Running total. Was floating 4.6rem off the bottom — far from the question above and the
+           progress bar below, so it read as an orphan. Dropped to sit just clear of the bar and
+           given a small accent label so it reads as a live indicator. Deliberately quieter than the
+           CTA: it reports, it does not ask. */
+        .wt-live { position: fixed; left: 50%; transform: translateX(-50%);
+                   bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
+                   display: flex; align-items: baseline; gap: 0.55rem;
+                   padding: 0.5rem 1.05rem 0.5rem 0.9rem;
+                   border-radius: 999px; border: 1px solid rgba(255,255,255,0.13);
+                   background: rgba(8,8,12,0.9); backdrop-filter: blur(12px);
+                   z-index: 60; pointer-events: none; opacity: 0; transition: opacity .25s; }
+        .wt-live.is-on { opacity: 1; }
+        .wt-live::before { content: 'Estimate'; font-family: var(--font-body); font-size: 0.6rem;
+                   font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+                   color: var(--accent); opacity: 0.85; }
+        .wt-live-u { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700;
+                     color: #fff; letter-spacing: -0.01em; }
+        .wt-live-a { font-family: var(--font-body); font-size: 0.7rem; color: rgba(255,255,255,0.48); }
+        .wt-live-m { font-family: var(--font-body); font-size: 0.74rem; color: var(--accent); }
+
+        /* Result screen. The only place the page allows an inner scroll by design, because an
+           itemised scope of 20 lines cannot be centred on a phone any other way. */
+        /* `margin-inline: auto` is load-bearing. .wt-in sets text-align:center, which centres INLINE
+           content and does nothing to a block box — so a max-width block with default margins sits
+           hard left. The whole scope panel was rendering off-centre under a centred headline for
+           exactly that reason. Wider too: 620px forced 20 line items into a narrow column beside a
+           lot of empty page. */
+        .wt-res { width: 100%; max-width: 720px; margin-inline: auto; text-align: left; }
+        /* The list scrolls, so it gets a scrollbar — and the default one was a chunky grey OS bar
+           with arrow buttons, drawn straight over the prices in the right-hand column. `padding-right`
+           reserves the gutter so no amount ever sits under the thumb, and the two blocks below style
+           the bar itself in both engines. Firefox honours scrollbar-width/-color; WebKit and Blink
+           need ::-webkit-scrollbar, and neither inherits from the other. */
+        .wt-res-list { max-height: min(40vh, 340px); overflow-y: auto; overscroll-behavior: contain;
+                       border-top: 1px solid rgba(255,255,255,0.08); margin-top: 0.9rem;
+                       padding-right: 0.85rem;
+                       scrollbar-width: thin;
+                       scrollbar-color: rgba(216,180,254,0.32) transparent; }
+        .wt-res-list::-webkit-scrollbar { width: 6px; }
+        .wt-res-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.04);
+                       border-radius: 100px; }
+        .wt-res-list::-webkit-scrollbar-thumb { background: rgba(216,180,254,0.3);
+                       border-radius: 100px; }
+        .wt-res-list::-webkit-scrollbar-thumb:hover { background: rgba(216,180,254,0.5); }
+        /* Row padding up from 0.32rem: twenty rows at 0.32 read as one grey mass. */
+        .wt-res-l { display: flex; align-items: baseline; gap: 1.2rem; padding: 0.5rem 0;
+                    border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .wt-res-n { flex: 1; font-family: var(--font-body); font-size: 0.78rem; color: var(--text-main); }
+        .wt-res-n small { display: block; color: rgba(255,255,255,0.46); font-size: 0.66rem; }
+        .wt-res-v { font-family: var(--font-body); font-size: 0.78rem; font-weight: 600;
+                    color: var(--text-main); white-space: nowrap; }
+        .wt-res-v.is-inc { color: rgba(255,255,255,0.46); font-weight: 500; }
+        .wt-res-tot { display: flex; align-items: baseline; justify-content: space-between;
+                      gap: 1rem; padding: 0.5rem 0 0.1rem; }
+        .wt-res-tot b { font-family: var(--font-head); font-size: 1.5rem; font-weight: 700;
+                        color: var(--text-main); }
+        .wt-res-tot span { font-family: var(--font-body); font-size: 0.72rem; color: rgba(255,255,255,0.46); }
+        .wt-res-sub { font-family: var(--font-body); font-size: 0.74rem; color: rgba(255,255,255,0.46);
+                      display: flex; justify-content: space-between; padding: 0.18rem 0; }
+        .wt-badge { display: inline-block; font-family: var(--font-body); font-size: 0.6rem;
+                    letter-spacing: 0.14em; text-transform: uppercase; padding: 0.24rem 0.6rem;
+                    border-radius: 999px; border: 1px solid rgba(255,255,255,0.16);
+                    color: rgba(255,255,255,0.46); margin-bottom: 0.5rem; }
+        .wt-badge--review { border-color: var(--accent); color: var(--accent); }
+        .wt-upsell { margin-top: 0.9rem; font-family: var(--font-body); font-size: 0.72rem;
+                     color: rgba(255,255,255,0.5); line-height: 1.7; }
+        .wt-upsell b { color: rgba(255,255,255,0.72); font-weight: 600; }
+        /* Chips rather than a dot-separated run-on: at four items the old line wrapped mid-price on
+           a phone, so "Analytics from $140" broke across two lines and the $140 read as belonging
+           to whatever followed it. */
+        .wt-upsell-i { display: inline-block; margin: 0.3rem 0.3rem 0 0; padding: 0.28rem 0.6rem;
+            border: 1px solid rgba(255,255,255,0.12); border-radius: 100px;
+            background: rgba(255,255,255,0.03); white-space: nowrap; }
+
+        /* "That change removed 4 earlier answers." Amber rather than red: nothing has gone wrong,
+           the estimator did exactly what it should, and the visitor needs to be told rather than
+           warned. It sits between the question and the options because that is where the eye is
+           after a click. */
+        .wt-dropped { font-family: var(--font-body); font-size: 0.78rem; line-height: 1.55;
+            color: #f7d9a0; background: rgba(247,217,160,0.07);
+            border: 1px solid rgba(247,217,160,0.22); border-left-width: 3px;
+            border-radius: 10px; padding: 0.6rem 0.85rem; margin: 1rem auto 0;
+            max-width: 62ch; text-align: left; }
+        @media (max-width: 560px) { .wt-dropped { font-size: 0.74rem; padding: 0.55rem 0.7rem; } }
+
+        /* ── A SECOND QUESTION ON THE SAME SCREEN ────────────────────────────────────────────────
+           Some questions are one decision the catalogue happens to price in two places: how many
+           pages plus any extra one-off layouts, which languages plus how much content to adapt, the
+           SEO level plus keyword research. Asked on two screens they read as two purchases — and
+           the addon's own help text usually refers to the host's answer, which only makes sense
+           with both on the page.
+
+           A rule, not a divider: the block is separated by a hairline and its heading is smaller
+           than the step's question, so the hierarchy says "still this screen, next question" rather
+           than "new screen". */
+        .wt-addon { margin-top: clamp(1.6rem, 3.4vh, 2.4rem); padding-top: clamp(1.2rem, 2.6vh, 1.8rem);
+            border-top: 1px solid rgba(255,255,255,0.10); }
+        .wt-addon-q { font-family: var(--font-head); font-weight: 600; letter-spacing: -0.01em;
+            font-size: clamp(1.05rem, 2.4vw, 1.35rem); line-height: 1.25; color: var(--text-main);
+            margin: 0; }
+        .wt-addon-s { font-family: var(--font-body); font-size: 0.88rem; line-height: 1.6;
+            color: var(--wt-read); margin: 0.45rem auto 0; max-width: 62ch; }
+        /* The addon's own grid starts closer to its heading than a step's does — the heading is
+           already the separator, so the step-sized gap read as a gap with nothing in it. */
+        .wt-addon .wt-opts { margin-top: clamp(0.9rem, 2vh, 1.3rem); }
+        .wt-addon .wt-mx-g { margin-top: 0.9rem; }
+        @media (max-width: 560px) {
+            .wt-addon { margin-top: 1.3rem; padding-top: 1rem; }
+            .wt-addon-q { font-size: 1.02rem; }
+            .wt-addon-s { font-size: 0.78rem; }
+        }
+
+        /* ── THE COUNTRY PICKER, ON A PHONE ──────────────────────────────────────────────────────
+           Measured on the phone step at 390x844 with the keyboard up: the panel is 320px tall and
+           opens downward from the button, so 149px of it was on screen and the rest was behind the
+           keyboard. At 360x640 it was 117px — four rows of a 240-country list, with the search box
+           eating two of them. The list is scrollable, so nothing was unreachable in principle; it
+           was just a four-row window onto a long list, which is not a control anyone uses.
+
+           A bottom sheet bound to the VISIBLE viewport rather than a dropdown bound to the button.
+           --wt-vvh / --wt-vvt are already maintained by keyboardAware() and are set on load, not
+           just while the keyboard is open, so this is one rule for both states. position:fixed also
+           takes the panel out of .wt-step's mobile scroll box, which would otherwise clip it.
+
+           Scoped to .wt-flow on purpose: /contact, /start and /pricing share this component and are
+           not part of this pass. */
+        @media (max-width: 560px) {
+            /* "fixed" here does NOT mean the viewport. `.wt-step.is-active` runs its entrance
+               animation with `fill-mode: both`, so its computed transform stays at the 100% keyframe
+               — matrix(1,0,0,1,0,0), an identity that is nonetheless not `none` — for the whole life
+               of the step. A transformed ancestor is a containing block for fixed descendants, so
+               everything below is measured against the STEP's box, which is .wt-flow's box. That is
+               also why .cf-turnstile had to be a sibling of the stage rather than live inside it.
+               Two rules because the box itself changes: with the keyboard up .wt-flow IS the visible
+               strip, so the sheet sits at its bottom; without it .wt-flow is the full layout
+               viewport, which on a phone extends behind the URL bar. */
+            .wt-flow .wt-cc-pop {
+                position: fixed; top: auto; left: 0; right: 0; width: auto;
+                bottom: calc(100vh - var(--wt-vvt, 0px) - var(--wt-vvh, 100vh));
+                /* 26rem cap so the sheet is a picker, not a takeover: on a tall phone with no
+                   keyboard the strip is 748px and the question would vanish behind it. The reserve
+                   is 2.5rem rather than 6: at 360x640 with the keyboard up the whole strip is 294px,
+                   and 6rem of it bought three countries and a search box. */
+                max-height: min(calc(var(--wt-vvh, 100vh) - 2.5rem), 26rem);
+                border-radius: 16px 16px 0 0; border-bottom: none;
+                box-shadow: 0 -18px 50px rgba(0,0,0,0.7);
+            }
+            body.wt-kb .wt-flow .wt-cc-pop { bottom: 0; }
+            /* 16px is the threshold under which iOS Safari zooms the page on focus — and a zoomed
+               page cannot be un-zoomed by the visitor without pinching. */
+            .wt-flow .wt-cc-search { font-size: 16px; padding: 0.9rem 1rem; }
+            /* rows were 36.6px */
+            .wt-flow .wt-cc-opt { min-height: 46px; padding: 0.7rem 1rem; }
+            .wt-flow .wt-cc-list { padding-bottom: env(safe-area-inset-bottom, 0px); }
+        }
+
+        /* Routing hand-off. Offered inline under the question that triggered it, never as a silent
+           redirect: switching service changes every question and every price. */
+        /* margin-inline:auto — the panel is a 520px block inside a centred column, and without it
+           the whole hand-off sat hard against the left edge under a centred question while every
+           other element on the step was centred. Same class of bug as the .wt-excl summary above,
+           and the same one-line fix. */
+        .wt-route { margin: 0.9rem auto 0; padding: 0.8rem 0.9rem; border-radius: 12px;
+                    border: 1px solid var(--accent); background: rgba(255,255,255,0.03);
+                    text-align: left; max-width: 520px; }
+        .wt-route-t { font-family: var(--font-head); font-size: 0.95rem; font-weight: 600;
+                      color: var(--text-main); margin: 0 0 0.3rem; }
+        .wt-route-d { font-family: var(--font-body); font-size: 0.72rem; color: rgba(255,255,255,0.46);
+                      line-height: 1.5; margin: 0 0 0.6rem; }
+        .wt-route-a { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        /* Two buttons that wrap to two lines on a phone should each own the line, not sit at 60%
+           width with a ragged right edge. */
+        @media (max-width: 560px) {
+            .wt-route-a { flex-direction: column; }
+            .wt-route-a > * { width: 100%; justify-content: center; }
+        }
+
+        /* Phones. The live pill sits above the nav, the grid goes single-column early, and the
+           step padding shrinks so a 10-option group still centres on a 360x640 screen. */
+        @media (max-width: 560px) {
+            /* A 1.65rem floor rather than the desktop 2rem: at 390px wide a longer question wraps to
+               four lines and pushes the options off an 844px-tall screen. */
+            .wt-q { font-size: clamp(1.3rem, 6vw, 1.6rem); }
+            .wt-num { margin-bottom: 0.85rem; }
+            .wt-opts, .wt-opts--dense, .wt-opts--wide {
+                grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); }
+            /* 34px on desktop, where there is a cursor. On a phone these two sit side by side
+               inside a tile that is itself a tap target, so an undersized one costs a selection,
+               not just a miss. */
+            .wt-qty button { width: 44px; height: 44px; }
+            /* WRAPPING IS THE FIX, not a smaller button. Two 44px targets, the output and a unit
+               label is wider than a card's ~139px content box in a two-column grid at 390px, and
+               .wt-opt centres its children — so the overflow split evenly and the minus button hung
+               outside the card's left border. Dropping the unit onto its own line brings the row
+               back inside without touching the tap targets. */
+            .wt-qty { gap: 0.35rem; flex-wrap: wrap; justify-content: center; max-width: 100%; }
+            .wt-qty-u { flex-basis: 100%; text-align: center; margin-top: 0.15rem; }
+            /* Descriptions used to vanish entirely below 561px — including on the SERVICE screen,
+               where a phone visitor picked between eight bare nouns on the one decision that sets
+               every question and every price that follows. They stay, clamped to two lines: enough
+               to explain, not enough to turn a grid into a wall. Dense groups still drop them (the
+               rule above) and lean on the .wt-seldesc note under the grid, because nineteen
+               descriptions genuinely cannot share a phone screen. */
+            .wt-opt-d {
+                display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4;
+                overflow: hidden; font-size: 0.8rem; line-height: 1.45;
+            }
+            /* Two lines cut every description mid-sentence — "A standard connection - a mailing
+               list, a spreadshee..." is not something a person can choose from. Four lines carries
+               the sentence; the SELECTED card drops the clamp entirely, because the option you have
+               picked is the one whose full text you need and it is a single card rather than a
+               grid, so it cannot turn the screen into a wall. */
+            .wt-opt.is-on .wt-opt-d { -webkit-line-clamp: unset; }
+            /* The bar is bottom-RIGHT, so the pill goes bottom-LEFT rather than above it: stacking
+               them pushed the pill up into the question on an 844px-tall screen. */
+            .wt-live { left: 0.75rem; transform: none;
+                       bottom: calc(env(safe-area-inset-bottom, 0px) + 0.9rem);
+                       padding: 0.42rem 0.85rem 0.42rem 0.75rem; max-width: calc(100vw - 12rem); }
+            .wt-live-a { display: none; }   /* the AED figure still shows on the result screen */
+            .wt-opts-wrap { max-height: min(46vh, 340px); }
+            .wt-res-list { max-height: 34vh; }
+        }
+        /* Short viewports — a landscape phone. Same principle as v1's @media (max-height: 620px). */
+        @media (max-height: 620px) {
+            .wt-opts-wrap { max-height: 40vh; }
+            .wt-live { display: none; }   /* the result screen still shows every figure */
+        }
+    

@@ -1,0 +1,110 @@
+
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W8BKMGHG"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+    <div class="grain"></div>
+
+    <nav>
+        <a href="/" class="logo">KIASA</a>
+        <div class="nav-right">
+            <div class="nav-clock" id="nav-clock"><span class="nav-clock-label">DUBAI</span><span id="dubai-time">--:--</span></div>
+            <button class="hamburger" id="hamburger" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="mobile-menu" id="mobile-menu">
+        <button class="mobile-close" aria-label="Close menu">&#x2715;</button>
+        <div class="mobile-menu-brand">KIASA</div>
+        <div class="mobile-menu-links">
+            <a href="/"                   class="m-link">Home</a>
+            <a href="/about"              class="m-link">About</a>
+            <a href="/gallery"            class="m-link">Infinite Gallery</a>
+            <a href="/case-studies"       class="m-link">Case Studies</a>
+            <a href="/blog"               class="m-link">Blog</a>
+            <a href="/pricing"            class="m-link">Services</a>
+            <a href="/contact"            class="m-link">Contact</a>
+        </div>
+        <div class="mobile-menu-footer">
+            <div class="mobile-menu-socials">
+                <a href="https://www.instagram.com/webtactics/" target="_blank" rel="noopener">Instagram</a>
+                <a href="https://www.linkedin.com/company/79060249/" target="_blank" rel="noopener">LinkedIn</a>
+                <a href="https://www.youtube.com/@Webtacticsorg" target="_blank" rel="noopener">YouTube</a>
+            </div>
+            <a href="https://wa.me/971509027130" target="_blank" rel="noopener" class="mobile-menu-whatsapp">WhatsApp Us</a>
+        </div>
+    </div>
+
+<main class="wt-flow" id="flow">
+    <!-- One live region. Generated steps are written into it, so there is no per-step markup to
+         keep in sync with the catalogue — which is the entire point of Pass 2. -->
+    <div class="wt-stage" id="wt-stage" aria-live="polite"></div>
+</main>
+
+<!-- ══ Anti-abuse, present BEFORE the POST exists ═════════════════════════════════════════════
+     Pass 4 wires the submission. These two live here now rather than arriving with it, because
+     scripts/check-tracking.mjs registers estimate.php as a lead form and fails while either is
+     missing — which is exactly the guard working: a form must never be able to ship in the same
+     commit that first makes it postable. The honeypot is a real field name, unlabelled and out of
+     the tab order; api/lead.php answers success and stores nothing when it arrives filled.
+     The Turnstile site key is public by design. Its secret counterpart lives only in
+     api/secrets.php on the server and is never named in a served page. -->
+<form id="wt-lead" autocomplete="off" onsubmit="return false;" style="position:absolute;left:-9999px;top:0" aria-hidden="true">
+    <input type="checkbox" name="botcheck" id="wt-botcheck" tabindex="-1" autocomplete="off">
+</form>
+<div class="cf-turnstile" id="wt-turnstile" data-sitekey="0x4AAAAAAEK3RClKxFP0jJjP" data-theme="dark"></div>
+
+<div class="wt-live" id="wt-live" aria-hidden="true">
+    <span class="wt-live-u" id="wt-live-usd"></span>
+    <span class="wt-live-a" id="wt-live-aed"></span>
+    <span class="wt-live-m" id="wt-live-mo"></span>
+</div>
+
+<div class="wt-bar" id="wt-bar">
+    <div class="wt-bar-p">
+        <div class="wt-bar-t"><span id="wt-pct">0</span>% completed</div>
+        <div class="wt-bar-track"><div class="wt-bar-fill" id="wt-fill"></div></div>
+    </div>
+    <div class="wt-nav">
+        <button type="button" id="wt-prev" aria-label="Previous step" disabled>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button type="button" id="wt-next" aria-label="Next step">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+    </div>
+</div>
+
+
+
+
+
+    <!-- ===== KIASA shared widgets ===== -->
+    <button id="sound-toggle" class="muted" aria-label="Toggle ambient sound">
+        <div class="sound-bars">
+            <div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div>
+            <div class="sound-bar"></div><div class="sound-bar"></div>
+        </div>
+        <span class="sound-label">SFX</span>
+    </button>
+    <audio id="ambient-audio" src="/Assets/KIASA%20Audio.mp3" loop preload="none"></audio>
+    <div id="wt-page-wipe"></div>
+    <div id="wt-cursor-glow"></div>
+    <div id="wt-cursor-dot"></div>
+    <div id="wt-cursor-ring"></div>
+
+    <!-- Package builder. Placed ABOVE the WhatsApp button because it is the cheaper first step for a
+         visitor who is not ready to talk yet; WhatsApp stays the lower, warmer option. /estimate hides
+         all three floats in its own stylesheet — they would sit on top of its progress bar. -->
+    <a id="wt-calc-float" href="/estimate" class="interactable" aria-label="Build your package and see the price">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="2.5" width="16" height="19" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M8 7h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18.5h.01M12 18.5h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="wt-calc-label">Build a package</span>
+    </a>
+
+    <a id="wa-float" href="https://wa.me/971509027130" target="_blank" rel="noopener" class="interactable" aria-label="Chat with us on WhatsApp">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.05 4.91A9.82 9.82 0 0 0 12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.91-7.01zM12.04 20.15h-.01a8.23 8.23 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.24 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.83-.2-.48-.4-.41-.56-.42h-.47c-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.16 1.74 2.66 4.21 3.73.59.25 1.05.41 1.41.52.59.19 1.13.16 1.55.1.47-.07 1.47-.6 1.68-1.18.21-.59.21-1.09.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg>
+    </a>
+
+    

@@ -1,0 +1,88 @@
+
+        /* Design tokens + reset now in /Assets/site.css */
+        html { scroll-behavior: smooth; }
+        body { background-color: var(--bg); color: var(--text-main); font-family: var(--font-body); overflow-x: hidden; font-size: 18px; }
+
+        /* nav + mobile menu now in /Assets/site.css */
+
+        .kicker { font-family: var(--font-body); font-weight: 600; color: var(--accent); font-size: 0.85rem; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 2rem; display: inline-block; border: 1px solid var(--accent-dim); padding: 0.6rem 1.5rem; border-radius: 50px; background: rgba(216, 180, 254, 0.05); }
+        h2 { font-family: var(--font-head); font-size: clamp(2rem, 5vw, 4.5rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; text-transform: uppercase; }
+        section { padding: 15vh 6vw; display: flex; flex-direction: column; justify-content: center; position: relative; }
+
+        .page-hero { min-height: 60vh; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 6vw 8vh; position: relative; padding-top: 12vh; }
+        .page-hero::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse 70% 55% at 50% 42%, rgba(139,92,246,0.08) 0%, transparent 68%); pointer-events:none; }
+        .page-hero > * { position: relative; z-index: 1; }
+        .page-hero h1 { font-family: var(--font-head); font-size: clamp(2.5rem, 6vw, 6rem); font-weight: 700; text-transform: uppercase; letter-spacing: -0.02em; line-height: 1.1; }
+        .page-desc { font-family: var(--font-body); font-size: clamp(1rem, 1.4vw, 1.2rem); color: var(--text-muted); font-weight: 500; max-width: 600px; line-height: 1.7; margin-top: 1.5rem; }
+        .breadcrumb { font-family: var(--font-body); font-size: 0.78rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 2rem; }
+        .breadcrumb a { color: var(--accent); text-decoration: none; }
+        /* .fade-up utility now in /Assets/site.css */
+
+        /* --- Blog Grid --- */
+        .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-top: 4rem; }
+        /* Whole-card click target. `.blog-read` is stretched over the card with an absolutely
+           positioned ::after rather than wrapping everything in a second anchor — one link stays in
+           the tab order, screen readers still announce a single "Read Article" link, and wt-track.js
+           still classifies the click by its /blog-post destination exactly as before.
+           `inset: 0` resolves against the nearest POSITIONED ancestor, which must stay .blog-card.
+           .blog-thumb is also position:relative and that is harmless only because the link lives in
+           .blog-body, not in the thumb — do not add position to .blog-body, or the overlay collapses
+           to the text column and the image stops being clickable. The overlay is transparent and sits
+           above the text, which costs text selection inside the card: the accepted trade for one link
+           instead of a duplicated one. */
+        .blog-card { position: relative; cursor: pointer; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; overflow: hidden; transition: border-color 0.4s, transform 0.4s, box-shadow 0.4s; }
+        .blog-read::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: 16px; }
+        .blog-card:focus-within { border-color: var(--accent); }
+        .blog-card:hover { border-color: var(--accent-dim); transform: translateY(-6px); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+        .blog-thumb { width: 100%; aspect-ratio: 16/10; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; background-size: cover; background-position: center; }
+        .blog-thumb::after { content:''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(2,2,4,0.7) 100%); pointer-events: none; transition: opacity 0.4s; }
+        .blog-card:hover .blog-thumb { transform: scale(1.04); }
+        .blog-thumb { transition: transform 0.6s ease; }
+        .blog-thumb-label { font-family: var(--font-head); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.25em; color: var(--accent); position: absolute; top: 1.2rem; left: 1.2rem; z-index: 2; background: rgba(0,0,0,0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); padding: 0.5rem 0.9rem; border-radius: 100px; }
+        .blog-body { padding: 2rem; }
+        .blog-meta { display: flex; gap: 1.5rem; margin-bottom: 1rem; }
+        .blog-meta span { font-family: var(--font-num); font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+        .blog-card h3 { font-family: var(--font-head); font-size: clamp(0.85rem, 1.3vw, 1.15rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.3; margin-bottom: 0.8rem; }
+        .blog-card p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.7; font-weight: 500; }
+        .blog-read { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none; margin-top: 1.2rem; transition: gap 0.3s; }
+        .blog-read:hover { gap: 12px; }
+
+        /* Grid status — the loading and "unavailable" states.
+           Spans every column so it reads as one centred message rather than sitting in a card slot,
+           and reserves height so the page does not jump when the real cards replace it. */
+        .blog-status { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.9rem; min-height: 240px; text-align: center; padding: 3rem 1.5rem; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; background: rgba(255,255,255,0.02); }
+        .blog-status p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.7; font-weight: 500; max-width: 34ch; margin: 0; }
+        .blog-status .blog-status-label { font-family: var(--font-head); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.25em; color: var(--accent); }
+        .blog-status button { margin-top: 0.4rem; background: transparent; border: 1px solid var(--accent-dim); color: var(--accent); border-radius: 100px; padding: 0.7rem 1.6rem; font-family: var(--font-body); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: background 0.3s, border-color 0.3s; }
+        .blog-status button:hover { background: rgba(255,255,255,0.04); border-color: var(--accent); }
+
+        /* Featured blog post */
+        .blog-card.featured { grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; }
+        .blog-card.featured .blog-thumb { aspect-ratio: auto; }
+        .blog-card.featured .blog-body { display: flex; flex-direction: column; justify-content: center; padding: 2.5rem; }
+        .blog-card.featured h3 { font-size: clamp(1rem, 1.8vw, 1.5rem); }
+
+        /* --- Newsletter --- */
+        .newsletter-section { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2rem; padding: 10vh 6vw; background: radial-gradient(ellipse at center, rgba(139,92,246,0.05) 0%, transparent 70%); }
+        .newsletter-form { display: flex; gap: 0; max-width: 500px; width: 100%; }
+        .newsletter-form input { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-right: none; border-radius: 100px 0 0 100px; padding: 1rem 1.5rem; color: #fff; font-family: var(--font-body); font-size: 1rem; font-weight: 500; }
+        .newsletter-form input::placeholder { color: var(--text-muted); }
+        .newsletter-form input:focus { outline: none; border-color: var(--accent); }
+        .newsletter-form button { background: #fff; color: #000; border: none; border-radius: 0 100px 100px 0; padding: 1rem 2rem; font-family: var(--font-body); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: background 0.3s; white-space: nowrap; }
+        .newsletter-form button:hover { background: var(--accent); }
+
+        /* footer + grain now in /Assets/site.css */
+
+        @media (max-width: 1024px) {
+            .blog-grid { grid-template-columns: 1fr; }
+            .blog-card.featured { grid-column: span 1; grid-template-columns: 1fr; }
+            .blog-card.featured .blog-thumb { aspect-ratio: 16/10; }
+            section { padding: 10vh 5vw; }
+        }
+        @media (max-width: 600px) {
+            .page-hero h1 { font-size: clamp(1.8rem, 8vw, 3rem); }
+            .newsletter-form { flex-direction: column; gap: 1rem; }
+            .newsletter-form input { border-radius: 100px; border-right: 1px solid rgba(255,255,255,0.1); }
+            .newsletter-form button { border-radius: 100px; }
+        }
+    

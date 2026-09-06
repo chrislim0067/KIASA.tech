@@ -1,0 +1,36 @@
+
+        /* Design tokens, reset, nav, mobile menu, fade-up, footer, grain and the
+           floating widgets now live in /Assets/site.css. Below is terms-specific only. */
+        html { scroll-behavior: smooth; }
+        body { background-color: var(--bg); color: var(--text-main); font-family: var(--font-body); overflow-x: hidden; font-size: 18px; }
+
+        /* nav now in /Assets/site.css */
+
+        /* --- Page Hero --- */
+        .page-hero { min-height: 50vh; display: flex; flex-direction: column; justify-content: flex-end; padding: 12vh 6vw 8vh; position: relative; overflow: hidden; }
+        .page-hero::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse 70% 55% at 50% 42%, rgba(139,92,246,0.08) 0%, transparent 68%); pointer-events:none; }
+        .page-hero::after { content:''; position:absolute; inset:0; background: linear-gradient(180deg, rgba(2,2,4,0.6) 0%, transparent 50%, rgba(2,2,4,0.9) 100%); pointer-events:none; }
+        .page-hero > * { position: relative; z-index: 1; }
+        .page-hero h1 { font-family: var(--font-head); font-size: clamp(2.2rem, 5vw, 5rem); font-weight: 700; text-transform: uppercase; letter-spacing: -0.02em; line-height: 1.1; }
+        .breadcrumb { font-family: var(--font-body); font-size: 0.78rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 2rem; }
+        .breadcrumb a { color: var(--accent); text-decoration: none; }
+        .page-date { font-family: var(--font-num); font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.2em; margin-top: 1.2rem; }
+
+        /* --- Content --- */
+        .legal-content { max-width: 860px; margin: 0 auto; padding: 8vh 6vw; }
+        .legal-section { margin-bottom: 4rem; }
+        .legal-section h2 { font-family: var(--font-head); font-size: clamp(1rem, 2vw, 1.4rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 1.2rem; padding-bottom: 0.8rem; border-bottom: 1px solid rgba(216,180,254,0.1); }
+        .legal-section p { color: var(--text-muted); font-size: 1.05rem; line-height: 1.85; font-weight: 500; margin-bottom: 1rem; }
+        .legal-section p strong { color: #fff; font-weight: 700; }
+        .legal-section ul { list-style: none; margin: 1rem 0; }
+        .legal-section ul li { color: var(--text-muted); font-size: 1.05rem; line-height: 1.85; font-weight: 500; padding: 0.3rem 0 0.3rem 1.5rem; position: relative; }
+        .legal-section ul li::before { content: '–'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+        .legal-intro { font-family: var(--font-body); font-size: 1.15rem; color: var(--text-muted); line-height: 1.8; font-weight: 500; max-width: 700px; margin-top: 1rem; margin-bottom: 4rem; border-left: 2px solid var(--accent-dim); padding-left: 1.5rem; }
+
+        /* footer now in /Assets/site.css */
+        @media (max-width: 600px) {
+            .legal-content { padding: 6vh 5vw; }
+        }
+
+        /* grain now in /Assets/site.css */
+    

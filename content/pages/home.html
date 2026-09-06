@@ -1,0 +1,656 @@
+
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W8BKMGHG"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+    <a href="#main-content" class="skip-link">Skip to content</a>
+
+    <div class="grain"></div>
+    <div id="god-rays"></div>
+    <div id="scene-vignette"></div>
+    <div id="page-wipe"></div>
+    <div id="wt-page-wipe"></div>
+    <div id="global-progress"></div>
+
+    <!-- Cookie Banner -->
+    <div id="cookie-banner" role="dialog" aria-label="Cookie consent">
+        <div class="cookie-icon">&#x1F36A;</div>
+        <div class="cookie-body">
+            <div class="cookie-title">Cookie Notice</div>
+            <p class="cookie-text">We use cookies to enhance your browsing experience and analyse site traffic.</p>
+        </div>
+        <div class="cookie-actions">
+            <button class="cookie-accept" onclick="acceptCookie()">Accept</button>
+            <button class="cookie-decline" onclick="declineCookie()">Decline</button>
+        </div>
+    </div>
+
+    <!-- Floating Scroll-to-Top -->
+    <button id="scroll-top-btn" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+        <svg class="scroll-progress-ring" viewBox="0 0 50 50"><circle class="scroll-progress-track" cx="25" cy="25" r="22"/><circle class="scroll-progress-fill" id="scroll-ring" cx="25" cy="25" r="22" stroke-dasharray="138.23" stroke-dashoffset="138.23"/></svg>
+        <svg class="scroll-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 12V4M8 4L4 8M8 4L12 8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <div class="letterbox letterbox-top"></div>
+    <div class="letterbox letterbox-bottom"></div>
+    <div id="cursor-dot"></div>
+    <div id="cursor-ring"></div>
+    <div id="cursor-view-label">VIEW →</div>
+    <div id="cursor-trail-glow"></div>
+
+    <div id="preloader">
+        <div class="preloader-overlay" style="background:radial-gradient(ellipse at center, rgba(139,92,246,0.08) 0%, var(--bg) 70%);"></div>
+        <div class="loader-brand">KIASA</div>
+        <div id="loader-progress">0%</div>
+        <div class="loader-line"><div class="loader-line-inner" id="loader-bar"></div></div>
+    </div>
+
+    <!-- Sound Toggle -->
+    <button id="sound-toggle" class="muted interactable" aria-label="Toggle ambient sound">
+        <div class="sound-bars">
+            <div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div>
+            <div class="sound-bar"></div><div class="sound-bar"></div>
+        </div>
+        <span class="sound-label">SFX</span>
+    </button>
+
+    <!-- Ambient Audio -->
+    <audio id="ambient-audio" src="/Assets/KIASA%20Audio.mp3" loop preload="none"></audio>
+
+    <!-- Parallax depth layers removed: the faint rings/lines rendered as stray marks near the hero/reel. -->
+
+
+    <!-- WebGL Background -->
+    <canvas id="webgl-canvas"></canvas>
+    <div id="work-progress-bar"></div>
+    <div id="scroll-vel-line"></div>
+
+    <nav id="navbar">
+        <div class="logo">KIASA</div>
+        <!-- The centred "Available for Projects" badge was removed. The navbar is a flex row of
+             logo / clock / hamburger; the badge was absolutely positioned at left:50% and therefore
+             took part in none of that spacing, so removing it changes no other element's position. -->
+        <div class="nav-clock" id="nav-clock"><span class="nav-clock-label">DUBAI</span><span id="dubai-time">--:--</span></div>
+        <div class="nav-links">
+            <a href="/about"        class="nav-link interactable">About</a>
+            <a href="/gallery"      class="nav-link interactable">Infinite Gallery</a>
+            <a href="/case-studies" class="nav-link interactable">Case Studies</a>
+            <a href="/blog"         class="nav-link interactable">Blog</a>
+            <a href="/pricing"      class="nav-link nav-cta interactable">Services</a>
+            <a href="/contact"          class="nav-link interactable">Contact</a>
+        </div>
+        <button class="hamburger interactable" id="hamburger" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <!-- Mobile Full-Screen Menu -->
+    <div class="mobile-menu" id="mobile-menu">
+        <button class="mobile-close interactable" onclick="closeMobileMenu()" aria-label="Close navigation menu">&#x2715;</button>
+        <div class="mobile-menu-brand">KIASA</div>
+        <div class="mobile-menu-links">
+            <!-- Home was MISSING here while every other page's menu had it (partials/nav.php line 25,
+                 and the hand-written menus in Gallery.html and blog-post.php). The homepage is the one
+                 page where it looks redundant, which is presumably why it was dropped — but it made
+                 the menu structurally different on the site's most-visited page, and a visitor deep in
+                 the menu had no labelled way back. -->
+            <a href="/"             class="m-link" onclick="closeMobileMenu()">Home</a>
+            <a href="/about"        class="m-link" onclick="closeMobileMenu()">About</a>
+            <a href="/gallery"      class="m-link" onclick="closeMobileMenu()">Infinite Gallery</a>
+            <a href="/case-studies" class="m-link" onclick="closeMobileMenu()">Case Studies</a>
+            <a href="/blog"         class="m-link" onclick="closeMobileMenu()">Blog</a>
+            <a href="/pricing"      class="m-link" onclick="closeMobileMenu()">Services</a>
+            <a href="/contact"          class="m-link" onclick="closeMobileMenu()">Contact</a>
+        </div>
+        <div class="mobile-menu-footer">
+            <div class="mobile-menu-socials">
+                <a href="https://www.instagram.com/webtactics/" target="_blank">Instagram</a>
+                <a href="https://www.linkedin.com/company/79060249/" target="_blank">LinkedIn</a>
+                <a href="https://www.youtube.com/@Webtacticsorg" target="_blank">YouTube</a>
+            </div>
+            <a href="https://wa.me/971509027130" target="_blank" class="mobile-menu-whatsapp">WhatsApp Us</a>
+        </div>
+    </div>
+
+    <!-- role="main" gives the landmark the skip link was missing. This was a plain <div>, so "Skip
+         to content" moved focus but exposed no main region for a screen reader to jump to. Kept as a
+         div with a role rather than swapped to <main> so the matching </div> far below stays valid. -->
+    <div id="main-content" role="main">
+
+        <section id="hero">
+            <!-- Centered anchor label that floats below the W logo -->
+            <div class="hero-center-label">
+                <div class="hero-cl-line"></div>
+                <span>A Global Digital Studio</span>
+                <div class="hero-cl-line"></div>
+            </div>
+
+            <!-- Bottom bar: headline left, desc + scroll right -->
+            <div class="hero-bottom">
+                <div class="hero-left">
+                    <h1 class="decode-text" data-text="WORLD CLASS">WORLD CLASS</h1>
+                    <div id="typed-heading" style="color:var(--accent);" aria-live="polite"><span id="typed-text"></span><span class="typed-cursor">|</span></div>
+                </div>
+                <div class="hero-right fade-up">
+                    <p class="hero-desc">Elevating brands worldwide through immersive web development, 3D experiences, AI automation, and relentless conversion strategy.</p>
+                    <div class="hero-scroll-hint"><div class="scroll-line"></div>SCROLL TO EXPLORE</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="about-1">
+            <p class="manifesto-text fade-up">
+                "To put it simply — we create strategic integrated experiences that form a human connection between brands and their targeted audience."
+            </p>
+            <p class="fade-up" style="margin-top:2rem;color:var(--text-muted);font-size:1.2rem;text-align:center;font-weight:500;">
+                We're team players, passionate and talented experts who deliver exceptional results tailored for your business.
+            </p>
+        </section>
+
+        <!-- MARQUEE TICKER -->
+        <div class="marquee-section">
+            <div class="marquee-track" id="marquee-track">
+                <div class="marquee-item"><span>KIASA</span><div class="marquee-dot"></div><span>Global Digital Studio</span><div class="marquee-dot"></div><span>Immersive Web</span><div class="marquee-dot"></div><span>3D Experiences</span><div class="marquee-dot"></div><span>AI Automations</span><div class="marquee-dot"></div><span>Brand Systems</span><div class="marquee-dot"></div><span>Est. 2020</span><div class="marquee-dot"></div></div>
+                <div class="marquee-item"><span>KIASA</span><div class="marquee-dot"></div><span>Global Digital Studio</span><div class="marquee-dot"></div><span>Immersive Web</span><div class="marquee-dot"></div><span>3D Experiences</span><div class="marquee-dot"></div><span>AI Automations</span><div class="marquee-dot"></div><span>Brand Systems</span><div class="marquee-dot"></div><span>Est. 2020</span><div class="marquee-dot"></div></div>
+            </div>
+        </div>
+
+        <!-- CLIENT MARQUEE -->
+        <div class="client-marquee-section">
+            <div style="text-align:center; margin-bottom:4rem;">
+                <span class="kicker fade-up">Trusted By 300+ Brands</span>
+            </div>
+            <div class="client-marquee-track row-1" id="client-row-1">
+                <div class="client-name">Brand Booster<div class="client-dot"></div></div>
+                <div class="client-name">The Designers Hub<div class="client-dot"></div></div>
+                <div class="client-name">Yasser & Mayasa<div class="client-dot"></div></div>
+                <div class="client-name">New World Technologies<div class="client-dot"></div></div>
+                <div class="client-name">Artistic Business Solutions<div class="client-dot"></div></div>
+                <div class="client-name">The Crown Circle<div class="client-dot"></div></div>
+                <div class="client-name">The Black Crown Label<div class="client-dot"></div></div>
+                <div class="client-name">One Percent<div class="client-dot"></div></div>
+                <div class="client-name">Mokdadii<div class="client-dot"></div></div>
+                <div class="client-name">Labaih Fashion<div class="client-dot"></div></div>
+                <!-- duplicate for seamless loop -->
+                <div class="client-name">Brand Booster<div class="client-dot"></div></div>
+                <div class="client-name">The Designers Hub<div class="client-dot"></div></div>
+                <div class="client-name">Yasser & Mayasa<div class="client-dot"></div></div>
+                <div class="client-name">New World Technologies<div class="client-dot"></div></div>
+                <div class="client-name">Artistic Business Solutions<div class="client-dot"></div></div>
+                <div class="client-name">The Crown Circle<div class="client-dot"></div></div>
+                <div class="client-name">The Black Crown Label<div class="client-dot"></div></div>
+                <div class="client-name">One Percent<div class="client-dot"></div></div>
+                <div class="client-name">Mokdadii<div class="client-dot"></div></div>
+                <div class="client-name">Labaih Fashion<div class="client-dot"></div></div>
+            </div>
+            <div class="client-marquee-track row-2" id="client-row-2">
+                <div class="client-name">Lenjawi Group<div class="client-dot"></div></div>
+                <div class="client-name">Villaamoon<div class="client-dot"></div></div>
+                <div class="client-name">Asteco<div class="client-dot"></div></div>
+                <div class="client-name">Zumra Networking Group<div class="client-dot"></div></div>
+                <div class="client-name">Istarahat<div class="client-dot"></div></div>
+                <div class="client-name">Selas Official<div class="client-dot"></div></div>
+                <div class="client-name">Zozo Kharmana<div class="client-dot"></div></div>
+                <div class="client-name">Rosa Couture<div class="client-dot"></div></div>
+                <div class="client-name">Sukna<div class="client-dot"></div></div>
+                <!-- duplicate for seamless loop -->
+                <div class="client-name">Lenjawi Group<div class="client-dot"></div></div>
+                <div class="client-name">Villaamoon<div class="client-dot"></div></div>
+                <div class="client-name">Asteco<div class="client-dot"></div></div>
+                <div class="client-name">Zumra Networking Group<div class="client-dot"></div></div>
+                <div class="client-name">Istarahat<div class="client-dot"></div></div>
+                <div class="client-name">Selas Official<div class="client-dot"></div></div>
+                <div class="client-name">Zozo Kharmana<div class="client-dot"></div></div>
+                <div class="client-name">Rosa Couture<div class="client-dot"></div></div>
+                <div class="client-name">Sukna<div class="client-dot"></div></div>
+            </div>
+        </div>
+
+        <!-- CINEMATIC REEL -->
+        <section id="reel">
+            <!-- preload="none", not "metadata". 1.98MB — half the page weight — for a section two and
+                 a half screens down. "metadata" is only a hint, and a server that does not honour
+                 Range requests can answer it only by sending the whole file: measured cold that is
+                 what happened, at 507ms, ahead of the hero. The warm observer in
+                 setupReelVideoAutoplay raises preload to 'auto' three quarters of a viewport out, and
+                 the play() on intersection would fetch it regardless, so the reel cannot end up
+                 permanently blank. -->
+            <video class="reel-video" muted loop playsinline preload="none" disablepictureinpicture controlslist="nodownload nofullscreen noremoteplayback">
+                <source src="/Assets/KIASA%20Promo.mp4" type="video/mp4">
+            </video>
+            <div class="reel-vignette"></div>
+            <div class="reel-scan"></div>
+            <div class="reel-content">
+                <span class="kicker fade-up">Our Reel</span>
+                <h2 class="reel-headline decode-text" data-text="CRAFTING DIGITAL">CRAFTING DIGITAL</h2>
+                <div class="reel-divider"></div>
+                <h2 class="reel-headline decode-text" data-text="REALITIES" style="color:var(--accent);">REALITIES</h2>
+                <p class="reel-sub fade-up">Immersive Web &nbsp;·&nbsp; 3D Experiences &nbsp;·&nbsp; AI Automations</p>
+            </div>
+        </section>
+
+        <!-- STATS BAND -->
+        <section id="stats">
+            <div class="stats-grid">
+                <div class="stat-item fade-up">
+                    <div class="stat-value"><span class="stat-num" data-target="300">0</span><span class="stat-suffix">+</span></div>
+                    <span class="stat-label">Projects Delivered</span>
+                </div>
+                <div class="stat-item fade-up">
+                    <div class="stat-value"><span class="stat-num" data-target="10">0</span><span class="stat-suffix">+</span></div>
+                    <span class="stat-label">Countries Served</span>
+                </div>
+                <div class="stat-item fade-up">
+                    <div class="stat-value"><span class="stat-num" data-target="100">0</span><span class="stat-suffix">%</span></div>
+                    <span class="stat-label">Client Retention</span>
+                </div>
+                <div class="stat-item fade-up">
+                    <div class="stat-value"><span class="stat-num" data-target="2020">0</span></div>
+                    <span class="stat-label">Est.</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="about-2">
+            <div class="fade-up"><span class="kicker">Our Core</span><h2 class="decode-text" data-text="Strategic Integration">Strategic Integration</h2></div>
+            <p class="core-text fade-up">
+                At our core, we create strategic, integrated experiences that forge genuine connections between brands and their target audiences. Our team is a dynamic blend of passionate, talented experts working collaboratively to deliver exceptional, tailored results. We thrive on bringing your vision to life — ensuring every interaction resonates and leaves a lasting impact.
+            </p>
+            <div class="awards-row fade-up">
+                <div class="award-badge"><span class="award-icon">★</span><span>Multi-Million Dollar Impact</span></div>
+                <div class="award-badge"><span class="award-icon">★</span><span>10+ Countries Served</span></div>
+                <div class="award-badge"><span class="award-icon">★</span><span>300+ Projects Delivered</span></div>
+                <div class="award-badge"><span class="award-icon">★</span><span>Est. in Dubai 2020</span></div>
+            </div>
+        </section>
+
+        <section id="capabilities">
+            <div class="fade-up"><span class="kicker">Capabilities</span><h2 class="decode-text" data-text="Our Services">Our Services</h2></div>
+            <div class="bento-grid">
+                <div class="bento-item fade-up interactable" onclick="openModal('services',0)">
+                    <img class="bento-bg" src="/Assets/generated/service-web.webp" alt="" loading="lazy">
+                    <div><span class="bento-num">01 //</span><h3>Web Design & Development</h3></div>
+                    <p>High-performance websites built for speed, conversion, and scale — from custom builds to full-stack platforms.</p>
+                </div>
+                <div class="bento-item fade-up interactable" onclick="openModal('services',1)">
+                    <img class="bento-bg" src="/Assets/generated/service-marketing.webp" alt="" loading="lazy">
+                    <div><span class="bento-num">02 //</span><h3>Marketing & Strategy</h3></div>
+                    <p>Data-driven marketing campaigns designed to amplify your reach. From SEO to full-scale paid acquisition, we position your brand exactly where your audience lives.</p>
+                </div>
+                <div class="bento-item fade-up interactable" onclick="openModal('services',2)">
+                    <img class="bento-bg" src="/Assets/generated/service-branding.webp" alt="" loading="lazy">
+                    <span class="bento-num">03 //</span><h3>AI Automations</h3>
+                    <p>AI-powered automation, smart workflows, and custom agents that cut manual work and scale your operations.</p>
+                </div>
+                <div class="bento-item fade-up interactable" onclick="openModal('services',3)">
+                    <img class="bento-bg" src="/Assets/generated/service-uiux.webp" alt="" loading="lazy">
+                    <span class="bento-num">04 //</span><h3>UI & UX Design</h3>
+                    <p>We craft intuitive, user-centric interfaces that guide behavior and increase conversion rates seamlessly.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- PROCESS -->
+        <section id="process">
+            <div class="fade-up"><span class="kicker">How We Work</span><h2 class="decode-text" data-text="Our Process">Our Process</h2></div>
+            <div class="process-grid">
+                <div class="process-step fade-up">
+                    <div class="process-connector"></div>
+                    <span class="process-step-num">01 //</span>
+                    <h3 class="process-step-title">Discovery</h3>
+                    <p class="process-step-desc">We deep-dive into your brand, audience, and goals. Understanding your world is the foundation of everything we build.</p>
+                </div>
+                <div class="process-step fade-up">
+                    <div class="process-connector"></div>
+                    <span class="process-step-num">02 //</span>
+                    <h3 class="process-step-title">Strategy</h3>
+                    <p class="process-step-desc">We map a clear digital roadmap — defining architecture, user flows, and conversion strategy before a single pixel is designed.</p>
+                </div>
+                <div class="process-step fade-up">
+                    <div class="process-connector"></div>
+                    <span class="process-step-num">03 //</span>
+                    <h3 class="process-step-title">Design</h3>
+                    <p class="process-step-desc">High-fidelity visuals that feel premium from the first glance. Every detail is intentional — typography, motion, colour, space.</p>
+                </div>
+                <div class="process-step fade-up">
+                    <div class="process-connector"></div>
+                    <span class="process-step-num">04 //</span>
+                    <h3 class="process-step-title">Build</h3>
+                    <p class="process-step-desc">Clean, performant code. We develop with speed, accessibility, and scalability in mind — built to grow with your business.</p>
+                </div>
+                <div class="process-step fade-up">
+                    <div class="process-connector"></div>
+                    <span class="process-step-num">05 //</span>
+                    <h3 class="process-step-title">Launch</h3>
+                    <p class="process-step-desc">Rigorous QA, smooth deployment, and post-launch support. We don't disappear after go-live — we stay in your corner.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA BANNER -->
+        <section class="cta-banner">
+            <div class="cta-divider"></div>
+            <h2 class="decode-text fade-up" data-text="Ready to Elevate?">Ready to Elevate?</h2>
+            <p class="cta-sub fade-up">Let's turn your vision into a digital reality. Book a free strategy call and discover what's possible.</p>
+            <a href="/contact" class="cta-btn interactable magnetic">
+                Start Your Project
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 9H14M14 9L9 4M14 9L9 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <div class="cta-divider"></div>
+        </section>
+
+        <div id="work-wrapper">
+            <div class="work-sticky">
+                <div class="work-header fade-up">
+                    <h2 class="decode-text" data-text="Selected Archives">Selected Archives</h2>
+                    <p style="color:var(--text-muted);font-weight:500;margin-top:0.5rem;letter-spacing:0.05em;">SCROLL TO EXPLORE. CLICK TO EXPAND.</p>
+                </div>
+                <div class="work-counter" id="work-counter">
+                    <span id="work-counter-current">01</span>
+                    <span class="work-counter-sep"> / </span>
+                    <span class="work-counter-total">07</span>
+                </div>
+
+                <div class="swipe-hint">SWIPE TO EXPLORE</div>
+                <div class="work-track" id="work-track">
+
+                    <div class="h-project interactable" data-bg style="background-image:url('/Assets/Multi-Million%20Dirham%20Impact.jpg')" onmouseenter="setHoveredProject(0)" onmouseleave="setHoveredProject(-1)" onclick="openModal('projects',0)">
+                        <div class="h-project-click"></div>
+                        <div class="h-project-overlay"></div>
+                        <span class="h-num">01</span>
+                        <h3 class="h-title">Multi-Million Dollar Impact</h3>
+                        <span class="h-cat">Revenue-driven strategies across 300+ brands</span>
+                    </div>
+
+                    <div class="h-project interactable" data-bg style="background-image:url('/Assets/Scaling%20Fashion%20Brands.jpg')" onmouseenter="setHoveredProject(1)" onmouseleave="setHoveredProject(-1)" onclick="openModal('projects',1)">
+                        <div class="h-project-click"></div>
+                        <div class="h-project-overlay"></div>
+                        <span class="h-num">02</span>
+                        <h3 class="h-title">Scaling Fashion Brands</h3>
+                        <span class="h-cat">30+ brands elevated across UAE & GCC</span>
+                    </div>
+
+                    <div class="h-project interactable" data-bg style="background-image:url('/Assets/High-Performance%20Campaigns.jpg')" onmouseenter="setHoveredProject(2)" onmouseleave="setHoveredProject(-1)" onclick="openModal('projects',2)">
+                        <div class="h-project-click"></div>
+                        <div class="h-project-overlay"></div>
+                        <span class="h-num">03</span>
+                        <h3 class="h-title">High-Performance Campaigns</h3>
+                        <span class="h-cat">Built to generate consistent, scalable results</span>
+                    </div>
+
+                    <div class="h-project interactable" data-bg style="background-image:url('/Assets/Elite%20Events%20%26%20Experiences.jpg')" onmouseenter="setHoveredProject(3)" onmouseleave="setHoveredProject(-1)" onclick="openModal('projects',3)">
+                        <div class="h-project-click"></div>
+                        <div class="h-project-overlay"></div>
+                        <span class="h-num">04</span>
+                        <h3 class="h-title">Elite Events & Experiences</h3>
+                        <span class="h-cat">VIPs, ministers & influential figures</span>
+                    </div>
+
+                    <div class="h-project interactable" data-bg style="background-image:url('/Assets/Strategic%20Tech%20Partnerships.jpg')" onmouseenter="setHoveredProject(4)" onmouseleave="setHoveredProject(-1)" onclick="openModal('projects',4)">
+                        <div class="h-project-click"></div>
+                        <div class="h-project-overlay"></div>
+                        <span class="h-num">05</span>
+                        <h3 class="h-title">Strategic Tech Partnerships</h3>
+                        <span class="h-cat">Working with high-level & royal networks</span>
+                    </div>
+
+                    <div class="h-project interactable" data-bg style="background-image:url('/Assets/100%2B%20Websites%20Delivered.jpg')" onmouseenter="setHoveredProject(5)" onmouseleave="setHoveredProject(-1)" onclick="openModal('projects',5)">
+                        <div class="h-project-click"></div>
+                        <div class="h-project-overlay"></div>
+                        <span class="h-num">06</span>
+                        <h3 class="h-title">100+ Websites Delivered</h3>
+                        <span class="h-cat">Built for performance, conversion & scale</span>
+                    </div>
+
+                    <div class="h-project interactable" data-bg style="background-image:url('/Assets/Full%20Creative%20Ecosystem.jpg')" onmouseenter="setHoveredProject(6)" onmouseleave="setHoveredProject(-1)" onclick="openModal('projects',6)">
+                        <div class="h-project-click"></div>
+                        <div class="h-project-overlay"></div>
+                        <span class="h-num">07</span>
+                        <h3 class="h-title">Full Creative Ecosystem</h3>
+                        <span class="h-cat">1000+ designs, 100+ videos, end-to-end execution</span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- TESTIMONIALS -->
+        <section id="testimonials">
+            <div class="fade-up"><span class="kicker">Client Voices</span><h2 class="decode-text" data-text="What They Say">What They Say</h2></div>
+            <div class="testimonial-slider" id="testimonial-slider">
+
+                <div class="testimonial-slide active">
+                    <p class="testimonial-quote">KIASA completely transformed our business. We went from having 7–8 attendees at our events to building an international ecosystem — now people from across the GCC are joining our classes to learn about fashion. Their website and strategy made it all possible.</p>
+                    <div class="testimonial-author"><strong>Designers Hub</strong>Fashion Education · UAE</div>
+                </div>
+
+                <div class="testimonial-slide">
+                    <p class="testimonial-quote">KIASA played a vital role in bringing The Crown Circle to life — from creating all event documents and managing our socials to building the website and ensuring a flawless launch at Dubai World Islands' Swedish Palace. They delivered excellence at every level.</p>
+                    <div class="testimonial-author"><strong>The Crown Circle</strong>Luxury Events · Dubai</div>
+                </div>
+
+                <div class="testimonial-slide">
+                    <p class="testimonial-quote">We were a small clothing manufacturer with big ambitions. KIASA built our website, designed our catalogue and logo, and ran our ads and social content — turning Labaih into a thriving company with a growing team and real market presence.</p>
+                    <div class="testimonial-author"><strong>Labaih Fashion</strong>Clothing Manufacturing · UAE</div>
+                </div>
+
+            </div>
+            <div class="testimonial-nav">
+                <button class="testimonial-arrow interactable" onclick="prevSlide()" aria-label="Previous testimonial">&#8592;</button>
+                <div class="testimonial-dots">
+                    <button class="t-dot active" onclick="goToSlide(0)"></button>
+                    <button class="t-dot" onclick="goToSlide(1)"></button>
+                    <button class="t-dot" onclick="goToSlide(2)"></button>
+                </div>
+                <button class="testimonial-arrow interactable" onclick="nextSlide()" aria-label="Next testimonial">&#8594;</button>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section id="faq">
+            <div class="fade-up"><span class="kicker">Questions</span><h2 class="decode-text" data-text="FAQ">FAQ</h2></div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <button class="faq-question interactable" onclick="toggleFaq(this)">
+                        What does your process look like?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer"><div class="faq-answer-inner">We follow a 5-step process: Discovery, Strategy, Design, Build, and Launch. Every project starts with a strategic discovery call to understand your goals, audience, and vision. From there we craft a tailored roadmap before touching a single design tool.</div></div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question interactable" onclick="toggleFaq(this)">
+                        How long does a project typically take?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer"><div class="faq-answer-inner">Project timelines vary based on scope. A brand identity project typically takes 2–4 weeks. A full website design and development project ranges from 4–10 weeks. We always agree on a clear timeline before starting and keep you updated throughout.</div></div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question interactable" onclick="toggleFaq(this)">
+                        Do you work with international clients?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer"><div class="faq-answer-inner">Absolutely. We have worked with clients across 10+ countries and operate fully remotely. Our communication is clear, structured, and time-zone friendly — wherever you are in the world, we make collaboration seamless.</div></div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question interactable" onclick="toggleFaq(this)">
+                        What do you need from me to get started?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer"><div class="faq-answer-inner">Just reach out via the contact form below. Tell us about your project, your goals, and your timeline. We'll schedule a discovery call and take it from there. No lengthy briefs required to start the conversation.</div></div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question interactable" onclick="toggleFaq(this)">
+                        Do you offer post-launch support?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer"><div class="faq-answer-inner">Yes. Every project includes a post-launch support period. We also offer ongoing retainer packages for clients who need continuous updates, new features, or marketing support after launch.</div></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact">
+            <div class="fade-up">
+                <span class="kicker">Initiate</span>
+                <h2 class="decode-text" style="margin-bottom:2rem;" data-text="Let's connect.">Let's connect.</h2>
+                <p style="color:var(--text-muted);font-size:1.1rem;max-width:400px;line-height:1.6;font-weight:500;">Our books are open. Drop us your details and we'll arrange a strategic discovery call.</p>
+            </div>
+            <div class="form-panel fade-up interactable">
+                <!-- Honeypot for spam bots -->
+                <input type="text" id="form-hp" name="botcheck" style="display:none!important" tabindex="-1" autocomplete="off">
+                <!-- name + autocomplete: without them no browser or password manager will offer to
+                     fill these three, which is the highest-friction part of the whole enquiry on a
+                     phone. autocomplete needs a name attribute to key off, so both are required. -->
+                <div class="input-group"><input id="form-name" name="name" autocomplete="name" type="text" placeholder=" " required aria-label="Full Name"><label>Full Name</label></div>
+                <div class="input-group"><input id="form-email" name="email" autocomplete="email" inputmode="email" type="email" placeholder=" " required aria-label="Email Address"><label>Email Address</label></div>
+                <div class="input-group"><input id="form-company" name="company" autocomplete="organization" type="text" placeholder=" " required aria-label="Company or Brand"><label>Company / Brand</label></div>
+                <div class="input-group"><input id="form-website" name="website" autocomplete="url" inputmode="url" type="text" placeholder=" " aria-label="Company Website (optional)"><label>Company Website (optional)</label></div>
+                <div class="input-group"><input id="form-phone" name="phone" autocomplete="tel" inputmode="tel" type="tel" placeholder=" " required aria-label="Phone Number"><label>Phone Number</label></div>
+                <div class="input-group select-group">
+                    <select id="form-service"><option value="">Service Interested In</option></select>
+                    <div class="custom-select interactable" data-target="form-service" role="listbox" aria-label="Service Interested In">
+                        <div class="custom-select-trigger" tabindex="0" role="button" aria-haspopup="listbox" aria-expanded="false">
+                            <span>Service Interested In</span>
+                            <div class="custom-select-arrow"><svg viewBox="0 0 12 8" fill="none"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+                        </div>
+                        <div class="custom-select-options">
+                            <div class="custom-select-option" role="option" data-value="Web Development">Web Development</div>
+                            <div class="custom-select-option" role="option" data-value="Immersive / 3D Web">Immersive / 3D Web</div>
+                            <div class="custom-select-option" role="option" data-value="AI &amp; Automation">AI &amp; Automation</div>
+                            <div class="custom-select-option" role="option" data-value="Marketing Campaign">Marketing Campaign</div>
+                            <div class="custom-select-option" role="option" data-value="Launch Strategy">Launch Strategy</div>
+                            <div class="custom-select-option" role="option" data-value="Full Online Setup">Full Online Setup</div>
+                            <div class="custom-select-option" role="option" data-value="UI/UX Design">UI/UX Design</div>
+                            <div class="custom-select-option" role="option" data-value="Brand Identity">Brand Identity</div>
+                            <div class="custom-select-option" role="option" data-value="Other">Other</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group select-group">
+                    <select id="form-budget"><option value="">Estimated Budget ($)</option></select>
+                    <div class="custom-select interactable" data-target="form-budget" role="listbox" aria-label="Estimated Budget">
+                        <div class="custom-select-trigger" tabindex="0" role="button" aria-haspopup="listbox" aria-expanded="false">
+                            <span>Estimated Budget ($)</span>
+                            <div class="custom-select-arrow"><svg viewBox="0 0 12 8" fill="none"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+                        </div>
+                        <div class="custom-select-options">
+                            <div class="custom-select-option" role="option" data-value="Under $3,000">Under $3K</div>
+                            <div class="custom-select-option" role="option" data-value="$3,000 – $5,000">$3K – $5K</div>
+                            <div class="custom-select-option" role="option" data-value="$5,000 – $10,000">$5K – $10K</div>
+                            <div class="custom-select-option" role="option" data-value="$10,000 – $25,000">$10K – $25K</div>
+                            <div class="custom-select-option" role="option" data-value="$25,000 – $50,000">$25K – $50K</div>
+                            <div class="custom-select-option" role="option" data-value="$50,000+">$50K+</div>
+                            <div class="custom-select-option" role="option" data-value="Not sure yet">Not sure yet</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group"><textarea id="form-message" rows="3" placeholder=" " aria-label="Tell us about your project"></textarea><label>Tell us about your project</label></div>
+                <!-- role="alert" so a screen reader announces the rejection. Without it the error
+                     went from display:none to block silently and a non-sighted user got no feedback
+                     at all — the button just stopped doing anything. -->
+                <div id="form-error" role="alert" aria-live="assertive" style="color:#f87171;font-size:0.85rem;font-weight:600;letter-spacing:0.05em;margin-bottom:1rem;display:none;"></div>
+                <!-- Cloudflare Turnstile. Site key is public; the secret lives only in api/secrets.php.
+                     Implicit rendering injects a hidden cf-turnstile-response input into this div. -->
+                <p class="form-floor" style="color:var(--text-muted);font-size:0.82rem;font-weight:500;letter-spacing:0.02em;margin:0 0 1.2rem;">Custom projects start from <b style="color:#fff">$3,000</b>.</p>
+                <div class="cf-turnstile" data-sitekey="0x4AAAAAAEK3RClKxFP0jJjP" data-theme="dark" style="margin-bottom:1.2rem"></div>
+                <div class="magnetic interactable"><button id="submit-btn" class="submit-btn" type="button" onclick="submitForm()">Send Dispatch</button></div>
+            </div>
+        </section>
+
+        <footer>
+            <div class="footer-wm" id="footer-wm">KIASA</div>
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-brand-name">KIASA</div>
+                    <p class="footer-brand-desc">A global digital studio — elevating brands through immersive web development, 3D experiences, AI automation, and relentless conversion strategy.</p>
+                    <a href="https://wa.me/971509027130" target="_blank" class="footer-whatsapp interactable">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                        WhatsApp Us
+                    </a>
+                </div>
+                <div class="footer-col">
+                    <h4>Pages</h4>
+                    <a href="/about" class="interactable">About Us</a>
+                    <a href="/case-studies" class="interactable">Case Studies</a>
+                    <a href="/blog" class="interactable">Blog</a>
+                    <a href="/pricing" class="interactable">Services</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Services</h4>
+                    <a href="#capabilities" class="interactable">Immersive Web</a>
+                    <a href="#capabilities" class="interactable">AI Automations</a>
+                    <a href="#capabilities" class="interactable">Marketing</a>
+                    <a href="#capabilities" class="interactable">UI/UX Design</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Connect</h4>
+                    <a href="https://www.instagram.com/webtactics/" target="_blank" class="interactable">Instagram</a>
+                    <a href="https://www.linkedin.com/company/79060249/" target="_blank" class="interactable">LinkedIn</a>
+                    <a href="https://www.youtube.com/@Webtacticsorg" target="_blank" class="interactable">YouTube</a>
+                    <a href="mailto:info@kiasa.tech" class="interactable">Email</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="footer-copy">© 2026 KIASA. All Rights Reserved.</div>
+                <a href="#hero" class="footer-top interactable" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">
+                    <span>Back to Top</span>
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 14V4M9 4L4 9M9 4L14 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+                <div class="footer-bottom-links">
+                    <a href="/privacy" class="interactable">Privacy Policy</a>
+                    <a href="/terms" class="interactable">Terms of Use</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+
+    <!-- DOM Detail Modal -->
+    <div id="detail-modal" onclick="if(event.target===this)closeModal()">
+        <div class="modal-content">
+            <div class="close-btn-wrap magnetic interactable">
+                <button class="close-btn" onclick="closeModal()">Close [X]</button>
+            </div>
+            <div class="modal-media">
+                <img   id="modal-img"   src="" alt="Project Preview" loading="lazy">
+                <video id="modal-video" src="" muted loop playsinline></video>
+            </div>
+            <div class="modal-text-wrap">
+                <div class="modal-kicker" id="modal-kicker">Category</div>
+                <h3  class="modal-title"  id="modal-title">Title</h3>
+                <p   class="modal-desc"   id="modal-desc">Description</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cinematic Project Modal -->
+    <div id="drawer-backdrop" onclick="closeDrawer()"></div>
+    <div id="case-drawer">
+        <div class="case-modal-inner">
+            <div class="drawer-close">
+                <button class="drawer-close-btn" onclick="closeDrawer()">✕</button>
+            </div>
+            <div class="drawer-media" id="drawer-media"></div>
+            <div class="drawer-body">
+                <div class="drawer-kicker" id="drawer-kicker">Category</div>
+                <h2 class="drawer-title" id="drawer-title">Project Title</h2>
+                <p class="drawer-desc" id="drawer-desc">Description</p>
+                <ul class="drawer-results" id="drawer-results"></ul>
+                <div class="drawer-divider"></div>
+                <div class="drawer-tag" id="drawer-tag">KIASA · Global Studio</div>
+            </div>
+            <span class="drawer-project-num" id="drawer-num">01</span>
+        </div>
+    </div>
+
+    <!-- Lite/fallback preview switch: visit ?lite=1 to preview the no-3D experience -->
+    
+    
+
+    <!-- Package builder float. Replicated by hand: this page is standalone and includes no
+         partials, so partials/widgets.php never runs here. Its CSS is inlined above, because
+         this page does not load Assets/site.css either. -->
+    <a id="wt-calc-float" href="/estimate" class="interactable" aria-label="Build your package and see the price"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="2.5" width="16" height="19" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M8 7h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18.5h.01M12 18.5h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span class="wt-calc-label">Build a package</span></a>
+
+    <a id="wa-float" href="https://wa.me/971509027130" target="_blank" rel="noopener" class="interactable" aria-label="Chat with us on WhatsApp">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.05 4.91A9.82 9.82 0 0 0 12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.91-7.01zM12.04 20.15h-.01a8.23 8.23 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.24 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.83-.2-.48-.4-.41-.56-.42h-.47c-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.16 1.74 2.66 4.21 3.73.59.25 1.05.41 1.41.52.59.19 1.13.16 1.55.1.47-.07 1.47-.6 1.68-1.18.21-.59.21-1.09.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg>
+    </a>

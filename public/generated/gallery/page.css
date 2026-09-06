@@ -1,0 +1,532 @@
+
+    /*
+      CSS LAYER MAP
+      - Tokens/reset establish the palette, typography, accessibility focus, and dark page base.
+      - WebGL/effect layers sit fixed behind or above the interface according to z-index.
+      - Navigation, controller, index, lightbox, CTA, loader, and progress rules style the DOM UI.
+      - The scroll track creates camera-travel distance without rendering page content itself.
+      - Fallback rules turn the hidden works index into a normal list if WebGL/CDN startup fails.
+      - Responsive/reduced-motion rules simplify expensive effects and reflow controls on phones.
+
+      Colour note: :root is the shared palette for both DOM/CSS and WebGL. Hex tokens feed Three.js;
+      matching *-rgb tokens supply transparent CSS and canvas variants of the same colours.
+    */
+    /* ── TOKENS ────────────────────────────────────────────────────── */
+    :root {
+      color-scheme: dark;
+      --bg: #020204;
+      --text-main: #ffffff;
+      --text-muted: #8892b0;
+      --accent: #d8b4fe;
+      --accent-rgb: 216,180,254;
+      --accent-dim: rgba(var(--accent-rgb),0.15);
+      --accent-gallery: #c7d2fe;
+      --accent-gallery-rgb: 199,210,254;
+      --accent-2: #7dd3fc;
+      --scene-bg: #04010c;
+      --scene-wall: #080808;
+      --scene-violet: #8b5cf6;
+      --scene-violet-rgb: 139,92,246;
+      --line: rgba(255,255,255,0.1);
+      --ui-strong: #ffffff;
+      --ui-rgb: 255,255,255;
+      --ui-contrast: #08070c;
+      --nav-surface: rgba(2,2,4,0.92);
+      --panel-surface: rgba(4,3,10,0.93);
+      --glass-surface: rgba(10,10,18,0.72);
+      --vignette-edge: rgba(4,1,12,0.92);
+      --font-head: 'Syncopate', sans-serif;
+      --font-body: 'Rajdhani', sans-serif;
+      --font-num: 'Orbitron', monospace;
+      --ease-out: cubic-bezier(0.16,1,0.3,1);
+    }
+
+
+    /* ── RESET ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-tap-highlight-color: transparent; }
+
+    /* No text selection anywhere in the walkthrough chrome.
+       .pad-btn already sets user-select:none on ITSELF, which is why the button never highlighted —
+       but that does not stop the browser starting a selection somewhere else from the same gesture.
+       Holding ◄/► on a phone is a long press followed by tiny drags, which is exactly the gesture
+       that begins a text selection, and it latched onto the nearest selectable text: the "WEB
+       TACTICS" logo in the header. Once a selection exists it persists, and on iOS it drags the
+       Copy/Look Up callout up with it.
+       This is a 3D walkthrough, so there is no prose here worth selecting; the exceptions below
+       restore it for the three places where copying text is a real thing to want. */
+    html, body { -webkit-user-select: none; -moz-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    #gallery-lightbox, #gallery-lightbox *, .works-index, .works-index *, .fallback, .fallback * {
+      -webkit-user-select: text; -moz-user-select: text; user-select: text; -webkit-touch-callout: default;
+    }
+    /* overflow-x: `clip` (not `hidden`) — hidden promotes body to a scroll container and
+       breaks mobile momentum scroll (see site.css). hidden stays first as the old-browser fallback. */
+    html { scroll-behavior: auto; background: var(--bg); overflow-x: hidden; overflow-x: clip; }
+    /* Hide the scrollbar VISUALLY only — wheel, trackpad, touch, keyboard and programmatic scrolling
+       all still work, and the scroll position is untouched. Three declarations because no single one
+       covers every engine: scrollbar-width (Firefox), -ms-overflow-style (legacy Edge/IE),
+       ::-webkit-scrollbar (Chrome/Edge/Safari + all iOS browsers). Applied from first paint, so it
+       cannot cause a layout shift, and removing the gutter only makes the viewport wider — the
+       direction that relieves horizontal overhang rather than creating it. */
+    html { scrollbar-width: none; -ms-overflow-style: none; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; display: none; }
+    body { min-height: 100vh; overflow-x: hidden; overflow-x: clip; background: var(--bg); color: var(--text-main); font-family: var(--font-body); font-size: 18px; font-weight: 500; line-height: 1.5; transition:background-color 0.55s var(--ease-out),color 0.45s ease; }
+    a { color: inherit; text-decoration: none; }
+    ::selection { background: rgba(var(--accent-rgb),0.28); color: #fff; }
+    *:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+    input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
+    /* Gated on .wt-cursor-ready, which the module adds only once the replacement cursor is actually
+       running. Unconditionally, this hid the real pointer for anyone whose custom cursor never
+       appears — reduced-motion visitors, a blocked/slow CDN, any JS failure — leaving them with no
+       visible mouse pointer at all on a page navigated entirely by pointing. */
+    @media (pointer: fine) { html.wt-cursor-ready, html.wt-cursor-ready *, html.wt-cursor-ready *::before, html.wt-cursor-ready *::after { cursor: none; } }
+
+    /* ── CANVAS ────────────────────────────────────────────────────── */
+    #webgl { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; background: var(--bg); will-change: contents; contain: strict; transition:background-color 0.55s var(--ease-out); }
+    .copy-stage, .scroll-track section { contain: content; }
+
+    /* ── FILM GRAIN ───────────────────────────────────────────────── */
+    #film-grain{position:fixed;inset:0;z-index:9997;pointer-events:none;opacity:0.038;mix-blend-mode:overlay;animation:grain-drift 0.22s steps(1) infinite;}
+    @keyframes grain-drift{0%{background-position:0 0}14%{background-position:-44px -22px}28%{background-position:28px -58px}43%{background-position:-66px 26px}57%{background-position:38px 52px}71%{background-position:-24px -76px}85%{background-position:56px -38px}100%{background-position:-32px 68px}}
+    /* ── CURSOR TRAIL ─────────────────────────────────────────────── */
+    #cursor-trail{position:fixed;inset:0;z-index:9998;pointer-events:none;}
+
+    /* ── GOD RAYS — static, slow rotation only ─────────────────────── */
+    #god-rays { position:fixed; top:-20%; left:50%; transform:translateX(-50%); width:120%; height:130%; pointer-events:none; z-index:2; opacity:0.035; background:conic-gradient(from 270deg at 50% -10%, rgba(var(--accent-rgb),0.8) 0deg, transparent 15deg, transparent 30deg, rgba(var(--accent-rgb),0.5) 33deg, transparent 48deg, transparent 70deg, rgba(var(--accent-rgb),0.6) 73deg, transparent 88deg, transparent 120deg, rgba(var(--accent-rgb),0.4) 123deg, transparent 138deg, transparent 360deg); animation:godRayRotate 28s linear infinite; will-change:transform; }
+    @keyframes godRayRotate { from{transform:translateX(-50%) rotate(0deg);} to{transform:translateX(-50%) rotate(360deg);} }
+    /* Mobile: drop the heaviest ambient overlays (full-screen blend layer + rotating conic god-rays) for smoothness */
+    @media (max-width:820px){ #film-grain, #god-rays { display:none !important; } }
+
+    /* ── SCENE VIGNETTE — static ───────────────────────────────────── */
+    #scene-vignette { position:fixed; inset:0; pointer-events:none; z-index:3; opacity:0.88; background:radial-gradient(ellipse at center, transparent 42%, var(--vignette-edge) 100%); transition:opacity 0.55s ease,background 0.55s ease; }
+
+    /* ── END-OF-CORRIDOR CTA ───────────────────────────────────────── */
+    #gallery-end-cta { position:fixed; inset:0; z-index:6; display:flex; align-items:center; justify-content:center; padding:2rem; pointer-events:none; opacity:0; transform:translateY(2rem); transition:opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
+    #gallery-end-cta.visible { opacity:1; transform:translateY(0); pointer-events:auto; }
+    .end-cta-card { position:relative; max-width:42rem; width:100%; text-align:center; padding:3.5rem 3rem 2.6rem; background:linear-gradient(180deg, rgba(14,8,22,0.78) 0%, rgba(6,3,12,0.88) 100%); backdrop-filter:blur(22px) saturate(140%); -webkit-backdrop-filter:blur(22px) saturate(140%); border:1px solid rgba(var(--accent-rgb),0.16); border-radius:2px; box-shadow:0 30px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(var(--accent-rgb),0.04) inset; }
+    .end-cta-corners span { position:absolute; width:18px; height:18px; border:1.5px solid rgba(var(--accent-rgb),0.55); pointer-events:none; }
+    .end-cta-corners span:nth-child(1){top:-1px;left:-1px;border-right:none;border-bottom:none;}
+    .end-cta-corners span:nth-child(2){top:-1px;right:-1px;border-left:none;border-bottom:none;}
+    .end-cta-corners span:nth-child(3){bottom:-1px;left:-1px;border-right:none;border-top:none;}
+    .end-cta-corners span:nth-child(4){bottom:-1px;right:-1px;border-left:none;border-top:none;}
+    .end-cta-eyebrow { display:inline-flex; align-items:center; gap:0.85rem; color:var(--accent); font-family:var(--font-body); font-size:0.72rem; font-weight:700; letter-spacing:0.42em; text-transform:uppercase; margin-bottom:1.3rem; opacity:0.85; }
+    .end-cta-eyebrow::before, .end-cta-eyebrow::after { content:''; display:block; width:18px; height:1px; background:rgba(var(--accent-rgb),0.5); }
+    .end-cta-title { font-family:var(--font-head); font-weight:700; font-size:clamp(1.8rem, 3.6vw, 2.7rem); letter-spacing:0.04em; text-transform:uppercase; color:#fff; line-height:1.05; margin-bottom:1.1rem; }
+    .end-cta-divider { width:48px; height:1px; background:linear-gradient(90deg, transparent, rgba(var(--accent-rgb),0.6), transparent); margin:0 auto 1.3rem; }
+    .end-cta-lead { font-family:var(--font-body); color:rgba(255,255,255,0.65); font-size:1rem; line-height:1.6; max-width:30rem; margin:0 auto 2rem; }
+    .end-cta-actions { display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap; }
+    .end-cta-btn { display:inline-flex; align-items:center; justify-content:center; padding:0.95rem 1.9rem; border-radius:999px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.02); color:#fff; font-family:var(--font-body); font-weight:700; font-size:0.78rem; letter-spacing:0.18em; text-transform:uppercase; text-decoration:none; transition:background 0.3s, border-color 0.3s, transform 0.3s, box-shadow 0.3s; cursor:pointer; }
+    .end-cta-btn:hover { background:rgba(var(--accent-rgb),0.14); border-color:var(--accent); transform:translateY(-2px); }
+    .end-cta-btn--primary { background:var(--accent); color:#0a0010; border-color:var(--accent); padding-left:2.4rem; padding-right:2.4rem; box-shadow:0 8px 30px rgba(var(--accent-rgb),0.25); }
+    .end-cta-btn--primary:hover { background:#fff; color:#0a0010; border-color:#fff; box-shadow:0 12px 40px rgba(var(--accent-rgb),0.45); }
+    .end-cta-btn .arrow { display:inline-block; margin-left:0.55rem; transition:transform 0.3s; }
+    .end-cta-btn:hover .arrow { transform:translateX(4px); }
+    @media(max-width:520px){ .end-cta-card{padding:2.4rem 1.5rem 2rem;} .end-cta-title{font-size:1.6rem;} .end-cta-actions{flex-direction:column;} .end-cta-btn{width:100%;} }
+
+    /* ── PAINTING LIGHTBOX ─────────────────────────────────────────── */
+    #gallery-lightbox { position:fixed; inset:0; z-index:1500; background:linear-gradient(90deg, rgba(4,1,12,0) 0%, rgba(4,1,12,0) 44%, rgba(4,1,12,0.82) 76%, rgba(4,1,12,0.93) 100%); pointer-events:all; visibility:hidden; opacity:0; }
+    #lb-panel { position:absolute; top:50%; left:74%; transform:translate(-50%,-50%); width:min(34vw,420px); max-width:88vw; text-align:center; }
+    #lb-num { font-family:var(--font-num,'Orbitron',sans-serif); font-size:0.72rem; letter-spacing:0.32em; color:var(--accent); text-transform:uppercase; margin-bottom:1rem; }
+    #lb-title { font-family:var(--font-head); font-size:clamp(1.4rem,2.4vw,2.1rem); font-weight:700; letter-spacing:-0.01em; line-height:1.12; text-transform:uppercase; color:#fff; max-width:none; margin-bottom:1.1rem; }
+    #lb-desc { font-family:var(--font-body); font-size:1rem; line-height:1.75; color:var(--text-muted,#8892b0); font-weight:500; margin-bottom:1.6rem; }
+    #lb-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:0.7rem; margin-bottom:1.6rem; }
+    .lb-btn { display:inline-flex; align-items:center; gap:0.4rem; padding:0.8rem 1.4rem; border-radius:100px; font-family:var(--font-body); font-weight:700; font-size:0.78rem; letter-spacing:0.1em; text-transform:uppercase; text-decoration:none; cursor:pointer; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.04); color:#fff; transition:background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s; }
+    .lb-btn:hover { border-color:var(--accent); transform:translateY(-1px); }
+    /* Brand accent (#d8b4fe), NOT --accent-gallery (#c7d2fe). The latter is a periwinkle blue used
+       for in-scene UI; on the primary CTA it read as off-brand next to the pink used sitewide. */
+    .lb-btn--primary { background:var(--accent); border-color:var(--accent); color:#12071f; }
+    .lb-btn--primary:hover { color:#12071f; box-shadow:0 8px 30px rgba(var(--accent-rgb),0.42); }
+    #lb-hint { font-family:var(--font-body); font-size:0.7rem; letter-spacing:0.28em; color:rgba(255,255,255,0.32); text-transform:uppercase; }
+    #lb-nav { display:flex; justify-content:center; gap:0.8rem; margin-bottom:1.5rem; }
+    #lb-prev, #lb-next { width:46px; height:46px; border-radius:50%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:#fff; font-size:1.15rem; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s, border-color 0.2s, transform 0.2s; }
+    #lb-prev:hover, #lb-next:hover { background:rgba(255,255,255,0.13); border-color:var(--accent); transform:translateY(-2px); }
+    #lb-close { position:absolute; top:2rem; right:2rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:100px; padding:0.7rem 1.8rem; font-family:var(--font-body); font-weight:700; letter-spacing:0.18em; text-transform:uppercase; font-size:0.78rem; cursor:pointer; transition:background 0.25s, border-color 0.25s; z-index:3; }
+    #lb-close:hover { background:rgba(255,255,255,0.14); border-color:var(--accent); }
+    body.lb-open #wt-nav, body.lb-open #sound-toggle, body.lb-open #wa-float,
+    body.lb-open #wt-calc-float,
+    body.lb-open #nav-toggle, body.lb-open #look-controls, body.lb-open .welcome-message,
+    body.lb-open .progress-rail, body.lb-open .now-viewing { opacity:0 !important; visibility:hidden !important; pointer-events:none !important; }
+    .lb-hint-touch { display:none; }
+    /* ── Lightbox on phones ──────────────────────────────────────────
+       The panel used to float over the artwork on a scrim that faded out well below the copy, so
+       the title and description landed on whatever the piece happened to be doing — and about half
+       these works are near-white mockups, which made the text unreadable. It is now a proper bottom
+       sheet: it carries its OWN opaque backdrop, so copy is never judged against the art, and the
+       type/spacing are sized for a phone instead of inheriting desktop scale. */
+    @media (max-width:820px){
+      #gallery-lightbox{ background:linear-gradient(0deg, rgba(4,1,12,0.97) 0%, rgba(4,1,12,0.9) 34%, rgba(4,1,12,0.45) 52%, rgba(4,1,12,0) 68%); }
+      #lb-panel{
+        left:0; right:0; top:auto; transform:none; width:auto; max-width:none;
+        bottom:0; padding:1.5rem 1.15rem calc(1rem + env(safe-area-inset-bottom,0px));
+        text-align:center;
+        background:linear-gradient(180deg, rgba(4,1,12,0) 0%, rgba(4,1,12,0.82) 12%, rgba(4,1,12,0.96) 30%, rgba(5,2,13,0.99) 100%);
+      }
+      #lb-num{ font-size:0.6rem; letter-spacing:0.24em; margin-bottom:0.5rem; }
+      #lb-title{ font-size:clamp(1.3rem,6.2vw,1.85rem); margin-bottom:0.5rem; }
+      /* Clamped: a long description used to push the buttons and arrows off the bottom of the screen. */
+      #lb-desc{ font-size:0.88rem; line-height:1.5; margin-bottom:1rem; color:rgba(255,255,255,0.74);
+                display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+      #lb-actions{ gap:0.5rem; margin-bottom:0.85rem; justify-content:center; }
+      .lb-btn{ padding:0.7rem 1.05rem; font-size:0.68rem; letter-spacing:0.07em; }
+      #lb-nav{ justify-content:center; gap:0.7rem; margin-bottom:0.65rem; }
+      #lb-prev, #lb-next{ width:42px; height:42px; }
+      #lb-hint{ font-size:0.56rem; letter-spacing:0.16em; line-height:1.5; }
+      .lb-hint-desk{ display:none; }
+      .lb-hint-touch{ display:inline; }
+      #lb-close{ top:calc(0.85rem + env(safe-area-inset-top,0px)); right:0.9rem; padding:0.58rem 1.15rem; font-size:0.68rem; letter-spacing:0.14em; }
+    }
+
+    /* ── GALLERY CURSOR ────────────────────────────────────────────── */
+    #cursor-dot, #cursor-ring, #cursor-view-label { position: fixed; top: 0; left: 0; pointer-events: none; opacity: 0; }
+    #cursor-dot { z-index: 10000; width: 6px; height: 6px; border-radius: 50%; background: #fff; mix-blend-mode: difference; transform: translate3d(-50px,-50px,0); transition: opacity 0.25s ease; }
+    #cursor-ring { z-index: 9999; width: 40px; height: 40px; border: 1px solid rgba(var(--accent-rgb),0.66); border-radius: 50%; mix-blend-mode: difference; transform-origin: center; will-change: transform; transition: width 0.2s ease, height 0.2s ease, border-color 0.25s ease, background 0.25s ease, opacity 0.25s ease; }
+    #cursor-view-label { z-index: 10001; padding: 0.48rem 0.86rem; border-radius: 999px; background: var(--accent-gallery); color: #000; font-family: var(--font-body); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; transform: translate3d(-50px,-50px,0); transition: opacity 0.2s ease; white-space: nowrap; }
+    body.cursor-ready #cursor-dot, body.cursor-ready #cursor-ring { opacity: 1; }
+    body.cursor-ready #cursor-view-label.visible { opacity: 1; }
+    body.hovering #cursor-ring { width: 65px; height: 65px; border-color: transparent; background: rgba(255,255,255,0.95); mix-blend-mode: exclusion; }
+    body.hovering #cursor-dot { opacity: 0; }
+    @media (pointer: coarse), (max-width: 900px) { #cursor-dot, #cursor-ring, #cursor-view-label { display: none; } }
+
+    /* Navigation controller — circular gamepad cluster. Desktop: seated in the gap between the
+       floating buttons and the progress bar. Mobile: revealed by the #nav-toggle FAB. */
+    #look-controls { position: fixed; right: 9rem; bottom: 2.1rem; z-index: 700; width: 140px; height: 140px; border-radius: 50%; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); place-items: center; background: radial-gradient(circle at 50% 40%, rgba(26,22,44,0.6), rgba(8,8,16,0.66)); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.1); padding: 9px; opacity: 0; pointer-events: none; transform: translateY(10px) scale(0.96); transform-origin: bottom right; transition: opacity 0.5s ease, transform 0.5s ease; box-shadow: 0 16px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05); }
+    body.past-hero:not(.lb-open):not(.menu-open):not(.end-cta):not(.ui-idle) #look-controls { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+    .pad-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.12s, box-shadow 0.2s; -webkit-user-select: none; user-select: none; touch-action: none; }
+    .pad-btn:hover, .pad-btn.active { background: var(--accent-gallery); border-color: var(--accent-gallery); color: #000; box-shadow: 0 0 18px rgba(var(--accent-rgb),0.4); }
+    .pad-btn.active { transform: scale(0.88); }
+    .pad-btn svg { display: block; }
+    /* Outside the room there is nothing to turn towards, so the turn half of the pad goes inert
+       rather than pretending to work. Opacity transitions on the same curve as the entrance blend. */
+    body.look-locked #look-left, body.look-locked #look-right { opacity: 0.2; pointer-events: none; }
+    #look-left, #look-right { transition: opacity 0.45s ease; }
+    .pad-up { grid-area: 1 / 2 / 2 / 3; } .pad-left { grid-area: 2 / 1 / 3 / 2; }
+    .pad-right { grid-area: 2 / 3 / 3 / 4; } .pad-down { grid-area: 3 / 2 / 4 / 3; }
+    .pad-core { grid-area: 2 / 2 / 3 / 3; width: 7px; height: 7px; border-radius: 50%; background: rgba(var(--accent-rgb),0.55); box-shadow: 0 0 10px rgba(var(--accent-rgb),0.5); }
+    /* One-time hint (desktop) */
+    .nav-hint { position: absolute; right: calc(100% + 14px); top: 50%; transform: translateY(-50%); white-space: nowrap; font-family: var(--font-body); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.85); background: rgba(10,10,18,0.72); border: 1px solid rgba(var(--accent-rgb),0.3); border-radius: 100px; padding: 0.5rem 0.9rem; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+    #look-controls.show-hint .nav-hint { opacity: 1; }
+
+    /* Mobile controller FAB (hidden on desktop). It is the TOP of the WhatsApp/SFX/calculator
+       float column, and its bottom offset is set in the lift block further down rather than
+       here — the value here is the desktop-stack fallback. */
+    #nav-toggle { display: none; }
+    @media (max-width: 900px) {
+      #nav-toggle { position: fixed; right: 1.5rem; bottom: calc(1.5rem + 132px); z-index: 800; min-width: 88px; height: 54px; padding:0 0.9rem; gap:0.5rem; border-radius: 100px; align-items: center; justify-content: center; background: var(--glass-surface); border: 1px solid rgba(var(--ui-rgb),0.14); color: var(--ui-strong); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 0.4s ease, background 0.2s, border-color 0.2s, transform 0.2s; box-shadow: 0 10px 40px rgba(0,0,0,0.28); }
+      .nav-toggle-label{font:700 0.64rem/1 var(--font-body);letter-spacing:0.12em;text-transform:uppercase;}
+      body.past-hero:not(.lb-open):not(.menu-open):not(.end-cta) #nav-toggle { display: flex; opacity: 1; pointer-events: auto; }
+      #nav-toggle.open { background: var(--accent-gallery); border-color: var(--accent-gallery); color: #000; }
+      /* Cluster on mobile: centered ABOVE the progress bar, revealed only when toggled open */
+      #look-controls { left: 50%; right: auto; bottom: 4.6rem; transform-origin: bottom center; transform: translateX(-50%) translateY(12px) scale(0.96); }
+      body.past-hero:not(.lb-open):not(.menu-open):not(.end-cta):not(.ui-idle) #look-controls { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(12px) scale(0.96); }
+      body.nav-open.past-hero:not(.lb-open):not(.menu-open):not(.end-cta) #look-controls { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0) scale(1); }
+      .nav-hint { display: none; }
+    }
+    @media(pointer:coarse){nav,#nav-toggle,#look-controls,#sound-toggle,#wa-float,#wt-calc-float{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}nav{background:var(--nav-surface);}#look-controls,#nav-toggle{background:var(--glass-surface);}
+    }
+
+    /* ── NAV (matches the rest of the site) ───────────────────────── */
+    nav { position: fixed; top: 0; left: 0; width: 100%; padding: 2rem 5vw; display: flex; justify-content: space-between; align-items: center; z-index: 1000; background: var(--nav-surface); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--line); transition:background-color 0.5s ease,border-color 0.5s ease; }
+    .logo { font-family: var(--font-head); font-weight: 700; font-size: clamp(1rem, 2vw, 1.2rem); letter-spacing: 0.15em; display: flex; align-items: center; gap: 12px; text-transform: uppercase; text-decoration: none; color: var(--ui-strong); }
+    /* accent dot before the wordmark removed sitewide — this page is standalone and carries its own copy */
+
+    /* ── HAMBURGER ─────────────────────────────────────────────────── */
+    .hamburger { display: flex; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 4px; z-index: 201; transition: opacity 0.3s; }
+    .nav-clock { font-family: var(--font-num); font-size: 0.65rem; letter-spacing: 0.2em; color: rgba(var(--ui-rgb),0.52); white-space: nowrap; margin-left: auto; margin-right: 1.5rem; }
+    .nav-clock-label { color: rgba(var(--ui-rgb),0.34); margin-right: 0.4em; }
+    @media (max-width: 1024px) { .nav-clock { display: none; } }
+    .hamburger span { display: block; width: 24px; height: 1.5px; background: var(--ui-strong); border-radius: 2px; transition: transform 0.4s var(--ease-out), opacity 0.3s, background-color 0.45s ease; transform-origin: center; }
+    .hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+    body.menu-open nav { opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    body.menu-open #cursor-dot,
+    body.menu-open #cursor-ring,
+    body.menu-open #cursor-view-label { opacity: 0 !important; visibility: hidden; }
+
+    /* ── MOBILE MENU (matches index.html) ─────────────────────────── */
+    html.menu-open, body.menu-open, body.modal-open { overflow: hidden; }
+    .mobile-menu { position: fixed; inset: 0; background: rgba(2,2,4,0.98); backdrop-filter: blur(30px); z-index: 1300; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 6rem 2rem 3rem; opacity: 0; pointer-events: none; transition: opacity 0.5s var(--ease-out); overflow-y: auto; scrollbar-width: none; line-height: normal; }
+    .mobile-menu::-webkit-scrollbar { display: none; }
+    .mobile-menu.open { opacity: 1; pointer-events: all; }
+    .mobile-menu-brand { font-family: var(--font-head); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent); opacity: 0.6; margin-bottom: 1rem; }
+    .mobile-menu-links { display: flex; flex-direction: column; align-items: center; gap: 0; flex: 1; justify-content: center; width: 100%; }
+    .mobile-menu .m-link { font-family: var(--font-head); font-size: clamp(1.4rem, 4vw, 3rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #fff; text-decoration: none; transition: color 0.3s, transform 0.3s; padding: 1rem 0; display: block; width: 100%; text-align: center; position: relative; opacity: 0; transform: translateY(20px); }
+    .mobile-menu.open .m-link { opacity: 1; transform: translateY(0); }
+    .mobile-menu.open .m-link:nth-child(1) { transition: opacity 0.5s 0.1s var(--ease-out), transform 0.5s 0.1s var(--ease-out), color 0.3s; }
+    .mobile-menu.open .m-link:nth-child(2) { transition: opacity 0.5s 0.15s var(--ease-out), transform 0.5s 0.15s var(--ease-out), color 0.3s; }
+    .mobile-menu.open .m-link:nth-child(3) { transition: opacity 0.5s 0.2s var(--ease-out), transform 0.5s 0.2s var(--ease-out), color 0.3s; }
+    .mobile-menu.open .m-link:nth-child(4) { transition: opacity 0.5s 0.25s var(--ease-out), transform 0.5s 0.25s var(--ease-out), color 0.3s; }
+    .mobile-menu.open .m-link:nth-child(5) { transition: opacity 0.5s 0.3s var(--ease-out), transform 0.5s 0.3s var(--ease-out), color 0.3s; }
+    .mobile-menu.open .m-link:nth-child(6) { transition: opacity 0.5s 0.35s var(--ease-out), transform 0.5s 0.35s var(--ease-out), color 0.3s; }
+    .mobile-menu.open .m-link:nth-child(7) { transition: opacity 0.5s 0.4s var(--ease-out), transform 0.5s 0.4s var(--ease-out), color 0.3s; }
+    .mobile-menu.open .m-link:nth-child(8) { transition: opacity 0.5s 0.45s var(--ease-out), transform 0.5s 0.45s var(--ease-out), color 0.3s; }
+    .mobile-menu .m-link::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 40px; height: 1px; background: rgba(255,255,255,0.06); }
+    .mobile-menu .m-link:last-child::after { display: none; }
+    .mobile-menu .m-link:hover, .mobile-menu .m-link:active { color: var(--accent); }
+    .mobile-menu-footer { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding-top: 2rem; opacity: 0; transform: translateY(15px); }
+    .mobile-menu.open .mobile-menu-footer { opacity: 1; transform: translateY(0); transition: opacity 0.5s 0.5s var(--ease-out), transform 0.5s 0.5s var(--ease-out); }
+    .mobile-menu-socials { display: flex; gap: 2rem; }
+    .mobile-menu-socials a { color: var(--text-muted); text-decoration: none; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; transition: color 0.3s; }
+    .mobile-menu-socials a:hover { color: #fff; }
+    .mobile-menu-whatsapp { display: flex; align-items: center; gap: 8px; color: #4ade80; font-family: var(--font-body); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none; }
+    .mobile-menu-whatsapp::before { content: ''; display: block; width: 6px; height: 6px; background: #4ade80; border-radius: 50%; box-shadow: 0 0 8px #4ade80; }
+    .mobile-close { position: absolute; top: 2rem; right: 2rem; background: none; border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.4rem; transition: border-color 0.3s, color 0.3s, transform 0.3s; z-index: 201; }
+    .mobile-close:hover { border-color: var(--accent); color: var(--accent); transform: rotate(90deg) scale(1.1); }
+
+    /* ── SOUND TOGGLE ──────────────────────────────────────────────── */
+    #sound-toggle { position:fixed; bottom:calc(2.5rem + 54px + 0.75rem); right:2.5rem; z-index:800; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; width:54px; height:54px; border-radius:50%; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); transition:background 0.3s,border-color 0.3s; pointer-events:auto; flex-direction:column; gap:4px; cursor:pointer; }
+    #sound-toggle:hover { background:rgba(var(--accent-rgb),0.15); border-color:var(--accent); }
+    #sound-toggle .sound-bars { display:flex; gap:2px; align-items:flex-end; height:14px; }
+    #sound-toggle .sound-bar { width:2px; background:var(--accent); border-radius:1px; }
+    #sound-toggle .sound-bar:nth-child(1){height:4px; animation:wt-sp 0.8s 0.00s ease-in-out infinite alternate;}
+    #sound-toggle .sound-bar:nth-child(2){height:10px;animation:wt-sp 0.8s 0.15s ease-in-out infinite alternate;}
+    #sound-toggle .sound-bar:nth-child(3){height:7px; animation:wt-sp 0.8s 0.30s ease-in-out infinite alternate;}
+    #sound-toggle .sound-bar:nth-child(4){height:12px;animation:wt-sp 0.8s 0.10s ease-in-out infinite alternate;}
+    #sound-toggle .sound-bar:nth-child(5){height:5px; animation:wt-sp 0.8s 0.25s ease-in-out infinite alternate;}
+    @keyframes wt-sp { from{transform:scaleY(0.3)} to{transform:scaleY(1)} }
+    #sound-toggle.muted .sound-bar { animation:none; transform:scaleY(0.3); opacity:0.25; }
+    #sound-toggle .sound-label { font-family:var(--font-num); font-size:0.42rem; letter-spacing:0.15em; color:var(--text-muted); }
+    @media (max-width:1024px){#sound-toggle{bottom:calc(1.5rem + 54px + 0.75rem + env(safe-area-inset-bottom, 0px));right:1.5rem;}}
+
+    /* ── WA FLOAT ──────────────────────────────────────────────────── */
+    #wa-float{position:fixed;bottom:calc(2.5rem + 2 * (54px + 0.75rem));right:2.5rem;z-index:800;width:54px;height:54px;border-radius:50%;background:rgba(37,211,102,0.10);border:1px solid rgba(37,211,102,0.35);color:#25d366;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-decoration:none;transition:background 0.3s,border-color 0.3s,transform 0.3s;}
+    #wa-float:hover{background:rgba(37,211,102,0.22);border-color:rgba(37,211,102,0.65);transform:scale(1.06);}
+    #wa-float svg{width:26px;height:26px;display:block;}
+    /* Floating package-builder button. Mirrors Assets/site.css — this page inlines its own styles and
+       does not load the shared sheet, so the rule has to exist here too. Sits two 54px slots above the
+       bottom, i.e. above #wa-float, which is above #sound-toggle. */
+    #wt-calc-float{position:fixed;bottom:2.5rem;right:2.5rem;z-index:800;height:54px;display:inline-flex;align-items:center;gap:0.6rem;padding:0 1.15rem;border-radius:100px;background:rgba(216,180,254,0.10);border:1px solid var(--accent-dim);color:var(--accent);text-decoration:none;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);font-family:var(--font-body);font-weight:700;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;white-space:nowrap;transition:background 0.3s,border-color 0.3s,transform 0.3s,color 0.3s;}
+    #wt-calc-float:hover{background:rgba(216,180,254,0.2);border-color:var(--accent);color:#fff;transform:scale(1.04);}
+    #wt-calc-float:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+    #wt-calc-float svg{width:20px;height:20px;display:block;flex-shrink:0;}
+    @media(max-width:1024px){#wt-calc-float{bottom:calc(1.5rem + env(safe-area-inset-bottom, 0px));right:1.5rem;width:54px;padding:0;justify-content:center;gap:0;}#wt-calc-float .wt-calc-label{display:none;}}
+    @media(prefers-reduced-motion:reduce){#wt-calc-float:hover{transform:none;}}
+    /* ── Gallery-only float geometry. This page has the least free edge on the site. ──
+       ICON ONLY AT EVERY WIDTH, not just on mobile. #look-controls is a 134px pad at right:9rem —
+       i.e. it occupies 144px..278px in from the right edge. The 54px circles live at 40px..94px and
+       clear it, but the 171px-wide PILL reaches to 211px and cuts straight through it (measured:
+       67x54px of overlap). The pad is invisible until the scene unlocks (opacity:0 under
+       body.look-locked), so this collision does not show up on a page that has not booted — it would
+       have appeared for real visitors only.
+       Raised base under 1024px: .progress-rail sits at bottom:2.2rem and .now-viewing at bottom:3.9rem,
+       both centred and near-full-width on a phone, so the lowest slot is not free there either. All
+       three floats lift together so the order stays the same as the rest of the site. */
+    #wt-calc-float{width:54px;padding:0;justify-content:center;gap:0;}
+    #wt-calc-float .wt-calc-label{display:none;}
+
+
+    #wa-float::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1px solid rgba(37,211,102,0.4);animation:waPulse 2.4s ease-out infinite;pointer-events:none;}
+    @keyframes waPulse{0%{transform:scale(0.95);opacity:0.7}100%{transform:scale(1.45);opacity:0}}
+    @media(max-width:1024px){#wa-float{bottom:calc(1.5rem + 2 * (54px + 0.75rem) + env(safe-area-inset-bottom, 0px));right:1.5rem;}}
+    /* Gallery mobile: lift the whole float column clear of .progress-rail (bottom:2.2rem) and
+       .now-viewing (bottom:3.9rem), both centred and near-full-width on a phone. LAST IN SOURCE ORDER
+       ON PURPOSE — these tie with the per-element rules above on specificity, so anything earlier is
+       overridden by them and only part of the column moves. */
+    @media(max-width:1024px){
+      #wt-calc-float{bottom:calc(5.5rem + env(safe-area-inset-bottom,0px));}
+      #sound-toggle{bottom:calc(5.5rem + 54px + 0.75rem + env(safe-area-inset-bottom,0px));}
+      #wa-float{bottom:calc(5.5rem + 2 * (54px + 0.75rem) + env(safe-area-inset-bottom,0px));}
+      /* #nav-toggle IS PART OF THIS COLUMN and was left out of the lift, which put it on top of the
+         SFX button on every phone. Its own declaration is bottom:calc(1.5rem + 132px) = 156px, and
+         once the other three moved to a 5.5rem base the SFX button landed at 154px — a 52px overlap
+         of two 54px controls, so the move pad covered the sound toggle almost exactly.
+         It takes the fourth slot, above WhatsApp. It is declared at max-width:900px and only paints
+         there, so including it in this 1024px block is harmless above 900px where it is display:none. */
+      #nav-toggle{bottom:calc(5.5rem + 3 * (54px + 0.75rem) + env(safe-area-inset-bottom,0px));}
+    }
+
+    /* ── PAGE WIPE — canonical block (matches site.css/index.html/blog-post.php) so the
+       brand moment (glow + wordmark) is identical entering/leaving the gallery. ───────── */
+    #wt-page-wipe{position:fixed;inset:0;background:var(--bg);z-index:99999;transform:translateY(100%);pointer-events:none;transition:transform 0.7s cubic-bezier(0.7,0,0.2,1);}
+    #wt-page-wipe.cover{transform:translateY(0);}
+    #wt-page-wipe.uncover{transform:translateY(-100%);}
+    #wt-page-wipe::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(var(--accent-rgb),0.08) 0%,transparent 60%);}
+    #wt-page-wipe::after{content:'KIASA';--wipe-ls:clamp(0.16em,1.1vw,0.4em);position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);text-align:center;white-space:nowrap;font-family:var(--font-head,'Syncopate',sans-serif);font-size:clamp(0.78rem,3.4vw,2rem);font-weight:700;letter-spacing:var(--wipe-ls);text-indent:var(--wipe-ls);color:var(--accent);opacity:0;transition:opacity 0.4s;}
+    #wt-page-wipe.cover::after{opacity:1;transition-delay:0.3s;}
+
+    /* ── PRELOADER (matches index.html) ───────────────────────────── */
+    #preloader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 1.2s var(--ease-out), visibility 1.2s; overflow:hidden; }
+    .preloader-overlay { position:absolute; inset:0; pointer-events:none; }
+    .loader-brand, #loader-progress, .loader-line { position:relative; z-index:1; }
+    .loader-brand { font-family: var(--font-head); font-weight: 700; font-size: 1.2rem; letter-spacing: 0.5em; margin-bottom: 3vh; color: var(--text-muted); text-transform: uppercase; }
+    #loader-progress { font-family: var(--font-num); font-size: clamp(4rem, 8vw, 8rem); font-weight: 700; color: #fff; width: 200px; text-align: center; letter-spacing: 0.1em; }
+    .loader-line { width: 200px; height: 1px; background: rgba(255,255,255,0.1); margin-top: 20px; position: relative; overflow: hidden; }
+    .loader-line-inner { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--accent); transition: width 0.2s; }
+
+    /* ── PROGRESS RAIL ─────────────────────────────────────────────── */
+    .progress-rail{position:fixed;left:50%;transform:translateX(-50%);bottom:2.2rem;z-index:6;display:grid;grid-template-columns:auto minmax(min(40vw,28rem),50vw) auto;align-items:center;gap:1.1rem;color:rgba(255,255,255,0.48);font-family:var(--font-num);font-size:0.68rem;text-transform:uppercase;white-space:nowrap;}
+    /* Now-viewing caption — sits just above the progress rail, fades in only while walking. */
+    .now-viewing{position:fixed;left:50%;transform:translateX(-50%) translateY(6px);bottom:3.9rem;z-index:6;font-family:var(--font-body);font-size:0.74rem;font-weight:600;letter-spacing:0.05em;color:rgba(255,255,255,0.62);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.4s ease,transform 0.4s ease;max-width:86vw;overflow:hidden;text-overflow:ellipsis;}
+    .now-viewing.on{opacity:1;transform:translateX(-50%) translateY(0);}
+    .now-viewing .nv-label{color:var(--accent);font-weight:700;letter-spacing:0.18em;text-transform:uppercase;font-size:0.62rem;margin-right:0.5rem;}
+    .now-viewing .nv-count{color:rgba(255,255,255,0.4);margin-left:0.5rem;}
+    body.lb-open .now-viewing, body.menu-open .now-viewing, body.end-cta .now-viewing{opacity:0 !important;}
+    @media(max-width:900px){.now-viewing{bottom:3.4rem;font-size:0.68rem;}}
+
+    /* Nav: Index button + right-hand group */
+    .nav-right-group{display:flex;align-items:center;gap:1.1rem;}
+    .nav-index-btn{display:inline-flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.14);color:#fff;font-family:var(--font-body);font-weight:700;font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.5rem 0.95rem;border-radius:100px;cursor:pointer;transition:background 0.2s,border-color 0.2s,color 0.2s;}
+    .nav-index-btn:hover,.nav-index-btn[aria-expanded="true"]{background:var(--accent-gallery);border-color:var(--accent-gallery);color:#000;}
+    .nav-index-btn svg{display:block;}
+    .nav-utility-btn{min-height:36px;padding:0.48rem 0.82rem;border-radius:100px;border:1px solid rgba(var(--ui-rgb),0.14);background:rgba(var(--ui-rgb),0.04);color:var(--ui-strong);font-family:var(--font-body);font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:transform 0.25s var(--ease-out),background 0.25s,border-color 0.25s,color 0.25s;}
+    .nav-utility-btn:hover,.nav-utility-btn[aria-expanded="true"]{transform:translateY(-1px);border-color:var(--accent);background:rgba(var(--accent-rgb),0.11);}
+    body.is-fallback #index-toggle{display:none;}
+    body.lb-open #index-toggle,body.lb-open #guide-toggle{opacity:0;pointer-events:none;}   /* can't open another overlay over a painting */
+    @media(max-width:900px){.nav-right-group{gap:0.55rem;}.nav-utility-btn{padding:0.46rem 0.64rem;letter-spacing:0.08em;}}
+    @media(max-width:600px){.nav-index-btn span{display:none;}.nav-index-btn{padding:0.5rem;}.nav-utility-btn{font-size:0.62rem;padding-inline:0.56rem;}}
+
+    /* Controls legend — a chrome-less HUD, not a dialog. No panel, border, or backdrop: just
+       key glyphs and white type floating over the corridor, so the artwork stays the main event.
+       Legibility over bright artwork comes from a text shadow rather than a background plate. */
+    /* Full-width band centred by flex, NOT left:50% + width:max-content + translate(-50%).
+       The max-content route mis-centres once the mobile rows set their own intrinsic width. */
+    #gallery-guide{position:fixed;left:0;right:0;bottom:5.2rem;z-index:1100;padding:0 1rem;display:flex;flex-direction:column;align-items:center;gap:1.15rem;color:#fff;text-shadow:0 1px 14px rgba(0,0,0,0.75),0 0 3px rgba(0,0,0,0.5);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(14px);transition:opacity 0.45s ease,transform 0.55s var(--ease-out),visibility 0s linear 0.55s;}
+    #gallery-guide.open{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);transition:opacity 0.45s ease,transform 0.55s var(--ease-out),visibility 0s;}
+    /* Children stay content-width so align-items:center actually centres the group. */
+    #gallery-guide > *{flex:0 0 auto;}
+    body.guide-open:not(.past-hero) .welcome-message{transform:translateX(-50%) translateY(-8.5rem);}
+    .guide-actions{display:flex;align-items:center;justify-content:center;gap:2.6rem;flex-wrap:wrap;}
+    /* Hairline separator between groups — replaces the old card's internal dividers. */
+    .guide-action+.guide-action{position:relative;}
+    .guide-action+.guide-action::before{content:'';position:absolute;left:-1.3rem;top:50%;width:1px;height:26px;transform:translateY(-50%);background:linear-gradient(180deg,transparent,rgba(255,255,255,0.22),transparent);}
+    .guide-action{display:flex;align-items:center;gap:0.85rem;min-width:0;}
+    .guide-keys{display:flex;gap:0.32rem;align-items:center;white-space:nowrap;}
+    /* Thin outlined caps, like the reference — no fill, no drop-shadow "keycap" styling. */
+    .guide-keys kbd{display:grid;place-items:center;min-width:30px;height:30px;padding:0 0.42rem;border:1px solid rgba(255,255,255,0.55);border-radius:5px;background:transparent;color:#fff;font:600 0.66rem/1 var(--font-num);letter-spacing:0.04em;}
+    /* The small ▶ that leads each label in the reference legend. */
+    .guide-copy{position:relative;padding-left:0.95rem;}
+    .guide-copy::before{content:'';position:absolute;left:0;top:0.34rem;border-style:solid;border-width:4px 0 4px 5px;border-color:transparent transparent transparent rgba(255,255,255,0.85);}
+    .guide-copy strong{display:block;font:700 0.86rem/1 var(--font-head);letter-spacing:0.13em;text-transform:uppercase;color:#fff;}
+    .guide-copy span{display:block;margin-top:0.34rem;color:rgba(255,255,255,0.62);font-family:var(--font-body);font-size:0.68rem;font-weight:500;line-height:1.2;letter-spacing:0.04em;}
+    .guide-mobile{display:none;}
+    /* Understated dismiss — the reference has none, but the guide must stay dismissible. */
+    .guide-close{min-height:34px;padding:0.3rem 1.1rem;border:1px solid rgba(255,255,255,0.28);border-radius:100px;background:transparent;color:rgba(255,255,255,0.72);font:700 0.62rem/1 var(--font-body);letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;transition:color 0.25s,border-color 0.25s,background 0.25s;}
+    .guide-close:hover{color:#fff;border-color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.06);}
+    body.menu-open #gallery-guide,body.index-open #gallery-guide,body.lb-open #gallery-guide,body.end-cta #gallery-guide{opacity:0!important;visibility:hidden!important;pointer-events:none!important;}
+    @media(max-width:900px){
+      #gallery-guide{bottom:calc(4.1rem + env(safe-area-inset-bottom,0px));gap:0.95rem;}
+      body.guide-open:not(.past-hero) .welcome-message{transform:translateX(-50%) translateY(-10.25rem);}
+      .guide-desktop{display:none;}.guide-mobile{display:flex;}
+      .guide-actions{flex-direction:column;align-items:flex-start;gap:0.85rem;}
+      /* Vertical stack on phones, so the between-group dividers would read as clutter. */
+      .guide-action+.guide-action::before{display:none;}
+      .guide-action{width:100%;gap:0.75rem;}
+      .guide-keys{flex:0 0 76px;justify-content:flex-start;}
+      .guide-keys kbd{min-width:32px;height:30px;}
+      .guide-copy strong{font-size:0.78rem;}
+    }
+
+    /* Works index panel */
+    #index-panel{position:fixed;inset:0;z-index:1200;background:rgba(4,3,10,0.93);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);display:flex;flex-direction:column;padding:6vh 5vw 4vh;opacity:0;visibility:hidden;transition:opacity 0.4s ease,visibility 0s linear 0.4s;}
+    body.index-open #index-panel{opacity:1;visibility:visible;transition:opacity 0.4s ease;}
+    .ix-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.8rem;flex-shrink:0;}
+    .ix-title{font-family:var(--font-head);font-size:clamp(1.3rem,3vw,2rem);font-weight:700;text-transform:uppercase;letter-spacing:-0.01em;color:#fff;}
+    .ix-title em{font-style:normal;color:var(--accent);font-family:var(--font-body);font-size:0.78rem;font-weight:600;letter-spacing:0.14em;margin-left:0.8rem;text-transform:uppercase;}
+    #ix-close{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:1.05rem;cursor:pointer;transition:background 0.2s,border-color 0.2s,transform 0.3s;flex-shrink:0;}
+    #ix-close:hover{border-color:var(--accent);color:var(--accent);transform:rotate(90deg);}
+    /* Categories are deliberately absent from this panel — both the filter chips that sat above the
+       grid and the small tag line that sat on every card. 14 tags across 51 works wrapped the chips
+       to two rows (up to 20vh above the fold) and put a second competing line of type in every tile.
+       The project name already says what the work is, and the piece itself says the rest one click
+       later, so the index is a clean jump list. The categories still exist in Assets/gallery-data.js
+       and still render in the hidden .works-index for SEO and the no-WebGL fallback. */
+    .ix-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:0.8rem;align-content:start;padding-bottom:2rem;}
+    /* justify-content matters now the tile holds a single element: grid stretches every tile to the
+       tallest in its row, so a one-line title next to a two-line one would otherwise sit high. */
+    .ix-item{text-align:left;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:1.15rem 1.3rem;cursor:pointer;transition:background 0.2s,border-color 0.2s,transform 0.2s;display:flex;flex-direction:column;justify-content:center;min-height:4.6rem;}
+    .ix-item:hover{background:rgba(var(--accent-rgb),0.06);border-color:var(--accent-gallery);transform:translateY(-2px);}
+    .ix-item-title{font-family:var(--font-head);font-size:0.98rem;font-weight:700;text-transform:uppercase;color:#fff;letter-spacing:0.01em;line-height:1.25;}
+
+    /* While the index is open, hide the walk controls / caption / rail behind it */
+    body.index-open #look-controls,body.index-open #nav-toggle,body.index-open .now-viewing,body.index-open .progress-rail{opacity:0 !important;pointer-events:none !important;}
+    .progress-rail__track{position:relative;display:block;height:2px;overflow:hidden;background:rgba(255,255,255,0.13);}
+    .progress-rail__fill{position:absolute;inset:0 auto 0 0;display:block;width:0%;background:linear-gradient(90deg,var(--accent),#fff);box-shadow:0 0 12px var(--accent);}
+
+    /* ── HERO BOTTOM LABEL — refined 3-line hierarchy ──────────────── */
+    .welcome-message{position:fixed;left:50%;bottom:5rem;z-index:4;display:flex;flex-direction:column;align-items:center;text-align:center;pointer-events:none;transform:translateX(-50%);transition:opacity 0.45s ease,transform 0.6s var(--ease-out),visibility 0s linear 0.45s;}
+    .welcome-eyebrow{display:block;font-family:var(--font-body);font-weight:700;font-size:clamp(0.62rem,0.78vw,0.72rem);letter-spacing:0.42em;text-transform:uppercase;color:var(--accent);opacity:0.78;margin-bottom:0.95rem;}
+    .welcome-message h1{margin:0 0 1.4rem;font-family:var(--font-head);font-weight:700;font-size:clamp(1.15rem,2.1vw,1.7rem);letter-spacing:0.20em;text-transform:uppercase;color:#fff;line-height:1;}
+    .welcome-tour-btn{display:inline-flex;align-items:center;gap:0.65rem;padding:0.85rem 1.8rem;margin-bottom:1.05rem;border-radius:999px;border:1px solid var(--accent);background:rgba(var(--accent-rgb),0.10);color:#fff;font-family:var(--font-body);font-weight:700;font-size:0.74rem;letter-spacing:0.22em;text-transform:uppercase;cursor:pointer;pointer-events:auto;transition:background 0.3s,transform 0.3s,border-color 0.3s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+    .welcome-tour-btn:hover{background:rgba(var(--accent-rgb),0.22);transform:translateY(-2px);border-color:#fff;}
+    .welcome-tour-btn .play-icon{display:inline-block;width:0;height:0;border-style:solid;border-width:5px 0 5px 8px;border-color:transparent transparent transparent currentColor;}
+    .welcome-hint{display:inline-flex;align-items:center;gap:0.85rem;font-family:var(--font-body);font-weight:600;font-size:clamp(0.6rem,0.74vw,0.68rem);letter-spacing:0.38em;text-transform:uppercase;color:rgba(255,255,255,0.42);}
+    .welcome-hint::before, .welcome-hint::after{content:'';display:block;width:20px;height:1px;background:rgba(255,255,255,0.22);}
+    body.welcome-gone .welcome-message{opacity:0;visibility:hidden;transform:translateX(-50%) translateY(1rem);transition:opacity 0.45s ease,transform 0.6s var(--ease-out),visibility 0s linear 0.45s;}
+    @media(max-width:900px){.welcome-message{bottom:4rem;}.welcome-eyebrow{letter-spacing:0.32em;}.welcome-message h1{letter-spacing:0.14em;}}
+
+    .hero-center-label{position:fixed;top:52%;left:50%;z-index:4;display:flex;align-items:center;gap:1.2rem;opacity:0.72;pointer-events:none;transform:translate(-50%,-50%);transition:opacity 0.45s ease;}
+    .hero-center-label span:not(.hero-cl-line){color:rgba(255,255,255,0.32);font-family:var(--font-body);font-size:0.76rem;font-weight:700;text-transform:uppercase;white-space:nowrap;}
+    .hero-cl-line{width:36px;height:1px;flex-shrink:0;background:rgba(255,255,255,0.18);}
+    body.past-hero .hero-center-label{opacity:0;}
+
+    /* ── COPY PANELS ───────────────────────────────────────────────── */
+    .copy-stage{position:fixed;inset:0;z-index:4;pointer-events:none;}
+    .copy-panel{position:absolute;left:6vw;top:50%;width:min(34rem,calc(100vw - 2rem));opacity:0;visibility:hidden;transform:translate3d(0,3rem,0);transition:opacity 520ms ease,transform 720ms var(--ease-out),visibility 0s linear 720ms;}
+    .copy-panel.is-active{opacity:1;visibility:visible;transform:translate3d(0,-50%,0);transition:opacity 520ms ease,transform 720ms var(--ease-out),visibility 0s;pointer-events:auto;}
+    .copy-panel--hero{top:auto;bottom:5.8rem;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(20rem,0.95fr);width:calc(100vw - 12vw);align-items:end;gap:4vw;padding-top:3vh;border-top:1px solid rgba(255,255,255,0.08);transform:translate3d(0,2rem,0);}
+    .copy-panel--hero.is-active{transform:translate3d(0,0,0);}
+    .copy-panel--hero .eyebrow,.copy-panel--hero h1{grid-column:1;}
+    .copy-panel--hero .lead,.copy-panel--hero .hero-scroll-hint{grid-column:2;}
+    .copy-panel--right{left:auto;right:6vw;width:min(31rem,calc(100vw - 2rem));}
+    .copy-panel--final{width:min(40rem,calc(100vw - 2rem));}
+    .eyebrow{margin:0 0 1rem;color:var(--accent);font-family:var(--font-body);font-size:0.84rem;font-weight:700;text-transform:uppercase;}
+    h1,h2{font-family:var(--font-head);font-weight:700;text-transform:uppercase;letter-spacing:0;}
+    h1{max-width:12ch;color:#dbeafe;font-size:6.5rem;line-height:0.96;}
+    h2{max-width:13ch;font-size:4.25rem;line-height:1.06;}
+    .lead,.copy-panel p:not(.eyebrow){width:100%;max-width:34rem;margin-top:1.2rem;color:var(--text-muted);font-size:1.15rem;font-weight:500;line-height:1.62;text-transform:uppercase;}
+    .hero-scroll-hint{display:inline-flex;align-items:center;gap:1rem;margin-top:2rem;color:rgba(255,255,255,0.34);font-size:0.82rem;font-weight:700;text-transform:uppercase;animation:scrollPulse 2.5s ease infinite;}
+    .scroll-line{width:36px;height:1px;background:currentColor;}
+    @keyframes scrollPulse{0%,100%{opacity:0.34}50%{opacity:0.76}}
+    .gallery-cta{display:inline-flex;align-items:center;justify-content:center;min-height:3.1rem;margin-top:2rem;padding:0.9rem 1.8rem;border:1px solid rgba(255,255,255,0.18);border-radius:999px;background:rgba(255,255,255,0.04);color:#fff;font-family:var(--font-body);font-size:0.9rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;pointer-events:auto;backdrop-filter:blur(14px);transition:border-color 0.3s,background 0.3s,transform 0.3s;}
+    .gallery-cta:hover{transform:translateY(-2px);border-color:var(--accent);background:var(--accent-dim);}
+
+    /* ── SCROLL TRACK ──────────────────────────────────────────────── */
+    .scroll-track{position:relative;z-index:1;}
+    /* Desktop runway. This is THE dial for how fast the corridor goes past: it sets how much
+       scroll distance maps onto the 0..1 walk. Was 132vh, which read as a rush past the work —
+       180vh gives roughly a third more scroll per painting. If this changes, scale the d-pad's
+       desktop MAX px/sec in animate() by the same factor or a held ▲ walks proportionally slower
+       through the room.
+       CORRECTION: this used to say the runway worked "without touching Lenis's glide (which is what
+       keeps the motion smooth)". Lenis has never run on this page — its pinned CDN build 404s — so
+       there is no glide, and until the nav modes below this runway was the ONLY thing shaping how
+       the walk feels. See SETUP/gallery-navigation.md. */
+    .scroll-track section{min-height:180vh;}
+    /* Longer runway again on phones. A touch swipe covers far more of the corridor than a wheel
+       notch does, so the same 9 sections need more scroll height for the walk to read as a
+       glide rather than a sprint (300vh ≈ 361px of scroll per painting on a 390px phone;
+       don't go past ~330vh — beyond that the walk to the end CTA gets genuinely endless, and
+       there is no snap to shorten the tail of a flick any more).
+       ScrollTrigger re-measures on resize. */
+    @media (max-width:900px){
+      .scroll-track{touch-action:pan-y pinch-zoom;overscroll-behavior-x:none;}
+      .scroll-track section{min-height:300vh;}
+    }
+
+    /* ── FALLBACK ──────────────────────────────────────────────────── */
+    .fallback{position:fixed;inset:0;z-index:10;display:none;place-items:center;padding:2rem;background:#050506;color:var(--text-main);text-align:center;}
+    /* On fallback, the "requires WebGL" card flows ABOVE the works list (not a fixed opaque cover). */
+    body.is-fallback .scroll-track{display:none;}
+    body.is-fallback .fallback{position:relative;inset:auto;z-index:11;display:block;background:transparent;padding:7rem 1.25rem 0;}
+    /* Works index — visually hidden (SEO + screen readers) while the 3D runs; a real list on fallback. */
+    .works-index{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+    body.is-fallback .works-index{position:relative;inset:auto;z-index:11;display:block;width:min(940px,92vw);height:auto;margin:0 auto;padding:1.5rem 1.25rem 5rem;clip:auto;white-space:normal;overflow:visible;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border:0;}
+    body.is-fallback .works-index h2{font-family:var(--font-head);font-size:clamp(1.4rem,3vw,2.1rem);font-weight:700;text-transform:uppercase;letter-spacing:-0.01em;color:#fff;margin-bottom:0.8rem;}
+    body.is-fallback .works-index > p{font-family:var(--font-body);color:var(--text-muted);font-size:1rem;line-height:1.7;max-width:60ch;margin-bottom:2.5rem;}
+    body.is-fallback .works-index ul{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:1px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:14px;overflow:hidden;}
+    body.is-fallback .works-index li{background:var(--bg,#020204);}
+    body.is-fallback .works-index a{display:block;padding:1.4rem 1.5rem;text-decoration:none;transition:background 0.2s;}
+    body.is-fallback .works-index a:hover{background:rgba(var(--accent-rgb),0.05);}
+    body.is-fallback .works-index strong{display:block;font-family:var(--font-head);font-size:0.98rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.01em;margin-bottom:0.4rem;}
+    body.is-fallback .works-index .wi-tag{display:inline-block;font-family:var(--font-body);font-size:0.64rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--accent);margin-bottom:0.6rem;}
+    body.is-fallback .works-index .wi-desc{display:block;font-family:var(--font-body);font-size:0.9rem;line-height:1.6;color:var(--text-muted);}
+    body.is-fallback #webgl,body.is-fallback .copy-stage,body.is-fallback .progress-rail,body.is-fallback .hero-center-label,body.is-fallback .welcome-message{opacity:0;pointer-events:none;}
+
+    /* Warm daylight gallery mode. The architecture becomes stone-and-charcoal rather than flat white,
+       preserving depth and artwork contrast while matching the supplied museum reference. */
+
+    /* ── RESPONSIVE ────────────────────────────────────────────────── */
+    @media(max-width:1100px){h1{font-size:4.6rem;}h2{font-size:3.35rem;}.copy-panel--hero{grid-template-columns:1fr;gap:0;}.copy-panel--hero .eyebrow,.copy-panel--hero h1,.copy-panel--hero .lead,.copy-panel--hero .hero-scroll-hint{grid-column:1;}}
+    @media(max-width:900px){body{font-size:16px;}nav{padding:1.2rem 5vw;}.copy-panel,.copy-panel--right,.copy-panel--final,.copy-panel--hero{left:1rem;right:auto;top:auto;bottom:5.4rem;width:calc(100vw - 2rem);padding-top:0;border-top:1px solid rgba(255,255,255,0.08);}.copy-panel--hero{display:block;}.copy-panel.is-active,.copy-panel--hero.is-active{transform:translate3d(0,0,0);}h1{max-width:9ch;font-size:3.55rem;}h2{max-width:11ch;font-size:2.7rem;}.lead,.copy-panel p:not(.eyebrow){width:min(100%,22rem);max-width:22rem;font-size:1rem;line-height:1.45;}.progress-rail{left:1rem;right:1rem;bottom:1rem;transform:none;grid-template-columns:auto 1fr auto;}.hero-center-label{display:none;}}
+    @media(max-width:520px){h1{font-size:2.85rem;}h2{font-size:2.25rem;}.copy-panel,.copy-panel--right,.copy-panel--final,.copy-panel--hero{bottom:4.85rem;}.lead,.copy-panel p:not(.eyebrow){width:min(100%,20.75rem);max-width:20.75rem;}.eyebrow{margin-bottom:0.7rem;}.hero-scroll-hint{margin-top:1rem;}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.001ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important;}}
+  

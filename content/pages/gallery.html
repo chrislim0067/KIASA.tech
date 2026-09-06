@@ -1,0 +1,285 @@
+
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W8BKMGHG"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+  <!--
+    BODY / VISUAL STACK
+    The canvas is the actual 3D gallery. Everything else below is a fixed 2D control, information,
+    transition, accessibility, or atmospheric layer placed over it. The final .scroll-track is the
+    invisible vertical runway that ScrollTrigger converts into 0..1 gallery progress.
+
+    Main interaction state is expressed through body classes such as past-hero, welcome-gone,
+    menu-open, index-open, lb-open, end-cta, frame-hover, hovering, nav-open, and ui-idle. CSS reads
+    those classes to show/hide the appropriate layers without rebuilding the DOM.
+  -->
+  <noscript>
+    <section class="no-js-fallback" aria-labelledby="no-js-title">
+      <div class="no-js-fallback__inner">
+        <h1 id="no-js-title">Portfolio Gallery</h1>
+        <p>This immersive gallery needs JavaScript and WebGL. You can still explore our detailed case studies or contact KIASA directly.</p>
+        <a href="/case-studies">View Case Studies</a>
+        <a href="/contact">Contact Us</a>
+      </div>
+    </section>
+  </noscript>
+  <!-- Grain -->
+  <!-- The .grain div that used to sit here was DEAD: Gallery.html links no stylesheet but Google
+       Fonts and defines no .grain rule, so it painted nothing. This page's real grain is
+       #film-grain (markup below, CSS ~line 291, driven by setupFilmGrain). Removed because
+       anyone "fixing the grain" here by editing .grain would see no change and lose an afternoon. -->
+
+  <!-- Gallery cursor -->
+  <div id="cursor-dot" aria-hidden="true"></div>
+  <div id="cursor-ring" aria-hidden="true"></div>
+  <div id="cursor-view-label" aria-hidden="true">Scroll</div>
+
+  <!-- Mobile: FAB that reveals the controller (hidden on desktop) -->
+  <button id="nav-toggle" class="interactable" aria-label="Show navigation controls" aria-expanded="false">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg>
+    <span class="nav-toggle-label">Move</span>
+  </button>
+
+  <!-- Navigation controller — up/down move through the corridor, left/right turn the view -->
+  <div id="look-controls" role="group" aria-label="Gallery navigation">
+    <span class="nav-hint" aria-hidden="true">Hold to move · look</span>
+    <button id="move-up" class="pad-btn pad-up interactable" aria-label="Move forward" title="Hold to move forward (W / ↑)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 15l7-7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button id="look-left" class="pad-btn pad-left interactable" aria-label="Turn left" title="Hold to turn left (A / ←)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <span class="pad-core" aria-hidden="true"></span>
+    <button id="look-right" class="pad-btn pad-right interactable" aria-label="Turn right" title="Hold to turn right (D / →)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button id="move-down" class="pad-btn pad-down interactable" aria-label="Move backward" title="Hold to move backward (S / ↓)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 9l7 7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <!-- WebGL canvas -->
+  <canvas id="webgl" aria-label="Interactive 3D portfolio gallery by KIASA"></canvas>
+
+  <!-- Preloader (matches index.html) -->
+  <div id="preloader" aria-live="polite">
+    <div class="preloader-overlay" style="background:radial-gradient(ellipse at center, rgba(var(--scene-violet-rgb),0.08) 0%, var(--bg) 70%);"></div>
+    <div class="loader-brand">KIASA</div>
+    <div id="loader-progress">0%</div>
+    <div class="loader-line"><div class="loader-line-inner" id="loader-bar"></div></div>
+  </div>
+
+  <!-- KIASA Nav -->
+  <nav id="wt-nav">
+    <a href="/" class="logo">KIASA</a>
+    <div class="nav-right-group">
+      <button id="guide-toggle" class="nav-utility-btn interactable" type="button" aria-label="Show gallery controls guide" aria-controls="gallery-guide" aria-expanded="false">Guide</button>
+      <button id="index-toggle" class="nav-index-btn interactable" aria-label="Open works index" aria-controls="index-panel" aria-expanded="false" onclick="event.stopPropagation(); window._toggleIndex && window._toggleIndex()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+        <span>Index</span>
+      </button>
+      <div class="nav-clock" id="nav-clock"><span class="nav-clock-label">DUBAI</span><span id="dubai-time">--:--</span></div>
+      <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Compact first-visit guide, always recoverable from the nav. -->
+  <!-- Controls legend. Deliberately chrome-less — it floats over the corridor as a thin HUD
+       rather than a panel, so it reads as part of the scene instead of a dialog on top of it. -->
+  <section id="gallery-guide" aria-label="How to explore the gallery" aria-hidden="true" inert>
+    <!-- Copy must describe the controls as they actually behave: the whole pad is hold-to-act and
+         the turn no longer springs back, which is the one thing a visitor cannot guess. -->
+    <div class="guide-actions guide-desktop">
+      <div class="guide-action">
+        <div class="guide-keys"><kbd>W</kbd><kbd>S</kbd></div>
+        <div class="guide-copy"><strong>Walk</strong><span>hold, or just scroll</span></div>
+      </div>
+      <div class="guide-action">
+        <div class="guide-keys"><kbd>A</kbd><kbd>D</kbd></div>
+        <div class="guide-copy"><strong>Turn</strong><span>hold — the view stays where you stop</span></div>
+      </div>
+      <div class="guide-action">
+        <div class="guide-keys"><kbd>Click</kbd></div>
+        <div class="guide-copy"><strong>View</strong><span>open any work</span></div>
+      </div>
+    </div>
+    <div class="guide-actions guide-mobile">
+      <div class="guide-action">
+        <div class="guide-keys"><kbd>↑</kbd><kbd>↓</kbd></div>
+        <div class="guide-copy"><strong>Walk</strong><span>swipe up / down, or hold</span></div>
+      </div>
+      <div class="guide-action">
+        <div class="guide-keys"><kbd>←</kbd><kbd>→</kbd></div>
+        <div class="guide-copy"><strong>Turn</strong><span>hold, or swipe sideways</span></div>
+      </div>
+      <div class="guide-action">
+        <div class="guide-keys"><kbd>Tap</kbd></div>
+        <div class="guide-copy"><strong>View</strong><span>tap any work</span></div>
+      </div>
+    </div>
+    <button id="guide-close" class="guide-close interactable" type="button" aria-label="Dismiss controls guide">Got it</button>
+  </section>
+
+  <!-- Works index panel -->
+  <div id="index-panel" role="dialog" aria-modal="true" aria-labelledby="ix-title-heading" aria-hidden="true" tabindex="-1" inert>
+    <div class="ix-head">
+      <span class="ix-title" id="ix-title-heading">The Index <em id="ix-total"></em></span>
+      <button type="button" id="ix-close" class="interactable" aria-label="Close index" onclick="window._toggleIndex && window._toggleIndex()">&#x2715;</button>
+    </div>
+    <div class="ix-grid" id="ix-grid"></div>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" id="mobile-menu" role="dialog" aria-modal="true" aria-labelledby="mobile-menu-title" aria-hidden="true" tabindex="-1" inert>
+    <button type="button" class="mobile-close" onclick="toggleMobileMenu()" aria-label="Close menu">&#x2715;</button>
+    <div class="mobile-menu-brand" id="mobile-menu-title">KIASA</div>
+    <div class="mobile-menu-links">
+      <a href="/"        class="m-link" onclick="toggleMobileMenu()">Home</a>
+      <a href="/about"         class="m-link" onclick="toggleMobileMenu()">About</a>
+      <a href="/gallery" class="m-link active" onclick="toggleMobileMenu()">Infinite Gallery</a>
+      <a href="/case-studies"  class="m-link" onclick="toggleMobileMenu()">Case Studies</a>
+      <a href="/blog"          class="m-link" onclick="toggleMobileMenu()">Blog</a>
+      <a href="/pricing"       class="m-link" onclick="toggleMobileMenu()">Services</a>
+      <a href="/contact" class="m-link" onclick="toggleMobileMenu()">Contact</a>
+    </div>
+    <div class="mobile-menu-footer">
+      <div class="mobile-menu-socials">
+        <a href="https://www.instagram.com/webtactics/" target="_blank">Instagram</a>
+        <a href="https://www.linkedin.com/company/79060249/" target="_blank">LinkedIn</a>
+        <a href="https://www.youtube.com/@Webtacticsorg" target="_blank">YouTube</a>
+      </div>
+      <a href="https://wa.me/971509027130" target="_blank" class="mobile-menu-whatsapp">WhatsApp Us</a>
+    </div>
+  </div>
+
+  <!-- Sound toggle + audio -->
+  <button id="sound-toggle" class="muted" aria-label="Toggle ambient sound">
+    <div class="sound-bars">
+      <div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div>
+      <div class="sound-bar"></div><div class="sound-bar"></div>
+    </div>
+    <span class="sound-label">SFX</span>
+  </button>
+  <audio id="ambient-audio" src="/Assets/KIASA%20Audio.mp3" loop preload="none"></audio>
+
+  <!-- Package builder float. Replicated by hand: this page is standalone and includes no partials,
+       so partials/widgets.php never runs here. Its CSS is inlined above and three hide-lists already
+       reference #wt-calc-float (no-JS, body.lb-open, coarse-pointer), so this element was all that
+       the launch was waiting on. -->
+  <a id="wt-calc-float" href="/estimate" aria-label="Build your package and see the price">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="2.5" width="16" height="19" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M8 7h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18.5h.01M12 18.5h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <span class="wt-calc-label">Build a package</span>
+  </a>
+
+  <!-- WhatsApp float -->
+  <a id="wa-float" href="https://wa.me/971509027130" target="_blank" rel="noopener" aria-label="Chat on WhatsApp">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.05 4.91A9.82 9.82 0 0 0 12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.91-7.01zM12.04 20.15h-.01a8.23 8.23 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.24 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.83-.2-.48-.4-.41-.56-.42h-.47c-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.16 1.74 2.66 4.21 3.73.59.25 1.05.41 1.41.52.59.19 1.13.16 1.55.1.47-.07 1.47-.6 1.68-1.18.21-.59.21-1.09.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg>
+  </a>
+
+  <!-- Film grain overlay -->
+  <div id="film-grain"></div>
+  <!-- God rays + scene vignette -->
+  <div id="god-rays"></div>
+  <div id="scene-vignette"></div>
+  <!-- Cursor particle trail (2-D canvas, painted each frame) -->
+  <canvas id="cursor-trail"></canvas>
+  <!-- Page wipe -->
+  <div id="wt-page-wipe"></div>
+  <!-- End-of-corridor CTA — appears at ~92% scroll, replaces the auto-loop -->
+  <div id="gallery-end-cta" role="region" aria-labelledby="end-cta-title" aria-hidden="true" inert>
+    <div class="end-cta-card">
+      <div class="end-cta-corners" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <div class="end-cta-eyebrow">End of Corridor</div>
+      <div class="end-cta-title" id="end-cta-title">Commission Your Own</div>
+      <div class="end-cta-divider" aria-hidden="true"></div>
+      <p class="end-cta-lead">Every piece in this corridor was built for a real client. Send your brief and yours could hang here next.</p>
+      <div class="end-cta-actions">
+        <a href="/pricing" class="end-cta-btn end-cta-btn--primary interactable" data-wt-manual-track onclick="try{window.wtTrack&&window.wtTrack('InitiateCheckout',{content_name:'gallery_end_cta'});}catch(e){}">Start a Project <span class="arrow" aria-hidden="true">→</span></a>
+        <a href="/case-studies" class="end-cta-btn interactable" data-wt-manual-track onclick="try{window.wtTrack&&window.wtTrack('ViewContent',{content_type:'page',content_name:'case_studies_from_gallery'});}catch(e){}">Case Studies</a>
+        <button type="button" class="end-cta-btn interactable" onclick="window._restartGalleryWalk && window._restartGalleryWalk()">Walk Again</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Painting lightbox overlay -->
+  <div id="gallery-lightbox" role="dialog" aria-modal="true" aria-labelledby="lb-title" aria-describedby="lb-desc" aria-hidden="true" tabindex="-1" inert>
+    <button type="button" id="lb-close" onclick="event.stopPropagation(); window._closeLightbox()">✕ &nbsp;Close</button>
+    <aside id="lb-panel">
+      <div id="lb-num">Selected Work</div>
+      <h2 id="lb-title">Selected Work</h2>
+      <p id="lb-desc"></p>
+      <div id="lb-actions">
+        <!-- InitiateCheckout fired inline: this href is internal and the class list matches none of
+             wt-track.js's rules, so the click was invisible to Meta. -->
+        <a id="lb-cta" href="/start" class="lb-btn lb-btn--primary interactable" data-wt-manual-track onclick="event.stopPropagation(); try{window.wtTrack&&window.wtTrack('InitiateCheckout',{content_name:'gallery_lightbox_cta'});}catch(e){}">Start a project like this →</a>
+        <a id="lb-live" href="#" target="_blank" rel="noopener" class="lb-btn interactable" style="display:none" onclick="event.stopPropagation()">View live ↗</a>
+        <button id="lb-share" type="button" class="lb-btn interactable" data-label="Copy link" onclick="event.stopPropagation(); window._lbShare()">Copy link</button>
+      </div>
+      <div id="lb-nav">
+        <button id="lb-prev" type="button" onclick="event.stopPropagation(); window._lbNav(-1)" aria-label="Previous painting">←</button>
+        <button id="lb-next" type="button" onclick="event.stopPropagation(); window._lbNav(1)" aria-label="Next painting">→</button>
+      </div>
+      <!-- A phone has no ESC key and does not "click"; the two variants swap at the same
+           breakpoint as the rest of the panel. -->
+      <div id="lb-hint"><span class="lb-hint-desk">Press ESC · ← → to browse · click to close</span><span class="lb-hint-touch">Tap the arrows to browse · tap outside to close</span></div>
+    </aside>
+  </div>
+
+  <!-- Now-viewing caption (current work name + position) -->
+  <div class="now-viewing" id="now-viewing" aria-hidden="true"></div>
+
+  <!-- Progress rail -->
+  <aside class="progress-rail" aria-hidden="true">
+    <span class="progress-rail__number" id="section-number">0%</span>
+    <span class="progress-rail__track"><span class="progress-rail__fill" id="progress-fill"></span></span>
+    <span class="progress-rail__label" id="section-label">∞</span>
+  </aside>
+
+  <!-- Welcome overlay — shows during the establishing shot, fades out as the user starts scrolling -->
+  <div class="welcome-message">
+    <span class="welcome-eyebrow">Curated Digital Archive</span>
+    <h1>Infinite Gallery</h1>
+    <button type="button" class="welcome-tour-btn interactable" onclick="window._startAutoTour && window._startAutoTour()">
+      <span class="play-icon" aria-hidden="true"></span>Begin Tour
+    </button>
+    <span class="welcome-hint">Scroll to walk · hover to view</span>
+  </div>
+
+  <!-- Scroll depth track (9 sections × 180vh desktop / 300vh mobile — see .scroll-track CSS) -->
+  <!-- This is the invisible scroll runway, not content — it is aria-hidden, so it must not also be
+       the page's only <main> or the document exposes no main landmark at all. The real main region
+       is the works index further down, which is the semantic equivalent of the 3D corridor. -->
+  <div class="scroll-track" aria-hidden="true">
+    <section></section><section></section><section></section>
+    <section></section><section></section><section></section>
+    <section></section><section></section><section></section>
+  </div>
+
+  <!-- WebGL fallback -->
+  <div class="fallback" id="fallback" role="status">
+    <p style="font-family:var(--font-head);font-size:1.1rem;color:var(--text-muted);line-height:1.8;text-align:center;">
+      This gallery requires WebGL and a web server.<br>
+      <span style="font-size:0.82rem;font-family:var(--font-body);opacity:0.6;">Open via Live Server or <code style="font-family:monospace;color:var(--accent);">npx serve .</code> — not directly from the file system.</span><br><br>
+      <a href="/case-studies" style="color:var(--accent);text-decoration:underline;font-size:0.9rem;">View our case studies instead →</a>
+    </p>
+  </div>
+
+  <!-- Accessible / crawlable / no-WebGL index of every work. Filled by the classic works script.
+       Visually hidden while the 3D gallery runs; revealed as a real list when it can't. -->
+  <!-- The semantic equivalent of the 3D corridor: every one of the 51 works as real links, for
+       search engines, screen readers and the WebGL fallback. role="main" makes it the page's main
+       landmark, which the document previously had none of — the only <main> was the aria-hidden
+       scroll runway, so assistive tech was told the page had no main region at all. -->
+  <nav id="works-index" class="works-index" role="main" aria-label="KIASA portfolio — full index"></nav>
+
+  <!-- ── NON-MODULE: mobile menu + audio + page wipe ──────────────── -->
+  
+
+  <!-- ── MODULE: Three.js gallery ─────────────────────────────────── -->
+  <!-- Project data stays in a classic script so the semantic fallback index is independent of WebGL/CDN imports. -->
+  
+  
+
+  
