@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Rajdhani, Syncopate } from 'next/font/google';
 import type { ReactNode } from 'react';
 
@@ -49,9 +48,19 @@ export default function AuthShell({
   return (
     <main className={classes}>
       <div className={variant === 'dashboard' ? 'kauth__panel' : 'kauth__card'}>
-        <Link href="/" className="kauth__brand">
+        {/*
+          A plain <a>, not next/link, and it must stay that way. The marketing
+          pages are a multi-page app that only initialises on a document load —
+          a client-side navigation leaves their import map inert and the hero
+          module unable to resolve "three". See app/auth/signout/route.ts.
+        */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages --
+            The rule assumes every route can be entered by client-side
+            navigation. "/" cannot: following its advice here is what caused the
+            stuck-loader bug this comment exists to prevent. */}
+        <a href="/" className="kauth__brand">
           KIASA
-        </Link>
+        </a>
         <h1 className={variant === 'dashboard' ? 'kauth__welcome' : 'kauth__title'}>{title}</h1>
         {subtitle ? <p className="kauth__subtitle">{subtitle}</p> : null}
         {children}

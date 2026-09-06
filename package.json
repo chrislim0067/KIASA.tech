@@ -14,7 +14,8 @@
     "brand": "node scripts/gen-brand-logo.mjs && node scripts/apply-patches.mjs",
     "patch": "node scripts/apply-patches.mjs",
     "responsive": "node scripts/verify-responsive.mjs",
-    "rebrand": "node scripts/rebrand.mjs"
+    "rebrand": "node scripts/rebrand.mjs",
+    "test:auth": "node scripts/test-auth-flow.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",

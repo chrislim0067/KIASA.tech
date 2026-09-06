@@ -3,8 +3,7 @@ import { redirect } from 'next/navigation';
 
 import AuthShell from '@/components/auth/AuthShell';
 import ConfigNotice from '@/components/auth/ConfigNotice';
-import LogoutButton from '@/components/auth/LogoutButton';
-import { signOut } from '@/app/auth/actions';
+import SignOutForm from '@/components/auth/SignOutForm';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { LOGIN } from '@/lib/auth/routes';
@@ -63,11 +62,9 @@ export default async function DashboardPage() {
       </div>
 
       <div className="kauth__actions">
-        {/* Server Action, so the auth cookies are cleared on the response and
-            sign-out still works without JavaScript. */}
-        <form action={signOut}>
-          <LogoutButton />
-        </form>
+        {/* Posts to /auth/signout, which clears the session and answers 303 so
+            the browser performs a real document load of the homepage. */}
+        <SignOutForm />
       </div>
     </AuthShell>
   );

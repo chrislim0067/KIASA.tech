@@ -8,8 +8,15 @@ import type { PageScript } from '@/types/page';
  * exactly once. React StrictMode double-invokes effects in development, which
  * without this guard loads every script twice — Turnstile warns, event
  * listeners double up, and the WebGL scenes get built twice on one canvas.
- * Module scope is per document, and every internal link is a plain <a> (a real
- * navigation), so this resets naturally on each page load.
+ * Module scope is per document, so these reset on each page load.
+ *
+ * That relies on an invariant the whole legacy layer depends on: **a legacy
+ * route may only be entered by a document load, never by a client-side
+ * navigation.** These pages are a multi-page app — their import map is only
+ * honoured when parsed with the document, so after a `<Link>` or a Server Action
+ * `redirect()` the hero module cannot resolve "three", init never runs and the
+ * page falls back to its degraded `wt-lite` mode. Link to them with a plain <a>,
+ * and redirect to them with a 303 from a Route Handler (app/auth/signout).
  */
 let started = false;
 let unwrapped = false;

@@ -91,6 +91,14 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     return NextResponse.redirect(url);
   }
 
+  // Keep authenticated pages out of every cache, including the back/forward
+  // cache. Without this, pressing Back after signing out can redisplay the
+  // rendered dashboard from the browser's own store even though the session is
+  // gone and the server would now refuse it.
+  if (isProtectedPath(pathname)) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+  }
+
   // Must return this exact response object so the refreshed cookies survive.
   return response;
 }

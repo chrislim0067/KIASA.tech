@@ -180,6 +180,21 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 Without them the public site serves normally and the auth screens explain which
 variable is missing; `/dashboard` stays closed.
 
+### Entering the marketing site from the app
+
+**A legacy route may only be entered by a document load, never by a client-side
+navigation.** Those pages are a multi-page app whose hero resolves the bare
+specifier `three` through a `<script type="importmap">`, and a browser only
+honours an import map parsed with the document. After a `<Link>` or a Server
+Action `redirect()` the map is inert, the module throws, the preloader is never
+dismissed and the page falls back to its degraded `wt-lite` mode.
+
+So: link to them with a plain `<a>`, and redirect to them with a `303` from a
+Route Handler — which is why sign-out is `app/auth/signout/route.ts` rather than
+a Server Action. `npm run test:auth` is the regression suite for this (48 checks:
+sign-out navigation, homepage health, scroll/menu/audio interaction, repeated
+sign-outs, back/forward, protected-route redirect, mobile).
+
 ### Supabase redirect URLs
 
 Authentication → URL Configuration:
