@@ -143,6 +143,51 @@ so nothing fires until you opt in.
 - The Cloudflare Turnstile site key (domain-locked to the old domain)
 - `google-site-verification` — removed rather than carried over; add KIASA's own
 
+## Authentication (Supabase)
+
+Supabase Auth via `@supabase/ssr`, using the cookie-based SSR pattern for the App
+Router. Credentials are read from `process.env` only — nothing is hardcoded, and
+no secret or service-role key is used anywhere in this app.
+
+| Path | What it does |
+|---|---|
+| `proxy.ts` | Next 16 Proxy (formerly Middleware). Refreshes the session cookie and applies coarse route policy. |
+| `lib/supabase/client.ts` | Browser client. Created on demand, never at module scope. |
+| `lib/supabase/server.ts` | Server Components / Route Handlers / Server Actions. Per request. |
+| `lib/supabase/proxy-session.ts` | Session refresh + optimistic redirects. |
+| `lib/supabase/env.ts` | Env access and the missing-configuration error. |
+| `lib/auth/routes.ts` | Which paths are protected, and the open-redirect guard. |
+| `app/auth/callback/route.ts` | Handles both PKCE (`?code`) and OTP (`?token_hash&type`) links. |
+| `app/auth/actions.ts` | `signOut` Server Action. |
+
+Routes: `/signup`, `/login`, `/forgot-password`, `/reset-password`,
+`/auth/callback`, `/dashboard`.
+
+**Two-layer protection.** The proxy redirects signed-out visitors away from
+`/dashboard`, but the Next docs are explicit that Proxy is not an authorization
+boundary — so `/dashboard` independently calls `supabase.auth.getUser()`, which
+revalidates the token with Supabase rather than trusting the cookie. Anonymous
+requests short-circuit before any Supabase call (no `sb-` cookie means no session
+to refresh), so ordinary marketing traffic costs nothing.
+
+Set locally in `.env.local` — never commit it:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+```
+
+Without them the public site serves normally and the auth screens explain which
+variable is missing; `/dashboard` stays closed.
+
+### Supabase redirect URLs
+
+Authentication → URL Configuration:
+
+- Site URL: `https://kiasa.tech`
+- Redirect URLs: `https://kiasa.tech/auth/callback`, `http://localhost:3100/auth/callback`
+  (add your Vercel preview domain too if you use preview deployments)
+
 ## Verifying against the original
 
 ```bash
