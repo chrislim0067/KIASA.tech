@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 
 import { isSupabaseConfigured, requireSupabaseEnv } from '@/lib/supabase/env';
 import { isAuthOnlyPath, isProtectedPath, DASHBOARD, LOGIN } from '@/lib/auth/routes';
+import { isAdminPath } from '@/lib/auth/roles';
 
 /**
  * Refreshes the Supabase session cookie and applies coarse route policy.
@@ -89,6 +90,39 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     url.pathname = DASHBOARD;
     url.search = '';
     return NextResponse.redirect(url);
+  }
+
+  /**
+   * Turn away non-administrators at the door, with a real HTTP redirect.
+   *
+   * This is NOT the authorization boundary — `requireAdminPage()` in every
+   * /admin page still is, and still runs. This exists because the admin routes
+   * have a `loading.tsx`, which makes Next stream them: the response commits as
+   * 200 with the skeleton before the page's `redirect()` is reached, so an
+   * unauthorized visitor got 200-then-a-redirect-inside-the-stream instead of a
+   * clean 307. No data leaked — the skeleton holds none — but an authorization
+   * boundary should be observable at the HTTP layer, not only to a client that
+   * executes the streamed payload. A test caught the change; this restores it.
+   *
+   * Cost is one indexed lookup, and only on /admin paths. It also makes the
+   * unauthorized case *faster*: they are turned around before the route runs
+   * any of its queries.
+   */
+  if (user && isAdminPath(pathname)) {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    // Absence means the ordinary role, and a failed read resolves the same way
+    // — the identical fail-closed rule the page-level check uses.
+    if (data?.role !== 'admin') {
+      const url = request.nextUrl.clone();
+      url.pathname = DASHBOARD;
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
   }
 
   // Keep authenticated pages out of every cache, including the back/forward
