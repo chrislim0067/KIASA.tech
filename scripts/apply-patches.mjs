@@ -139,7 +139,15 @@ if (hero.includes('_wmFitScale')) {
                 // here would make the brand breathe during a scroll. Only the
                 // aspect ratio actually matters, so this recomputes on resize and
                 // nowhere else, and stays at 1 on any normal desktop window.
-                const _wmSpan = Math.max(WORDMARK_SIZE.width, ringMesh ? ringMesh.geometry.parameters.radius * 2 : 0);
+                // The resting position is pushed right by lX to clear the
+                // left-aligned headline, and that offset is NOT scaled with the
+                // group — so it has to be counted twice into the width being
+                // fitted, or the brand is centred correctly and then shoved off
+                // the right edge anyway. At 390x844 that was the difference
+                // between a right edge of 7.15 (clipped) and 6.20 (fits) against
+                // a 6.56 limit.
+                const _wmOffsetX = Math.max(0, (WORDMARK_SIZE.width - 4.8) * 0.22);
+                const _wmSpan = Math.max(WORDMARK_SIZE.width, ringMesh ? ringMesh.geometry.parameters.radius * 2 : 0) + _wmOffsetX * 2;
                 const _wmVisibleW = (2 * Math.tan(35 * Math.PI / 360) * 45) * camera.aspect;
                 const _wmFitScale = Math.min(1, (_wmVisibleW * 0.9) / _wmSpan);
                 const baseScale = _wmFitScale;`,
