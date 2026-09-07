@@ -48,9 +48,11 @@ export const PENDING_ROUTE = '/pending';
 /**
  * Human-readable copy for the waiting screen.
  *
- * A rejected person is told the decision, never the reason: the reason is an
- * internal note for the administrator, and echoing it invites argument with a
- * decision that has already been made.
+ * The rejection REASON is shown alongside this, by AccessWatcher. An earlier
+ * version withheld it on the theory that it invited argument — but the user can
+ * read their own `user_access` row through PostgREST, reason column included,
+ * so withholding it in the UI was an appearance of a control rather than a
+ * control. The admin form is explicit that the text will be seen.
  */
 export function accessMessage(status: AccessStatus): { title: string; body: string } {
   switch (status) {
@@ -61,7 +63,8 @@ export function accessMessage(status: AccessStatus): { title: string; body: stri
         title: 'Account not approved',
         body:
           'Your request to join KIASA was not approved. If you believe this is a ' +
-          'mistake, reply to the email you signed up with and a person will look at it.',
+          'mistake, reply to the email you signed up with and a person will look at it. ' +
+          'If the decision is changed, this page will update on its own.',
       };
     case 'pending':
     default:
