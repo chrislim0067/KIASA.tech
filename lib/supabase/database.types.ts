@@ -9,6 +9,205 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_user_id: string | null
+          created_at: string
+          detail: Json
+          failure_code: string | null
+          id: string
+          occurred_at: string
+          result: string
+          target_email: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          detail?: Json
+          failure_code?: string | null
+          id?: string
+          occurred_at?: string
+          result: string
+          target_email?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          detail?: Json
+          failure_code?: string | null
+          id?: string
+          occurred_at?: string
+          result?: string
+          target_email?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
+      application_attempts: {
+        Row: {
+          application_id: string
+          attempt_number: number
+          created_at: string
+          detail: Json
+          ended_at: string | null
+          executor_id: string | null
+          executor_type: string
+          failure_class: string | null
+          failure_code: string | null
+          id: string
+          job_id: string
+          method: string
+          outcome: string | null
+          started_at: string
+          user_id: string
+          worker_id: string | null
+        }
+        Insert: {
+          application_id: string
+          attempt_number: number
+          created_at?: string
+          detail?: Json
+          ended_at?: string | null
+          executor_id?: string | null
+          executor_type: string
+          failure_class?: string | null
+          failure_code?: string | null
+          id?: string
+          job_id: string
+          method: string
+          outcome?: string | null
+          started_at?: string
+          user_id: string
+          worker_id?: string | null
+        }
+        Update: {
+          application_id?: string
+          attempt_number?: number
+          created_at?: string
+          detail?: Json
+          ended_at?: string | null
+          executor_id?: string | null
+          executor_type?: string
+          failure_class?: string | null
+          failure_code?: string | null
+          id?: string
+          job_id?: string
+          method?: string
+          outcome?: string | null
+          started_at?: string
+          user_id?: string
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_attempts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_attempts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_attempts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          attempt_count: number
+          confirmed_at: string | null
+          created_at: string
+          executor_id: string | null
+          executor_type: string | null
+          first_started_at: string | null
+          id: string
+          job_id: string
+          last_attempt_at: string | null
+          method: string
+          queued_at: string
+          status: string
+          status_class: string | null
+          status_code: string | null
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+          worker_id: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          confirmed_at?: string | null
+          created_at?: string
+          executor_id?: string | null
+          executor_type?: string | null
+          first_started_at?: string | null
+          id?: string
+          job_id: string
+          last_attempt_at?: string | null
+          method: string
+          queued_at?: string
+          status?: string
+          status_class?: string | null
+          status_code?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+          worker_id?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          confirmed_at?: string | null
+          created_at?: string
+          executor_id?: string | null
+          executor_type?: string | null
+          first_started_at?: string | null
+          id?: string
+          job_id?: string
+          last_attempt_at?: string | null
+          method?: string
+          queued_at?: string
+          status?: string
+          status_class?: string | null
+          status_code?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       automation_settings: {
         Row: {
           absolute_min_salary: number | null
@@ -97,7 +296,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "automation_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       certifications: {
         Row: {
@@ -142,7 +349,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "certifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       education_entries: {
         Row: {
@@ -199,7 +414,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "education_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       job_events: {
         Row: {
@@ -254,6 +477,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -348,6 +578,13 @@ export type Database = {
             referencedRelation: "job_snapshots"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "job_facts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       job_preferences: {
@@ -399,7 +636,15 @@ export type Database = {
           willing_to_relocate?: boolean | null
           work_modes?: string[]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "job_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       job_snapshots: {
         Row: {
@@ -455,6 +700,13 @@ export type Database = {
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "job_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       jobs: {
@@ -500,7 +752,15 @@ export type Database = {
           url_fingerprint?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       languages: {
         Row: {
@@ -533,7 +793,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "languages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -611,7 +879,15 @@ export type Database = {
           user_id?: string
           website_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       projects: {
         Row: {
@@ -665,7 +941,15 @@ export type Database = {
           url?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       skills: {
         Row: {
@@ -704,7 +988,60 @@ export type Database = {
           user_id?: string
           years_experience?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "skills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          granted_at: string
+          granted_by: string | null
+          note: string | null
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       verified_answers: {
         Row: {
@@ -767,7 +1104,15 @@ export type Database = {
           user_id?: string
           verified_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "verified_answers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       work_authorizations: {
         Row: {
@@ -806,7 +1151,15 @@ export type Database = {
           user_id?: string
           verified_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "work_authorizations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       work_experiences: {
         Row: {
@@ -863,11 +1216,113 @@ export type Database = {
           user_id?: string
           work_mode?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "work_experiences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
     }
     Views: {
-      [_ in never]: never
+      admin_platform_stats: {
+        Row: {
+          admin_actions_7d: number | null
+          admin_actions_failed_7d: number | null
+          applications_automated: number | null
+          applications_failed: number | null
+          applications_manual: number | null
+          applications_needs_intervention: number | null
+          applications_pending: number | null
+          applications_succeeded: number | null
+          applications_total: number | null
+          bid_bot_attempts: number | null
+          bid_bot_attempts_submitted: number | null
+          bid_bot_failed: number | null
+          bid_bot_succeeded: number | null
+          bid_bot_total: number | null
+          jobs_extracted: number | null
+          jobs_new_7d: number | null
+          jobs_parked: number | null
+          jobs_total: number | null
+          users_active_30d: number | null
+          users_admin: number | null
+          users_new_30d: number | null
+          users_new_7d: number | null
+          users_pending_confirmation: number | null
+          users_total: number | null
+        }
+        Relationships: []
+      }
+      admin_user_directory: {
+        Row: {
+          account_status: string | null
+          applications_failed: number | null
+          applications_pending: number | null
+          applications_succeeded: number | null
+          applications_total: number | null
+          automation_total: number | null
+          banned_until: string | null
+          bid_bot_attempts: number | null
+          bid_bot_succeeded: number | null
+          bid_bot_total: number | null
+          city: string | null
+          contact_email: string | null
+          country_code: string | null
+          deleted_at: string | null
+          display_name: string | null
+          email: string | null
+          email_confirmed_at: string | null
+          invited_at: string | null
+          is_anonymous: boolean | null
+          is_automation_enabled: boolean | null
+          jobs_total: number | null
+          last_activity_at: string | null
+          last_application_at: string | null
+          last_job_at: string | null
+          last_sign_in_at: string | null
+          manual_total: number | null
+          onboarding_completed_at: string | null
+          preferred_name: string | null
+          registered_at: string | null
+          role: string | null
+          role_granted_at: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      application_stats_by_user: {
+        Row: {
+          applications_cancelled: number | null
+          applications_confirmed: number | null
+          applications_duplicate: number | null
+          applications_failed: number | null
+          applications_needs_intervention: number | null
+          applications_pending: number | null
+          applications_skipped: number | null
+          applications_succeeded: number | null
+          applications_total: number | null
+          attempts_failed: number | null
+          attempts_total: number | null
+          automated_total: number | null
+          automation_total: number | null
+          bid_bot_attempts: number | null
+          bid_bot_attempts_submitted: number | null
+          bid_bot_failed: number | null
+          bid_bot_succeeded: number | null
+          bid_bot_total: number | null
+          external_total: number | null
+          last_application_at: string | null
+          last_attempt_at: string | null
+          last_submitted_at: string | null
+          manual_total: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       is_blank_or_invisible: { Args: { value: string }; Returns: boolean }

@@ -5,8 +5,20 @@
  * authoritative check in the page can never drift apart.
  */
 
-/** Signed-out visitors are redirected to LOGIN. Add future private areas here. */
-export const PROTECTED_PREFIXES = ['/dashboard'] as const;
+/**
+ * Signed-out visitors are redirected to LOGIN. Add future private areas here.
+ *
+ * `/admin` is listed so an anonymous visitor is bounced to the login screen
+ * without a wasted render, exactly as `/dashboard` is. That is ALL this does:
+ * it is the optimistic check the Next docs describe, and it distinguishes only
+ * "signed in" from "signed out". It knows nothing about roles, and an ordinary
+ * signed-in user passes it freely.
+ *
+ * Administrator authorization happens in `requireAdminPage()` on every /admin
+ * page and `guardApi()` in every /api/admin handler. Listing a prefix here is
+ * never what makes a route administrator-only.
+ */
+export const PROTECTED_PREFIXES = ['/dashboard', '/admin'] as const;
 
 /** Signed-in visitors are redirected to DASHBOARD — no point showing these. */
 export const AUTH_ONLY_ROUTES = ['/login', '/signup'] as const;
