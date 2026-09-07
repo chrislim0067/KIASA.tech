@@ -205,10 +205,17 @@ begin
   end if;
 
   -- The project-wide function rule still holds: this migration adds a view, not
-  -- a definer function.
+  -- a definer function. Scoped by name — a hosted Supabase project also carries
+  -- platform helpers that are not ours to audit; see migration 7.
   select string_agg(p.proname, ', ') into offending
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
+    and p.proname = any(array[
+      'set_updated_at', 'text_array_matches', 'text_array_no_blanks', 'text_array_ok',
+      'jsonb_links_ok', 'is_blank_or_invisible', 'set_row_timestamps',
+      'guard_verified_answer_provenance', 'set_event_created_at', 'refuse_row_update',
+      'guard_job_status_transition', 'set_audit_created_at', 'guard_user_role_subject',
+      'set_attempt_created_at', 'guard_application_status_transition'])
     and (p.prosecdef or p.proconfig is null
          or not (p.proconfig && array['search_path=""', 'search_path=']));
   if offending is not null then
