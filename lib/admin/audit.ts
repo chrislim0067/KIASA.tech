@@ -19,6 +19,9 @@ export const AUDIT_ACTIONS = [
   'user.deleted',
   'user.role_granted',
   'user.role_revoked',
+  'user.approved',
+  'user.rejected',
+  'user.access_reset',
   'admin.bootstrapped',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

@@ -2,6 +2,7 @@ import 'server-only';
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isAppRole, DEFAULT_ROLE, type AppRole } from '@/lib/auth/roles';
+import { isAccessStatus, DEFAULT_ACCESS, type AccessStatus } from '@/lib/auth/access';
 
 /**
  * Read side of the administrator surface.
@@ -78,6 +79,8 @@ export interface ListUsersParams {
   readonly search?: string | null;
   readonly role?: AppRole | null;
   readonly status?: AccountStatus | null;
+  /** Filter by the approval gate. 'pending' is the administrator's work queue. */
+  readonly accessStatus?: AccessStatus | null;
   readonly sort?: UserSortField;
   readonly direction?: 'asc' | 'desc';
   /** Only accounts registered on or after this ISO timestamp. */
@@ -92,6 +95,8 @@ export interface AdminUserRow {
   readonly display_name: string | null;
   readonly role: AppRole;
   readonly account_status: AccountStatus;
+  /** The approval gate: pending / approved / rejected. */
+  readonly access_status: AccessStatus;
   readonly registered_at: string;
   readonly last_activity_at: string | null;
   readonly applications_total: number;
@@ -102,7 +107,7 @@ export interface AdminUserRow {
 
 /** The columns the list needs. Deliberately fewer than the detail page. */
 const LIST_COLUMNS =
-  'user_id, email, display_name, role, account_status, registered_at, last_activity_at, applications_total, applications_succeeded, bid_bot_total, jobs_total' as const;
+  'user_id, email, display_name, role, account_status, access_status, registered_at, last_activity_at, applications_total, applications_succeeded, bid_bot_total, jobs_total' as const;
 
 export const MAX_PAGE_SIZE = 100;
 
@@ -139,6 +144,7 @@ export async function listUsers(
 
   if (params.role) query = query.eq('role', params.role);
   if (params.status) query = query.eq('account_status', params.status);
+  if (params.accessStatus) query = query.eq('access_status', params.accessStatus);
   if (params.registeredAfter) query = query.gte('registered_at', params.registeredAfter);
   if (params.hasApplications) query = query.gt('applications_total', 0);
 
@@ -161,6 +167,7 @@ export async function listUsers(
       display_name: row.display_name ?? null,
       role: isAppRole(row.role) ? row.role : DEFAULT_ROLE,
       account_status: row.account_status as AccountStatus,
+      access_status: isAccessStatus(row.access_status) ? row.access_status : DEFAULT_ACCESS,
       registered_at: String(row.registered_at),
       last_activity_at: row.last_activity_at ?? null,
       applications_total: Number(row.applications_total ?? 0),
@@ -266,7 +273,7 @@ export async function getUserAccount(userId: string): Promise<Record<string, unk
   const { data, error } = await admin
     .from('admin_user_directory')
     .select(
-      'user_id, email, display_name, preferred_name, contact_email, city, country_code, role, role_granted_at, account_status, registered_at, last_sign_in_at, email_confirmed_at, invited_at, banned_until, onboarding_completed_at, is_automation_enabled, last_activity_at, jobs_total, last_job_at'
+      'user_id, email, display_name, preferred_name, contact_email, city, country_code, role, role_granted_at, account_status, access_status, access_decided_at, access_decided_by, access_reason, registered_at, last_sign_in_at, email_confirmed_at, invited_at, banned_until, onboarding_completed_at, is_automation_enabled, last_activity_at, jobs_total, last_job_at'
     )
     .eq('user_id', userId)
     .maybeSingle();
@@ -427,6 +434,15 @@ export interface PlatformStats {
   readonly usersActive30d: number;
   readonly usersAdmin: number;
   readonly usersPendingConfirmation: number;
+  /**
+   * The approval queue — accounts waiting on an administrator.
+   *
+   * Distinct from usersPendingConfirmation, which is waiting on the person to
+   * click a link in their email. This one is work for a human here.
+   */
+  readonly usersPendingApproval: number;
+  readonly usersApproved: number;
+  readonly usersRejected: number;
 
   readonly applicationsTotal: number;
   readonly applicationsSucceeded: number;
@@ -488,6 +504,9 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     usersActive30d: n(data?.users_active_30d),
     usersAdmin: n(data?.users_admin),
     usersPendingConfirmation: n(data?.users_pending_confirmation),
+    usersPendingApproval: n(data?.users_pending_approval),
+    usersApproved: n(data?.users_approved),
+    usersRejected: n(data?.users_rejected),
 
     applicationsTotal: n(data?.applications_total),
     applicationsSucceeded: n(data?.applications_succeeded),

@@ -74,6 +74,7 @@ export async function POST(request: Request) {
       email,
       redirectTo: inviteRedirectTarget(request),
       invitedByEmail: user.email ?? null,
+      invitedByUserId: user.id,
     });
 
     if (!result.ok) {

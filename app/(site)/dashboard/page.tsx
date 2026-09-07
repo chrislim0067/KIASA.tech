@@ -9,6 +9,12 @@ import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { LOGIN } from '@/lib/auth/routes';
 import { isAppRole, isAdminRole, DEFAULT_ROLE, ADMIN_ROOT } from '@/lib/auth/roles';
+import {
+  isAccessStatus,
+  canUseProduct,
+  DEFAULT_ACCESS,
+  PENDING_ROUTE,
+} from '@/lib/auth/access';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +48,29 @@ export default async function DashboardPage() {
 
   if (!user) redirect(LOGIN);
 
+  /**
+   * THE APPROVAL GATE.
+   *
+   * Confirming an email only proves control of a mailbox. Until an
+   * administrator approves the account it reaches nothing, and is sent to the
+   * waiting screen instead.
+   *
+   * Read with the caller's own session through `user_access_select_own`, and it
+   * fails CLOSED: absence of a row and a failed read both mean `pending`.
+   *
+   * Administrators are exempt. Their role is a stronger claim than approval,
+   * and gating both would deadlock the moment an administrator's access row was
+   * missing — the only person who could approve them would be locked out of the
+   * page where approving happens.
+   */
+  const { data: accessRow } = await supabase
+    .from('user_access')
+    .select('status')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  const accessStatus = isAccessStatus(accessRow?.status) ? accessRow.status : DEFAULT_ACCESS;
+
   const fullName =
     typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : null;
 
@@ -65,6 +94,9 @@ export default async function DashboardPage() {
 
   const role = isAppRole(roleRow?.role) ? roleRow.role : DEFAULT_ROLE;
   const showAdminLink = isAdminRole(role);
+
+  // The gate, applied after the role is known so administrators are exempt.
+  if (!showAdminLink && !canUseProduct(accessStatus)) redirect(PENDING_ROUTE);
 
   return (
     <AuthShell title="Welcome to KIASA" variant="dashboard">

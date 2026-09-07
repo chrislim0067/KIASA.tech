@@ -396,6 +396,16 @@
 .kadmin__badge--failed { color: var(--kadmin-danger); border-color: rgba(255, 143, 163, 0.4); }
 .kadmin__badge--needs_intervention { color: var(--kadmin-warn); border-color: rgba(255, 212, 121, 0.35); }
 
+/* The approval gate. Deliberately distinct from account_status above: one asks
+   "has a person let them in", the other "has their email confirmed". */
+.kadmin__badge--access-approved { color: var(--kadmin-success); border-color: rgba(126, 224, 184, 0.35); }
+.kadmin__badge--access-pending {
+  color: var(--kadmin-warn);
+  border-color: rgba(255, 212, 121, 0.45);
+  background: rgba(255, 212, 121, 0.1);
+}
+.kadmin__badge--access-rejected { color: var(--kadmin-danger); border-color: rgba(255, 143, 163, 0.4); }
+
 /* ------------------------------------------------------------ pagination -- */
 .kadmin__pager {
   display: flex;

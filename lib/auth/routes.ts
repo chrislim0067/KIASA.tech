@@ -17,8 +17,12 @@
  * Administrator authorization happens in `requireAdminPage()` on every /admin
  * page and `guardApi()` in every /api/admin handler. Listing a prefix here is
  * never what makes a route administrator-only.
+ *
+ * `/pending` is the waiting screen for an account that has confirmed its email
+ * but has not been approved. It needs a session to say anything useful, so it
+ * belongs here too — and the approval gate itself lives in the page, not here.
  */
-export const PROTECTED_PREFIXES = ['/dashboard', '/admin'] as const;
+export const PROTECTED_PREFIXES = ['/dashboard', '/admin', '/pending'] as const;
 
 /** Signed-in visitors are redirected to DASHBOARD — no point showing these. */
 export const AUTH_ONLY_ROUTES = ['/login', '/signup'] as const;
