@@ -280,6 +280,50 @@ async function main() {
   const userPulse = await req('/api/admin/pulse', { cookie: userCookie });
   check('ordinary user cannot read the live pulse', userPulse.status === 403, `status ${userPulse.status}`);
 
+  /* ---------------------------------------------- the candidate's own view */
+  section("A candidate's own status endpoint");
+
+  const anonStatus = await req('/api/access/status');
+  check('anonymous cannot read an access status', anonStatus.status === 401, `status ${anonStatus.status}`);
+
+  // Reject the ordinary user with a reason, as an administrator would.
+  const rejected = await req(`/api/admin/users/${ordinary.id}/access`, {
+    cookie: adminCookie,
+    method: 'PUT',
+    body: { status: 'rejected', reason: 'Not a fit for this cohort.' },
+  });
+  check('administrator can reject with a reason', rejected.status === 200, `status ${rejected.status}`);
+
+  const ownStatus = await req('/api/access/status', { cookie: userCookie });
+  const ownBody = await ownStatus.json().catch(() => ({}));
+  check(
+    'the candidate can read their OWN status',
+    ownStatus.status === 200 && ownBody.status === 'rejected',
+    `status ${ownStatus.status} -> ${ownBody.status}`
+  );
+  check(
+    'and is given the reason',
+    ownBody.reason === 'Not a fit for this cohort.',
+    String(ownBody.reason)
+  );
+
+  // The endpoint reads through the caller's own session, so an administrator
+  // asking it gets THEIR row, never the person they just rejected.
+  const adminOwnStatus = await req('/api/access/status', { cookie: adminCookie });
+  const adminOwnBody = await adminOwnStatus.json().catch(() => ({}));
+  check(
+    'it always answers about the caller, never about anyone else',
+    adminOwnStatus.status === 200 && adminOwnBody.status !== 'rejected',
+    `admin sees '${adminOwnBody.status}', not the rejected user's status`
+  );
+
+  // Put them back, so the later invitation/deletion checks are unaffected.
+  await req(`/api/admin/users/${ordinary.id}/access`, {
+    cookie: adminCookie,
+    method: 'PUT',
+    body: { status: 'approved' },
+  });
+
   const userAdminPage = await req('/admin', { cookie: userCookie });
   check(
     'ordinary user is redirected away from /admin',

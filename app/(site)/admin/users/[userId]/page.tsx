@@ -213,7 +213,7 @@ export default async function AdminUserDetailPage({
           </p>
           {accessReason ? (
             <p>
-              <strong>Reason (internal):</strong> {accessReason}
+              <strong>Reason shown to them:</strong> {accessReason}
             </p>
           ) : null}
         </div>

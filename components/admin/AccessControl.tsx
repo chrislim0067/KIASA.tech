@@ -91,10 +91,14 @@ export default function AccessControl({
   if (rejecting) {
     return (
       <span className="kadmin__chips">
+        {/* The applicant SEES this text on their waiting screen. Saying so on
+            the input is the only thing stopping an administrator typing a
+            private note into a field the subject can read. */}
         <input
           className="kadmin__input"
-          style={{ maxWidth: '18rem' }}
-          placeholder="Reason (internal note)"
+          style={{ maxWidth: '20rem' }}
+          placeholder="Reason — shown to the applicant"
+          aria-label="Rejection reason, shown to the applicant"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           disabled={busy}

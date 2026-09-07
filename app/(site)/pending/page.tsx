@@ -4,18 +4,24 @@ import { redirect } from 'next/navigation';
 import AuthShell from '@/components/auth/AuthShell';
 import ConfigNotice from '@/components/auth/ConfigNotice';
 import SignOutForm from '@/components/auth/SignOutForm';
+import AccessWatcher from '@/components/auth/AccessWatcher';
+import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
-import { getCallerAccess } from '@/lib/auth/access-guard';
-import { accessMessage, canUseProduct } from '@/lib/auth/access';
+import { accessMessage, canUseProduct, isAccessStatus, DEFAULT_ACCESS } from '@/lib/auth/access';
 import { LOGIN, DASHBOARD } from '@/lib/auth/routes';
 
 /**
  * Where a signed-in but unapproved account waits.
  *
- * Deliberately a dead end: it shows the person where they stand and offers a
- * sign-out, and nothing else. There is no "request access again" button —
- * re-requesting would just be a way to spam the administrator's queue, and the
- * decision is already recorded.
+ * Live: AccessWatcher polls the candidate's own status and moves them to the
+ * dashboard the moment an administrator approves, without a refresh.
+ *
+ * The rejection reason IS shown. That reverses the original design, which
+ * showed only the decision — the owner wants the applicant told why, and the
+ * reason was in any case already readable by that user through PostgREST,
+ * since the select-own policy covers every column of their own row. Hiding it
+ * in the UI was an appearance of a control rather than a control. The admin
+ * form now says plainly that the text will be shown.
  *
  * An approved user who lands here is bounced to the dashboard, so the page can
  * never become a trap after someone is let in.
@@ -37,8 +43,24 @@ export default async function PendingPage() {
     );
   }
 
-  const { user, status } = await getCallerAccess();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) redirect(LOGIN);
+
+  const { data, error } = await supabase
+    .from('user_access')
+    .select('status, reason, decided_at')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  // Absence and failure both mean pending — the same fail-closed rule the gate
+  // itself uses.
+  const status = !error && data && isAccessStatus(data.status) ? data.status : DEFAULT_ACCESS;
+  const reason = status === 'rejected' ? (data?.reason ?? null) : null;
+
   if (canUseProduct(status)) redirect(DASHBOARD);
 
   const { title, body } = accessMessage(status);
@@ -52,12 +74,9 @@ export default async function PendingPage() {
         <span className="kauth__email">{user.email}</span>
       </div>
 
-      {status === 'pending' ? (
-        <p className="kauth__hint">
-          Approvals are done by a person, so this is not instant. You do not need to do
-          anything else — signing in again will not speed it up.
-        </p>
-      ) : null}
+      {/* Renders the reason when there is one, and keeps the page in step with
+          the decision without the person having to reload. */}
+      <AccessWatcher initialStatus={status} initialReason={reason} />
 
       <div className="kauth__actions">
         <SignOutForm />
