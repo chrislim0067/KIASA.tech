@@ -16,27 +16,50 @@
  */
 
 .kadmin {
-  --kadmin-bg: #020204;
-  --kadmin-text: #ffffff;
-  --kadmin-muted: #8892b0;
-  --kadmin-accent: #d8b4fe;
-  --kadmin-accent-dim: rgba(216, 180, 254, 0.15);
-  --kadmin-line: rgba(216, 180, 254, 0.22);
-  --kadmin-line-soft: rgba(255, 255, 255, 0.08);
-  --kadmin-surface: rgba(255, 255, 255, 0.025);
-  --kadmin-surface-raised: rgba(255, 255, 255, 0.045);
-  --kadmin-danger: #ff8fa3;
-  --kadmin-warn: #ffd479;
-  --kadmin-success: #7ee0b8;
+  /* A hair off pure black. #020204 is right for the marketing hero, where it
+     sits behind a lit 3D scene, but as the ground for pages of small text it
+     makes every border either invisible or harsh. */
+  --kadmin-bg: #0b0c10;
+  --kadmin-text: #edeef2;
+  /* Was #8892b0 — a blue-grey that reads as washed out at small sizes. */
+  --kadmin-muted: #9aa2b1;
+  --kadmin-accent: #cbaaf7;
+  --kadmin-accent-dim: rgba(203, 170, 247, 0.13);
+  --kadmin-line: rgba(203, 170, 247, 0.24);
+  --kadmin-line-soft: rgba(255, 255, 255, 0.09);
+  --kadmin-surface: rgba(255, 255, 255, 0.028);
+  --kadmin-surface-raised: rgba(255, 255, 255, 0.05);
+  --kadmin-danger: #ff96a8;
+  --kadmin-warn: #f0c977;
+  --kadmin-success: #7fdcb4;
   --kadmin-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --kadmin-radius: 8px;
+  --kadmin-radius-sm: 6px;
+
   --kadmin-head: var(--kadmin-font-head), 'Syncopate', 'Segoe UI', sans-serif;
-  --kadmin-body: var(--kadmin-font-body), 'Rajdhani', 'Segoe UI', sans-serif;
+  /*
+   * The admin UI runs on the system stack, not the brand faces.
+   *
+   * Syncopate is a wide geometric display face and Rajdhani is condensed; both
+   * are made to be seen, not read. Setting an entire tool in them — with 15
+   * uppercase rules and 16 letter-spacing rules on top — is most of why this
+   * screen felt dated and hard to scan. The brand still anchors the page
+   * through the wordmark in the bar, which keeps --kadmin-head; everything a
+   * person actually reads uses a neutral stack that renders natively on their
+   * own machine.
+   */
+  --kadmin-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --kadmin-num: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Menlo, monospace;
+  --kadmin-body: var(--kadmin-ui);
 
   color-scheme: dark;
   min-height: 100dvh;
   background: var(--kadmin-bg);
   color: var(--kadmin-text);
-  font-family: var(--kadmin-body);
+  font-family: var(--kadmin-ui);
+  font-size: 15px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -97,29 +120,29 @@ body:has(.kadmin) {
 .kadmin__brand:hover { color: var(--kadmin-accent); }
 
 .kadmin__tag {
-  padding: 0.2rem 0.5rem;
+  padding: 0.15rem 0.5rem;
   border: 1px solid var(--kadmin-line);
+  border-radius: 999px;
   color: var(--kadmin-accent);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
-.kadmin__nav { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.kadmin__nav { display: flex; flex-wrap: wrap; gap: 0.15rem; }
 
 .kadmin__navLink {
-  padding: 0.4rem 0.85rem;
+  padding: 0.35rem 0.7rem;
   border: 1px solid transparent;
+  border-radius: var(--kadmin-radius-sm);
   color: var(--kadmin-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0;
   text-decoration: none;
-  transition: color 0.2s var(--kadmin-ease), border-color 0.2s var(--kadmin-ease);
+  transition: color 0.15s var(--kadmin-ease), background 0.15s var(--kadmin-ease);
 }
-.kadmin__navLink:hover { color: var(--kadmin-text); border-color: var(--kadmin-line-soft); }
+.kadmin__navLink:hover { color: var(--kadmin-text); background: rgba(255, 255, 255, 0.05); }
 .kadmin__navLink[aria-current='page'] {
   color: var(--kadmin-accent);
   border-color: var(--kadmin-line);
@@ -150,13 +173,15 @@ body:has(.kadmin) {
   margin: 0 auto;
 }
 
+/* Was uppercase Syncopate at 0.06em tracking. A page title should read as a
+   title, not as a banner: sentence case in the UI face at a real size carries
+   more hierarchy and shouts less. */
 .kadmin__heading {
-  margin: 0 0 0.4rem;
-  font-family: var(--kadmin-head);
-  font-weight: 700;
-  font-size: clamp(1.05rem, 3vw, 1.4rem);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+  font-size: clamp(1.35rem, 3vw, 1.6rem);
+  letter-spacing: -0.01em;
+  color: var(--kadmin-text);
 }
 
 .kadmin__lede {
@@ -177,32 +202,18 @@ body:has(.kadmin) {
   margin-bottom: 0.9rem;
 }
 
-/* These were 0.8rem muted grey with 0.2em tracking — the same weight as the
+/* These were 0.8rem muted grey uppercase at 0.2em — the same weight as the
    labels inside the tiles, so the page read as one undifferentiated field of
-   boxes with no way to tell where ACCOUNTS ended and APPLICATIONS began. A
-   section heading has to out-rank the things under it. */
+   boxes with no way to tell where Accounts ended and Applications began. A
+   section heading has to out-rank the things under it, and size and colour do
+   that better than tracking does. */
 .kadmin__sectionTitle {
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-family: var(--kadmin-head);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
   color: var(--kadmin-text);
 }
-/* A short accent rule, so the eye catches the start of a section while scanning
-   down rather than having to read each heading. */
-.kadmin__sectionTitle::before {
-  content: '';
-  width: 1.5rem;
-  height: 2px;
-  flex: none;
-  background: var(--kadmin-accent);
-}
-
 /* ------------------------------------------------------------- stat grid -- */
 /*
  * Flex, not grid.
@@ -225,6 +236,7 @@ body:has(.kadmin) {
 }
 
 .kadmin__stat {
+  border-radius: var(--kadmin-radius);
   flex: 1 1 11rem;
   max-width: 16rem;
   min-width: 0;
@@ -241,8 +253,7 @@ body:has(.kadmin) {
   font-weight: 600;
   /* 0.16em of tracking on 11px caps pushed the words apart faster than the eye
      groups them, which is most of why these were hard to scan. */
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   line-height: 1.3;
   /* Reserve two lines. A label like "Awaiting confirmation" wraps while its
      neighbours do not, which dropped that tile's number a line below every
@@ -255,10 +266,14 @@ body:has(.kadmin) {
 }
 
 .kadmin__statValue {
-  font-family: var(--kadmin-head);
-  font-size: clamp(1.3rem, 3.5vw, 1.75rem);
-  font-weight: 700;
-  line-height: 1.1;
+  /* Was Syncopate. It is a wide geometric display face whose zero is close to a
+     perfect circle, so a row of zeros read as a row of rings rather than as
+     numbers — which is exactly the case this dashboard shows most often. */
+  font-family: var(--kadmin-ui);
+  font-size: clamp(1.5rem, 3.5vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   /* Tabular figures so a column of numbers lines up as it changes. */
   font-variant-numeric: tabular-nums;
 }
@@ -280,6 +295,7 @@ body:has(.kadmin) {
 
 /* ---------------------------------------------------------------- notice -- */
 .kadmin__notice {
+  border-radius: var(--kadmin-radius);
   padding: 0.9rem 1.1rem;
   border: 1px solid var(--kadmin-line);
   background: var(--kadmin-accent-dim);
@@ -311,8 +327,7 @@ body:has(.kadmin) {
 .kadmin__label {
   font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--kadmin-muted);
 }
 
@@ -351,8 +366,7 @@ body:has(.kadmin) {
   font-family: var(--kadmin-body);
   font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   text-decoration: none;
   cursor: pointer;
   transition: opacity 0.2s var(--kadmin-ease), background 0.2s var(--kadmin-ease);
@@ -374,7 +388,7 @@ body:has(.kadmin) {
 }
 .kadmin__button--danger:hover { background: rgba(255, 143, 163, 0.12); opacity: 1; }
 
-.kadmin__button--small { padding: 0.4rem 0.7rem; font-size: 0.72rem; letter-spacing: 0.1em; }
+.kadmin__button--small { padding: 0.4rem 0.7rem; font-size: 0.72rem; letter-spacing: 0; }
 
 /* ----------------------------------------------------------------- table -- */
 .kadmin__tableWrap { border: 1px solid var(--kadmin-line-soft); background: var(--kadmin-surface); }
@@ -390,8 +404,7 @@ body:has(.kadmin) {
   text-align: left;
   font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--kadmin-muted);
   border-bottom: 1px solid var(--kadmin-line-soft);
   white-space: nowrap;
@@ -449,8 +462,7 @@ body:has(.kadmin) {
     flex: 0 0 auto;
     font-size: 0.66rem;
     font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    letter-spacing: 0;
     color: var(--kadmin-muted);
   }
 
@@ -465,8 +477,7 @@ body:has(.kadmin) {
   border-radius: 2px;
   font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   white-space: nowrap;
   color: var(--kadmin-muted);
 }
@@ -501,8 +512,7 @@ body:has(.kadmin) {
   color: var(--kadmin-text);
   text-decoration: none;
   font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 .kadmin__pagerLinks a:hover { border-color: var(--kadmin-accent); color: var(--kadmin-accent); }
 .kadmin__pagerLinks span { opacity: 0.35; cursor: not-allowed; }
@@ -523,6 +533,7 @@ body:has(.kadmin) {
 }
 
 .kadmin__panel {
+  border-radius: var(--kadmin-radius);
   padding: 1.25rem;
   border: 1px solid var(--kadmin-line-soft);
   background: var(--kadmin-surface);
@@ -542,8 +553,7 @@ body:has(.kadmin) {
 .kadmin__dt {
   font-size: 0.7rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--kadmin-muted);
 }
 .kadmin__dd { margin: 0; text-align: right; word-break: break-word; }
@@ -556,8 +566,7 @@ body:has(.kadmin) {
   margin-bottom: 1rem;
   color: var(--kadmin-muted);
   font-size: 0.78rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   text-decoration: none;
 }
 .kadmin__back:hover { color: var(--kadmin-accent); }
@@ -575,6 +584,7 @@ body:has(.kadmin) {
 }
 
 .kadmin__dialog {
+  border-radius: var(--kadmin-radius);
   width: min(32rem, 100%);
   max-height: 90dvh;
   overflow-y: auto;
@@ -585,11 +595,10 @@ body:has(.kadmin) {
 
 .kadmin__dialogTitle {
   margin: 0 0 0.6rem;
-  font-family: var(--kadmin-head);
+  font-family: var(--kadmin-ui);
   font-size: 0.95rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .kadmin__dialogBody { color: var(--kadmin-muted); line-height: 1.6; font-size: 0.92rem; }
