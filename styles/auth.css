@@ -30,6 +30,27 @@
   box-sizing: border-box;
 }
 
+/*
+ * The other half of the same gap: body keeps the UA default margin: 8px.
+ *
+ * .kauth is min-height:100dvh, so the document became 8 + 100dvh + 8 — a
+ * permanent 16px vertical overflow and a scrollbar on every auth screen, at
+ * every viewport, even when the card fits with room to spare.
+ *
+ * The marketing pages never had this because site.css opens with
+ * `* { margin: 0; padding: 0; box-sizing: border-box }`. These screens
+ * deliberately do not load site.css (it carries nav, footer, cursor and Lenis
+ * rules that expect elements they don't render), so they inherited neither
+ * reset.
+ *
+ * Matched with :has() rather than a bare `body` rule so this cannot reach a
+ * legacy page under any bundling arrangement — the same instinct that keeps
+ * everything else in this file scoped under .kauth.
+ */
+body:has(.kauth) {
+  margin: 0;
+}
+
 .kauth {
   --kauth-bg: #020204;
   --kauth-text: #ffffff;
