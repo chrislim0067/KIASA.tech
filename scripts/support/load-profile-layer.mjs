@@ -24,7 +24,9 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(import.meta.dirname, '..', '..');
-const LAYER_URL = pathToFileURL(path.join(ROOT, 'lib', 'profile') + path.sep).href;
+const LAYER_URLS = ['profile', 'jobs'].map(
+  (dir) => pathToFileURL(path.join(ROOT, 'lib', dir) + path.sep).href,
+);
 
 registerHooks({
   resolve(specifier, context, next) {
@@ -37,16 +39,24 @@ registerHooks({
     // left to Node's normal resolution.
     const importer = context.parentURL ?? '';
     if (
-      importer.startsWith(LAYER_URL)
+      LAYER_URLS.some((layer) => importer.startsWith(layer))
       && /^\.{1,2}\//.test(specifier)
       && !/\.[cm]?[jt]s$/.test(specifier)
     ) {
       return next(`${specifier}.ts`, context);
     }
+    // The layers address each other through the repository's "@/" alias, which
+    // is a tsconfig path mapping that Node knows nothing about. Only runtime
+    // imports reach here; the type-only ones are erased before resolution.
+    if (specifier.startsWith('@/')) {
+      const target = path.join(ROOT, specifier.slice(2));
+      return next(pathToFileURL(/\.[cm]?[jt]s$/.test(target) ? target : `${target}.ts`).href, context);
+    }
     return next(specifier, context);
   },
 });
 
-/** The layer's public surface, exactly as an application would import it. */
+/** Each layer's public surface, exactly as an application would import it. */
 export const profile = await import(pathToFileURL(path.join(ROOT, 'lib', 'profile', 'index.ts')).href);
+export const jobs = await import(pathToFileURL(path.join(ROOT, 'lib', 'jobs', 'index.ts')).href);
 export const REPO_ROOT = ROOT;

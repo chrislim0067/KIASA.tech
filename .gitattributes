@@ -1,0 +1,12 @@
+# scripts/gen-types.mjs always writes this file with LF, and
+# scripts/test-type-generation.mjs compares it to the committed blob byte for
+# byte. Without this line, a checkout on a machine with core.autocrlf=true
+# writes CRLF, so the first run after a fresh clone fails on Windows with
+# "regenerated content matches the committed file - DIFFERS" even though the
+# content is identical. Pinning the eol makes the checked-out bytes match what
+# the generator produces on every platform.
+#
+# Scoped to this one generated file on purpose: a repository-wide `* text=auto`
+# would renormalise unrelated files, including the byte-faithful legacy assets
+# the rebuild depends on.
+lib/supabase/database.types.ts text eol=lf

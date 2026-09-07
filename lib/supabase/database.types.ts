@@ -201,6 +201,155 @@ export type Database = {
         }
         Relationships: []
       }
+      job_events: {
+        Row: {
+          actor_id: string | null
+          actor_type: string
+          created_at: string
+          detail: Json
+          error_category: string | null
+          error_code: string | null
+          event_type: string
+          from_status: string | null
+          id: string
+          job_id: string
+          occurred_at: string
+          to_status: string | null
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_type: string
+          created_at?: string
+          detail?: Json
+          error_category?: string | null
+          error_code?: string | null
+          event_type: string
+          from_status?: string | null
+          id?: string
+          job_id: string
+          occurred_at?: string
+          to_status?: string | null
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_type?: string
+          created_at?: string
+          detail?: Json
+          error_category?: string | null
+          error_code?: string | null
+          event_type?: string
+          from_status?: string | null
+          id?: string
+          job_id?: string
+          occurred_at?: string
+          to_status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_facts: {
+        Row: {
+          apply_url: string | null
+          company_name: string | null
+          created_at: string
+          date_posted: string | null
+          description_text: string | null
+          employment_type: string | null
+          extraction_reason: string | null
+          extraction_status: string
+          field_provenance: Json
+          id: string
+          identifier: string | null
+          job_id: string
+          location_raw: string | null
+          remote_type: string | null
+          salary_currency: string | null
+          salary_max: number | null
+          salary_min: number | null
+          salary_period: string | null
+          snapshot_id: string
+          title: string | null
+          updated_at: string
+          user_id: string
+          valid_through: string | null
+        }
+        Insert: {
+          apply_url?: string | null
+          company_name?: string | null
+          created_at?: string
+          date_posted?: string | null
+          description_text?: string | null
+          employment_type?: string | null
+          extraction_reason?: string | null
+          extraction_status: string
+          field_provenance?: Json
+          id?: string
+          identifier?: string | null
+          job_id: string
+          location_raw?: string | null
+          remote_type?: string | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
+          snapshot_id: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          valid_through?: string | null
+        }
+        Update: {
+          apply_url?: string | null
+          company_name?: string | null
+          created_at?: string
+          date_posted?: string | null
+          description_text?: string | null
+          employment_type?: string | null
+          extraction_reason?: string | null
+          extraction_status?: string
+          field_provenance?: Json
+          id?: string
+          identifier?: string | null
+          job_id?: string
+          location_raw?: string | null
+          remote_type?: string | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
+          snapshot_id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          valid_through?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_facts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_facts_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "job_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_preferences: {
         Row: {
           created_at: string
@@ -249,6 +398,107 @@ export type Database = {
           user_id?: string
           willing_to_relocate?: boolean | null
           work_modes?: string[]
+        }
+        Relationships: []
+      }
+      job_snapshots: {
+        Row: {
+          body: string | null
+          byte_size: number
+          content_hash: string | null
+          content_type: string | null
+          created_at: string
+          fetched_at: string
+          final_url: string | null
+          http_status: number | null
+          id: string
+          job_id: string
+          outcome: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          byte_size: number
+          content_hash?: string | null
+          content_type?: string | null
+          created_at?: string
+          fetched_at?: string
+          final_url?: string | null
+          http_status?: number | null
+          id?: string
+          job_id: string
+          outcome: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          byte_size?: number
+          content_hash?: string | null
+          content_type?: string | null
+          created_at?: string
+          fetched_at?: string
+          final_url?: string | null
+          http_status?: number | null
+          id?: string
+          job_id?: string
+          outcome?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_snapshots_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          ats_vendor: string | null
+          canonical_url: string
+          created_at: string
+          external_job_id: string | null
+          id: string
+          source: string
+          status: string
+          status_reason: string | null
+          submitted_url: string
+          updated_at: string
+          url_fingerprint: string | null
+          user_id: string
+        }
+        Insert: {
+          ats_vendor?: string | null
+          canonical_url: string
+          created_at?: string
+          external_job_id?: string | null
+          id?: string
+          source: string
+          status?: string
+          status_reason?: string | null
+          submitted_url: string
+          updated_at?: string
+          url_fingerprint?: string | null
+          user_id: string
+        }
+        Update: {
+          ats_vendor?: string | null
+          canonical_url?: string
+          created_at?: string
+          external_job_id?: string | null
+          id?: string
+          source?: string
+          status?: string
+          status_reason?: string | null
+          submitted_url?: string
+          updated_at?: string
+          url_fingerprint?: string | null
+          user_id?: string
         }
         Relationships: []
       }
