@@ -3157,7 +3157,7 @@
             const el = document.getElementById('dubai-time');
             if (!el) return;
             function update() {
-                const now = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Dubai', hour: '2-digit', minute: '2-digit' });
+                const now = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit' });
                 el.textContent = now;
             }
             update();
