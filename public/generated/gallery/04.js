@@ -19,7 +19,7 @@
       on()/off() - Per-button handlers created by bind; start an action on press and stop it on any
         release, pointer cancellation, pointer exit, or lost focus.
       setOpen(open) - Opens/closes the mobile controller cluster and synchronizes aria-expanded.
-      u() - Refreshes the standalone Dubai clock; called immediately and every 30 seconds.
+      u() - Refreshes the standalone Singapore clock; called immediately and every 30 seconds.
       tryPlay() / onUserGesture() - Restore ambient audio only after browser autoplay rules permit it.
       parkWipe() - Resets the page-transition overlay after its entrance animation is complete.
 
@@ -263,7 +263,7 @@
         setOpen(false);
       });
     })();
-    // Dubai clock in the nav (Gallery is standalone — doesn't load site.js)
+    // Singapore clock in the nav (Gallery is standalone — doesn't load site.js)
     (function () {
       var el = document.getElementById('dubai-time');
       if (!el) return;

@@ -47,7 +47,7 @@ nav { position: fixed; top: 0; left: 0; width: 100%; padding: 2rem 5vw; display:
    only applies between children and there is now just one, so the wordmark sits flush with no shift. */
 .nav-links { display: none; }
 .nav-right { display: flex; align-items: center; gap: 1.1rem; }
-/* Dubai clock — shown in the nav on every page */
+/* Singapore clock — shown in the nav on every page */
 .nav-clock { font-family: var(--font-num, 'Rajdhani', 'Orbitron', monospace); font-size: 0.65rem; letter-spacing: 0.2em; color: rgba(255,255,255,0.4); white-space: nowrap; }
 .nav-clock-label { color: rgba(255,255,255,0.25); margin-right: 0.4em; }
 @media (max-width: 1024px) { .nav-clock { display: none; } }
@@ -277,7 +277,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: non
 .wt-cc { position: relative; flex: 0 0 auto; }
 
 /* Closed control: dial code and caret only. Narrow on purpose — the country name used to sit here and
-   at "United Arab Emirates" width it took over the field. Full name is on the button's title. */
+   at "Singapore" width it took over the field. Full name is on the button's title. */
 .wt-cc-btn {
     display: inline-flex; align-items: center; gap: 0.45rem; height: 100%;
     background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.2);

@@ -28,7 +28,7 @@
                     title:"Scaling Fashion Brands", category:"Fashion & E-Commerce",
                     desc:"From concept to market leaders — we elevate fashion brands through strategy, design, and execution. Where creativity meets commercial success.",
                     img:"/Assets/Scaling%20Fashion%20Brands.jpg", video:null,
-                    results:["30+ fashion brands successfully launched and scaled","Developed full brand identities and positioning","Designed and built e-commerce platforms","Strong brand presence across UAE & GCC","Consistent revenue growth through digital channels"]
+                    results:["30+ fashion brands successfully launched and scaled","Developed full brand identities and positioning","Designed and built e-commerce platforms","Strong brand presence across Singapore & APAC","Consistent revenue growth through digital channels"]
                 },
                 {
                     title:"High-Performance Campaigns", category:"Marketing & Performance",
@@ -46,7 +46,7 @@
                     title:"Strategic Tech Partnerships", category:"Technology & Innovation",
                     desc:"We collaborate with advanced technology providers to deliver innovative solutions. Innovation through strategic collaboration.",
                     img:"/Assets/Strategic%20Tech%20Partnerships.jpg", video:null,
-                    results:["Partnered with leading tech and innovation companies","Delivered immersive and digital-first experiences","Exposure to high-level and strategic networks","Implementation of advanced tech solutions","Expansion across UAE, Qatar, and Oman"]
+                    results:["Partnered with leading tech and innovation companies","Delivered immersive and digital-first experiences","Exposure to high-level and strategic networks","Implementation of advanced tech solutions","Expansion across Singapore, Qatar, and Oman"]
                 },
                 {
                     title:"100+ Websites Delivered", category:"Web Development",
@@ -665,7 +665,7 @@
             setupTextSplitKickers();
             setupLazyBackgrounds();
             setupCardEntrance();
-            setupDubaiClock();
+            setupSingaporeClock();
             setupStatsRecount();
             setupCinematicEntry();
             setupRetroFooter();
@@ -2692,7 +2692,28 @@
                 mid  = (Math.sin(t * 2.1 + 1.2) * 0.5 + 0.5) * 0.5;
                 if (ringMesh) ringMesh.material.emissiveIntensity = 2.0 + bass * 4.0;
                 if (particles && particles.material) particles.material.size = 0.08 + mid * 0.06;
-                const baseScale = _isMobileAnim ? 0.9 : 1.0;
+                // Fit the whole brand — the wordmark and the ring around it —
+                // inside the viewport.
+                //
+                // The hero frames the logo at z -25 from a camera at z 20 through
+                // a 35deg vertical FOV, so the visible width there is
+                // (2 * tan(fov/2) * 45) * aspect. Narrowing the window shrinks
+                // that while the geometry stays ~13 units wide, which is what
+                // clipped KIASA off at both ends. The old 0.9 mobile constant
+                // could not help: it was a step at 1024px decided once at build
+                // time, and this very line overwrites the group's scale every
+                // frame, so anything set on resize was lerped straight back out.
+                //
+                // Measured from a FIXED reference framing rather than the live
+                // camera, deliberately. camera.fov is animated by scroll velocity
+                // and logoGroup is lerped toward the camera, so reading either
+                // here would make the brand breathe during a scroll. Only the
+                // aspect ratio actually matters, so this recomputes on resize and
+                // nowhere else, and stays at 1 on any normal desktop window.
+                const _wmSpan = Math.max(WORDMARK_SIZE.width, ringMesh ? ringMesh.geometry.parameters.radius * 2 : 0);
+                const _wmVisibleW = (2 * Math.tan(35 * Math.PI / 360) * 45) * camera.aspect;
+                const _wmFitScale = Math.min(1, (_wmVisibleW * 0.9) / _wmSpan);
+                const baseScale = _wmFitScale;
                 const audioScale = baseScale * (1.0 + bass * 0.04);
                 logoGroup.scale.setScalar(logoGroup.scale.x + (audioScale - logoGroup.scale.x) * 0.15);
             }
@@ -3151,9 +3172,9 @@
         }
 
         // ==========================================
-        // Real-Time Dubai Clock
+        // Real-Time Singapore Clock
         // ==========================================
-        function setupDubaiClock() {
+        function setupSingaporeClock() {
             const el = document.getElementById('dubai-time');
             if (!el) return;
             function update() {

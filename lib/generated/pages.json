@@ -780,7 +780,7 @@
     "segment": "arabic-website-design",
     "meta": {
       "title": "Arabic Website Design and RTL Development | KIASA",
-      "description": "Arabic website design from a Dubai studio. The Arabic version built as its own version — direction in the markup, real Arabic type, and copy written in Arabic.",
+      "description": "Arabic website design from a Singapore studio. The Arabic version built as its own version — direction in the markup, real Arabic type, and copy written in Arabic.",
       "canonical": "https://kiasa.tech/arabic-website-design",
       "ogImage": "https://kiasa.tech/Assets/Social%20Sharing%20image.jpg",
       "ogTitle": "Arabic Website Design and RTL Development — KIASA",
@@ -804,7 +804,7 @@
       },
       {
         "name": "description",
-        "content": "Arabic website design from a Dubai studio. The Arabic version built as its own version &amp;mdash; direction in the markup, real Arabic type, and copy written in Arabic."
+        "content": "Arabic website design from a Singapore studio. The Arabic version built as its own version &amp;mdash; direction in the markup, real Arabic type, and copy written in Arabic."
       },
       {
         "name": "robots",
@@ -828,7 +828,7 @@
       },
       {
         "property": "og:description",
-        "content": "Arabic website design from a Dubai studio. The Arabic version built as its own version &amp;mdash; direction in the markup, real Arabic type, and copy written in Arabic."
+        "content": "Arabic website design from a Singapore studio. The Arabic version built as its own version &amp;mdash; direction in the markup, real Arabic type, and copy written in Arabic."
       },
       {
         "property": "og:url",
@@ -864,7 +864,7 @@
       },
       {
         "name": "twitter:description",
-        "content": "Arabic website design from a Dubai studio. The Arabic version built as its own version &amp;mdash; direction in the markup, real Arabic type, and copy written in Arabic."
+        "content": "Arabic website design from a Singapore studio. The Arabic version built as its own version &amp;mdash; direction in the markup, real Arabic type, and copy written in Arabic."
       },
       {
         "name": "twitter:image",
@@ -1310,7 +1310,7 @@
       "value": "ai-agents-for-business-uae-governed-automation"
     },
     "meta": {
-      "title": "AI Agents for Business in the UAE: Automate With Control",
+      "title": "AI Agents for Business in Singapore: Automate With Control",
       "description": "A UK government test logged 19 unsanctioned AI agent actions. A human reviewer caught the worst. Here is what to automate in 2026, and what to govern.",
       "canonical": "https://kiasa.tech/blog-post?slug=ai-agents-for-business-uae-governed-automation",
       "ogImage": "https://kiasa.tech/Assets/blog/ai-agents-for-business-uae-governed-automation-banner.webp",
@@ -1811,11 +1811,11 @@
       "value": "arabic-seo-uae"
     },
     "meta": {
-      "title": "Arabic SEO in the UAE: What Actually Ranks",
-      "description": "Arabic is not a translation layer on an English site. What actually ranks in Arabic search across Dubai, Sharjah and Abu Dhabi — in both languages.",
+      "title": "Arabic SEO in Singapore: What Actually Ranks",
+      "description": "Arabic is not a translation layer on an English site. What actually ranks in Arabic search across Singapore, Sharjah and Abu Dhabi — in both languages.",
       "canonical": "https://kiasa.tech/blog-post?slug=arabic-seo-uae",
       "ogImage": "https://kiasa.tech/Assets/blog/arabic-seo-uae-banner.webp",
-      "ogTitle": "Arabic SEO in the UAE: Why Translating Your English Site Does Not Work",
+      "ogTitle": "Arabic SEO in Singapore: Why Translating Your English Site Does Not Work",
       "lang": "en",
       "dir": "ltr",
       "bodyClass": "",
@@ -1836,7 +1836,7 @@
       },
       {
         "name": "description",
-        "content": "Arabic is not a translation layer on an English site. What actually ranks in Arabic search across Dubai, Sharjah and Abu Dhabi — in both languages."
+        "content": "Arabic is not a translation layer on an English site. What actually ranks in Arabic search across Singapore, Sharjah and Abu Dhabi — in both languages."
       },
       {
         "name": "robots",
@@ -1856,11 +1856,11 @@
       },
       {
         "property": "og:title",
-        "content": "Arabic SEO in the UAE: Why Translating Your English Site Does Not Work"
+        "content": "Arabic SEO in Singapore: Why Translating Your English Site Does Not Work"
       },
       {
         "property": "og:description",
-        "content": "Arabic is not a translation layer on an English site. What actually ranks in Arabic search across Dubai, Sharjah and Abu Dhabi — in both languages."
+        "content": "Arabic is not a translation layer on an English site. What actually ranks in Arabic search across Singapore, Sharjah and Abu Dhabi — in both languages."
       },
       {
         "property": "og:url",
@@ -1876,7 +1876,7 @@
       },
       {
         "property": "og:image:alt",
-        "content": "Arabic SEO in the UAE: Why Translating Your English Site Does Not Work"
+        "content": "Arabic SEO in Singapore: Why Translating Your English Site Does Not Work"
       },
       {
         "property": "article:section",
@@ -1892,11 +1892,11 @@
       },
       {
         "name": "twitter:title",
-        "content": "Arabic SEO in the UAE: Why Translating Your English Site Does Not Work"
+        "content": "Arabic SEO in Singapore: Why Translating Your English Site Does Not Work"
       },
       {
         "name": "twitter:description",
-        "content": "Arabic is not a translation layer on an English site. What actually ranks in Arabic search across Dubai, Sharjah and Abu Dhabi — in both languages."
+        "content": "Arabic is not a translation layer on an English site. What actually ranks in Arabic search across Singapore, Sharjah and Abu Dhabi — in both languages."
       },
       {
         "name": "twitter:image",
@@ -1904,7 +1904,7 @@
       },
       {
         "name": "twitter:image:alt",
-        "content": "Arabic SEO in the UAE: Why Translating Your English Site Does Not Work"
+        "content": "Arabic SEO in Singapore: Why Translating Your English Site Does Not Work"
       }
     ],
     "stylesheets": [
@@ -1978,11 +1978,11 @@
       "value": "chatgpt-ads-uae-business"
     },
     "meta": {
-      "title": "ChatGPT Ads: What UAE Businesses Should Do Now",
+      "title": "ChatGPT Ads: What Singapore Businesses Should Do Now",
       "description": "OpenAI now sells ads inside ChatGPT across four continents. No Gulf market is on the list. Here is what shipped, and what to do before it arrives.",
       "canonical": "https://kiasa.tech/blog-post?slug=chatgpt-ads-uae-business",
       "ogImage": "https://kiasa.tech/Assets/blog/chatgpt-ads-uae-business-banner.webp",
-      "ogTitle": "ChatGPT Has Ads Now. Not in the UAE — and That Is the Useful Part",
+      "ogTitle": "ChatGPT Has Ads Now. Not in Singapore — and That Is the Useful Part",
       "lang": "en",
       "dir": "ltr",
       "bodyClass": "",
@@ -2023,7 +2023,7 @@
       },
       {
         "property": "og:title",
-        "content": "ChatGPT Has Ads Now. Not in the UAE — and That Is the Useful Part"
+        "content": "ChatGPT Has Ads Now. Not in Singapore — and That Is the Useful Part"
       },
       {
         "property": "og:description",
@@ -2043,7 +2043,7 @@
       },
       {
         "property": "og:image:alt",
-        "content": "ChatGPT Has Ads Now. Not in the UAE — and That Is the Useful Part"
+        "content": "ChatGPT Has Ads Now. Not in Singapore — and That Is the Useful Part"
       },
       {
         "property": "article:section",
@@ -2059,7 +2059,7 @@
       },
       {
         "name": "twitter:title",
-        "content": "ChatGPT Has Ads Now. Not in the UAE — and That Is the Useful Part"
+        "content": "ChatGPT Has Ads Now. Not in Singapore — and That Is the Useful Part"
       },
       {
         "name": "twitter:description",
@@ -2071,7 +2071,7 @@
       },
       {
         "name": "twitter:image:alt",
-        "content": "ChatGPT Has Ads Now. Not in the UAE — and That Is the Useful Part"
+        "content": "ChatGPT Has Ads Now. Not in Singapore — and That Is the Useful Part"
       }
     ],
     "stylesheets": [
@@ -2145,11 +2145,11 @@
       "value": "conversion-first-website"
     },
     "meta": {
-      "title": "Conversion-First Web Design for Dubai Businesses",
-      "description": "The UAE digital market is evolving at breakneck speed. With over 98% internet penetration and one of the highest smartphone adoption rates globally, Dubai ",
+      "title": "Conversion-First Web Design for Singapore Businesses",
+      "description": "Singapore digital market is evolving at breakneck speed. With over 98% internet penetration and one of the highest smartphone adoption rates globally, Singapore ",
       "canonical": "https://kiasa.tech/blog-post?slug=conversion-first-website",
       "ogImage": "https://kiasa.tech/Assets/Blog-Conversion-First-Website.jpg.webp",
-      "ogTitle": "Why Your Dubai Business Needs a Conversion-First Website in 2026",
+      "ogTitle": "Why Your Singapore Business Needs a Conversion-First Website in 2026",
       "lang": "en",
       "dir": "ltr",
       "bodyClass": "",
@@ -2170,7 +2170,7 @@
       },
       {
         "name": "description",
-        "content": "The UAE digital market is evolving at breakneck speed. With over 98% internet penetration and one of the highest smartphone adoption rates globally, Dubai "
+        "content": "Singapore digital market is evolving at breakneck speed. With over 98% internet penetration and one of the highest smartphone adoption rates globally, Singapore "
       },
       {
         "name": "robots",
@@ -2190,11 +2190,11 @@
       },
       {
         "property": "og:title",
-        "content": "Why Your Dubai Business Needs a Conversion-First Website in 2026"
+        "content": "Why Your Singapore Business Needs a Conversion-First Website in 2026"
       },
       {
         "property": "og:description",
-        "content": "The UAE digital market is evolving at breakneck speed. With over 98% internet penetration and one of the highest smartphone adoption rates globally, Dubai businesses are competing in one of the most d"
+        "content": "Singapore digital market is evolving at breakneck speed. With over 98% internet penetration and one of the highest smartphone adoption rates globally, Singapore businesses are competing in one of the most d"
       },
       {
         "property": "og:url",
@@ -2210,7 +2210,7 @@
       },
       {
         "property": "og:image:alt",
-        "content": "Why Your Dubai Business Needs a Conversion-First Website in 2026"
+        "content": "Why Your Singapore Business Needs a Conversion-First Website in 2026"
       },
       {
         "property": "article:section",
@@ -2226,11 +2226,11 @@
       },
       {
         "name": "twitter:title",
-        "content": "Why Your Dubai Business Needs a Conversion-First Website in 2026"
+        "content": "Why Your Singapore Business Needs a Conversion-First Website in 2026"
       },
       {
         "name": "twitter:description",
-        "content": "The UAE digital market is evolving at breakneck speed. With over 98% internet penetration and one of the highest smartphone adoption rates globally, Dubai businesses are competing in one of the most d"
+        "content": "Singapore digital market is evolving at breakneck speed. With over 98% internet penetration and one of the highest smartphone adoption rates globally, Singapore businesses are competing in one of the most d"
       },
       {
         "name": "twitter:image",
@@ -2238,7 +2238,7 @@
       },
       {
         "name": "twitter:image:alt",
-        "content": "Why Your Dubai Business Needs a Conversion-First Website in 2026"
+        "content": "Why Your Singapore Business Needs a Conversion-First Website in 2026"
       }
     ],
     "stylesheets": [
@@ -2479,11 +2479,11 @@
       "value": "free-ai-frontier-ai-uae-business"
     },
     "meta": {
-      "title": "AI for Business UAE: Free Tiers vs Frontier Models",
+      "title": "AI for Business Singapore: Free Tiers vs Frontier Models",
       "description": "OpenAI made its cheapest model unlimited and kept the flagship paid. That split is coming to your market too — here is how to be on the right side.",
       "canonical": "https://kiasa.tech/blog-post?slug=free-ai-frontier-ai-uae-business",
       "ogImage": "https://kiasa.tech/Assets/blog/free-ai-frontier-ai-uae-business-banner.webp",
-      "ogTitle": "AI Just Split Into Free and Frontier. Here Is What That Means for UAE Businesses.",
+      "ogTitle": "AI Just Split Into Free and Frontier. Here Is What That Means for Singapore Businesses.",
       "lang": "en",
       "dir": "ltr",
       "bodyClass": "",
@@ -2524,7 +2524,7 @@
       },
       {
         "property": "og:title",
-        "content": "AI Just Split Into Free and Frontier. Here Is What That Means for UAE Businesses."
+        "content": "AI Just Split Into Free and Frontier. Here Is What That Means for Singapore Businesses."
       },
       {
         "property": "og:description",
@@ -2544,7 +2544,7 @@
       },
       {
         "property": "og:image:alt",
-        "content": "AI Just Split Into Free and Frontier. Here Is What That Means for UAE Businesses."
+        "content": "AI Just Split Into Free and Frontier. Here Is What That Means for Singapore Businesses."
       },
       {
         "property": "article:section",
@@ -2560,7 +2560,7 @@
       },
       {
         "name": "twitter:title",
-        "content": "AI Just Split Into Free and Frontier. Here Is What That Means for UAE Businesses."
+        "content": "AI Just Split Into Free and Frontier. Here Is What That Means for Singapore Businesses."
       },
       {
         "name": "twitter:description",
@@ -2572,7 +2572,7 @@
       },
       {
         "name": "twitter:image:alt",
-        "content": "AI Just Split Into Free and Frontier. Here Is What That Means for UAE Businesses."
+        "content": "AI Just Split Into Free and Frontier. Here Is What That Means for Singapore Businesses."
       }
     ],
     "stylesheets": [
@@ -3314,11 +3314,11 @@
       "value": "mobile-first-design"
     },
     "meta": {
-      "title": "Mobile-First Design: Building for UAE Phone Users",
-      "description": "Here's a number that should reshape how you think about web design in the UAE: 85% of web traffic comes from mobile devices. Not tablets — phones. Yet the ",
+      "title": "Mobile-First Design: Building for Singapore Phone Users",
+      "description": "Here's a number that should reshape how you think about web design in Singapore: 85% of web traffic comes from mobile devices. Not tablets — phones. Yet the ",
       "canonical": "https://kiasa.tech/blog-post?slug=mobile-first-design",
       "ogImage": "https://kiasa.tech/Assets/Blog-Mobile-First-Design.webp",
-      "ogTitle": "Mobile-First Design: How to Build for the 85% of UAE Users on Phones",
+      "ogTitle": "Mobile-First Design: How to Build for the 85% of Singapore Users on Phones",
       "lang": "en",
       "dir": "ltr",
       "bodyClass": "",
@@ -3339,7 +3339,7 @@
       },
       {
         "name": "description",
-        "content": "Here&#039;s a number that should reshape how you think about web design in the UAE: 85% of web traffic comes from mobile devices. Not tablets — phones. Yet the "
+        "content": "Here&#039;s a number that should reshape how you think about web design in Singapore: 85% of web traffic comes from mobile devices. Not tablets — phones. Yet the "
       },
       {
         "name": "robots",
@@ -3359,11 +3359,11 @@
       },
       {
         "property": "og:title",
-        "content": "Mobile-First Design: How to Build for the 85% of UAE Users on Phones"
+        "content": "Mobile-First Design: How to Build for the 85% of Singapore Users on Phones"
       },
       {
         "property": "og:description",
-        "content": "Here&#039;s a number that should reshape how you think about web design in the UAE: 85% of web traffic comes from mobile devices. Not tablets — phones. Yet the vast majority of websites are still designed "
+        "content": "Here&#039;s a number that should reshape how you think about web design in Singapore: 85% of web traffic comes from mobile devices. Not tablets — phones. Yet the vast majority of websites are still designed "
       },
       {
         "property": "og:url",
@@ -3379,7 +3379,7 @@
       },
       {
         "property": "og:image:alt",
-        "content": "Mobile-First Design: How to Build for the 85% of UAE Users on Phones"
+        "content": "Mobile-First Design: How to Build for the 85% of Singapore Users on Phones"
       },
       {
         "property": "article:section",
@@ -3395,11 +3395,11 @@
       },
       {
         "name": "twitter:title",
-        "content": "Mobile-First Design: How to Build for the 85% of UAE Users on Phones"
+        "content": "Mobile-First Design: How to Build for the 85% of Singapore Users on Phones"
       },
       {
         "name": "twitter:description",
-        "content": "Here&#039;s a number that should reshape how you think about web design in the UAE: 85% of web traffic comes from mobile devices. Not tablets — phones. Yet the vast majority of websites are still designed "
+        "content": "Here&#039;s a number that should reshape how you think about web design in Singapore: 85% of web traffic comes from mobile devices. Not tablets — phones. Yet the vast majority of websites are still designed "
       },
       {
         "name": "twitter:image",
@@ -3407,7 +3407,7 @@
       },
       {
         "name": "twitter:image:alt",
-        "content": "Mobile-First Design: How to Build for the 85% of UAE Users on Phones"
+        "content": "Mobile-First Design: How to Build for the 85% of Singapore Users on Phones"
       }
     ],
     "stylesheets": [
@@ -3815,11 +3815,11 @@
       "value": "premium-brand-identity"
     },
     "meta": {
-      "title": "Premium Brand Identity: Lessons From Dubai Fashion",
-      "description": "Dubai is one of the world's most competitive markets for premium brands. Between homegrown labels, international luxury houses, and a consumer base with ex",
+      "title": "Premium Brand Identity: Lessons From Singapore Fashion",
+      "description": "Singapore is one of the world's most competitive markets for premium brands. Between homegrown labels, international luxury houses, and a consumer base with ex",
       "canonical": "https://kiasa.tech/blog-post?slug=premium-brand-identity",
       "ogImage": "https://kiasa.tech/Assets/Blog-Premium-Brand-Identity.webp",
-      "ogTitle": "Building a Premium Brand Identity: Lessons from Dubai's Fashion Scene",
+      "ogTitle": "Building a Premium Brand Identity: Lessons from Singapore's Fashion Scene",
       "lang": "en",
       "dir": "ltr",
       "bodyClass": "",
@@ -3840,7 +3840,7 @@
       },
       {
         "name": "description",
-        "content": "Dubai is one of the world&#039;s most competitive markets for premium brands. Between homegrown labels, international luxury houses, and a consumer base with ex"
+        "content": "Singapore is one of the world&#039;s most competitive markets for premium brands. Between homegrown labels, international luxury houses, and a consumer base with ex"
       },
       {
         "name": "robots",
@@ -3860,11 +3860,11 @@
       },
       {
         "property": "og:title",
-        "content": "Building a Premium Brand Identity: Lessons from Dubai&#039;s Fashion Scene"
+        "content": "Building a Premium Brand Identity: Lessons from Singapore&#039;s Fashion Scene"
       },
       {
         "property": "og:description",
-        "content": "Dubai is one of the world&#039;s most competitive markets for premium brands. Between homegrown labels, international luxury houses, and a consumer base with extremely high standards, standing out requires"
+        "content": "Singapore is one of the world&#039;s most competitive markets for premium brands. Between homegrown labels, international luxury houses, and a consumer base with extremely high standards, standing out requires"
       },
       {
         "property": "og:url",
@@ -3880,7 +3880,7 @@
       },
       {
         "property": "og:image:alt",
-        "content": "Building a Premium Brand Identity: Lessons from Dubai&#039;s Fashion Scene"
+        "content": "Building a Premium Brand Identity: Lessons from Singapore&#039;s Fashion Scene"
       },
       {
         "property": "article:section",
@@ -3896,11 +3896,11 @@
       },
       {
         "name": "twitter:title",
-        "content": "Building a Premium Brand Identity: Lessons from Dubai&#039;s Fashion Scene"
+        "content": "Building a Premium Brand Identity: Lessons from Singapore&#039;s Fashion Scene"
       },
       {
         "name": "twitter:description",
-        "content": "Dubai is one of the world&#039;s most competitive markets for premium brands. Between homegrown labels, international luxury houses, and a consumer base with extremely high standards, standing out requires"
+        "content": "Singapore is one of the world&#039;s most competitive markets for premium brands. Between homegrown labels, international luxury houses, and a consumer base with extremely high standards, standing out requires"
       },
       {
         "name": "twitter:image",
@@ -3908,7 +3908,7 @@
       },
       {
         "name": "twitter:image:alt",
-        "content": "Building a Premium Brand Identity: Lessons from Dubai&#039;s Fashion Scene"
+        "content": "Building a Premium Brand Identity: Lessons from Singapore&#039;s Fashion Scene"
       }
     ],
     "stylesheets": [
@@ -3982,11 +3982,11 @@
       "value": "uae-ai-compliance-2026"
     },
     "meta": {
-      "title": "UAE AI Compliance 2026: What Applies to Your Business",
-      "description": "There is no single UAE AI Act. Here is what genuinely governs business AI use in the UAE — the Charter, the PDPL, and free-zone rules — with sources.",
+      "title": "Singapore AI Compliance 2026: What Applies to Your Business",
+      "description": "There is no single Singapore AI Act. Here is what genuinely governs business AI use in Singapore — the Charter, the PDPL, and free-zone rules — with sources.",
       "canonical": "https://kiasa.tech/blog-post?slug=uae-ai-compliance-2026",
       "ogImage": "https://kiasa.tech/Assets/blog/uae-ai-compliance-2026-banner.webp",
-      "ogTitle": "AI Compliance in the UAE: What Actually Applies to Your Business",
+      "ogTitle": "AI Compliance in Singapore: What Actually Applies to Your Business",
       "lang": "en",
       "dir": "ltr",
       "bodyClass": "",
@@ -4007,7 +4007,7 @@
       },
       {
         "name": "description",
-        "content": "There is no single UAE AI Act. Here is what genuinely governs business AI use in the UAE — the Charter, the PDPL, and free-zone rules — with sources."
+        "content": "There is no single Singapore AI Act. Here is what genuinely governs business AI use in Singapore — the Charter, the PDPL, and free-zone rules — with sources."
       },
       {
         "name": "robots",
@@ -4027,11 +4027,11 @@
       },
       {
         "property": "og:title",
-        "content": "AI Compliance in the UAE: What Actually Applies to Your Business"
+        "content": "AI Compliance in Singapore: What Actually Applies to Your Business"
       },
       {
         "property": "og:description",
-        "content": "There is no single UAE AI Act. Here is what genuinely governs business AI use in the UAE — the Charter, the PDPL, and free-zone rules — with sources."
+        "content": "There is no single Singapore AI Act. Here is what genuinely governs business AI use in Singapore — the Charter, the PDPL, and free-zone rules — with sources."
       },
       {
         "property": "og:url",
@@ -4047,7 +4047,7 @@
       },
       {
         "property": "og:image:alt",
-        "content": "AI Compliance in the UAE: What Actually Applies to Your Business"
+        "content": "AI Compliance in Singapore: What Actually Applies to Your Business"
       },
       {
         "property": "article:section",
@@ -4063,11 +4063,11 @@
       },
       {
         "name": "twitter:title",
-        "content": "AI Compliance in the UAE: What Actually Applies to Your Business"
+        "content": "AI Compliance in Singapore: What Actually Applies to Your Business"
       },
       {
         "name": "twitter:description",
-        "content": "There is no single UAE AI Act. Here is what genuinely governs business AI use in the UAE — the Charter, the PDPL, and free-zone rules — with sources."
+        "content": "There is no single Singapore AI Act. Here is what genuinely governs business AI use in Singapore — the Charter, the PDPL, and free-zone rules — with sources."
       },
       {
         "name": "twitter:image",
@@ -4075,7 +4075,7 @@
       },
       {
         "name": "twitter:image:alt",
-        "content": "AI Compliance in the UAE: What Actually Applies to Your Business"
+        "content": "AI Compliance in Singapore: What Actually Applies to Your Business"
       }
     ],
     "stylesheets": [
@@ -4149,11 +4149,11 @@
       "value": "web-development-company-dubai"
     },
     "meta": {
-      "title": "Choosing a Web Development Company in Dubai: A Guide",
-      "description": "Eleven questions that separate a real web development company in Dubai from a reseller — and what the answers should sound like. In English and Arabic.",
+      "title": "Choosing a Web Development Company in Singapore: A Guide",
+      "description": "Eleven questions that separate a real web development company in Singapore from a reseller — and what the answers should sound like. In English and Arabic.",
       "canonical": "https://kiasa.tech/blog-post?slug=web-development-company-dubai",
       "ogImage": "https://kiasa.tech/Assets/blog/web-development-company-dubai-banner.webp",
-      "ogTitle": "How to Choose a Web Development Company in Dubai — Without Getting Burned",
+      "ogTitle": "How to Choose a Web Development Company in Singapore — Without Getting Burned",
       "lang": "en",
       "dir": "ltr",
       "bodyClass": "",
@@ -4174,7 +4174,7 @@
       },
       {
         "name": "description",
-        "content": "Eleven questions that separate a real web development company in Dubai from a reseller — and what the answers should sound like. In English and Arabic."
+        "content": "Eleven questions that separate a real web development company in Singapore from a reseller — and what the answers should sound like. In English and Arabic."
       },
       {
         "name": "robots",
@@ -4194,11 +4194,11 @@
       },
       {
         "property": "og:title",
-        "content": "How to Choose a Web Development Company in Dubai — Without Getting Burned"
+        "content": "How to Choose a Web Development Company in Singapore — Without Getting Burned"
       },
       {
         "property": "og:description",
-        "content": "Eleven questions that separate a real web development company in Dubai from a reseller — and what the answers should sound like. In English and Arabic."
+        "content": "Eleven questions that separate a real web development company in Singapore from a reseller — and what the answers should sound like. In English and Arabic."
       },
       {
         "property": "og:url",
@@ -4214,7 +4214,7 @@
       },
       {
         "property": "og:image:alt",
-        "content": "How to Choose a Web Development Company in Dubai — Without Getting Burned"
+        "content": "How to Choose a Web Development Company in Singapore — Without Getting Burned"
       },
       {
         "property": "article:section",
@@ -4230,11 +4230,11 @@
       },
       {
         "name": "twitter:title",
-        "content": "How to Choose a Web Development Company in Dubai — Without Getting Burned"
+        "content": "How to Choose a Web Development Company in Singapore — Without Getting Burned"
       },
       {
         "name": "twitter:description",
-        "content": "Eleven questions that separate a real web development company in Dubai from a reseller — and what the answers should sound like. In English and Arabic."
+        "content": "Eleven questions that separate a real web development company in Singapore from a reseller — and what the answers should sound like. In English and Arabic."
       },
       {
         "name": "twitter:image",
@@ -4242,7 +4242,7 @@
       },
       {
         "name": "twitter:image:alt",
-        "content": "How to Choose a Web Development Company in Dubai — Without Getting Burned"
+        "content": "How to Choose a Web Development Company in Singapore — Without Getting Burned"
       }
     ],
     "stylesheets": [
@@ -4905,11 +4905,11 @@
     "key": "ecommerce-website-dubai",
     "segment": "ecommerce-website-dubai",
     "meta": {
-      "title": "Ecommerce Website Design in Dubai | KIASA",
-      "description": "Ecommerce website design in Dubai. Online stores built with UAE payment gateways, cash on delivery, delivery zones and an Arabic checkout.",
+      "title": "Ecommerce Website Design in Singapore | KIASA",
+      "description": "Ecommerce website design in Singapore. Online stores built with Singapore payment gateways, cash on delivery, delivery zones and an Arabic checkout.",
       "canonical": "https://kiasa.tech/ecommerce-website-dubai",
       "ogImage": "https://kiasa.tech/Assets/Social%20Sharing%20image.jpg",
-      "ogTitle": "Ecommerce Website Design in Dubai — KIASA",
+      "ogTitle": "Ecommerce Website Design in Singapore — KIASA",
       "lang": "en",
       "dir": "ltr",
       "bodyClass": "",
@@ -4930,7 +4930,7 @@
       },
       {
         "name": "description",
-        "content": "Ecommerce website design in Dubai. Online stores built with UAE payment gateways, cash on delivery, delivery zones and an Arabic checkout."
+        "content": "Ecommerce website design in Singapore. Online stores built with Singapore payment gateways, cash on delivery, delivery zones and an Arabic checkout."
       },
       {
         "name": "robots",
@@ -4950,11 +4950,11 @@
       },
       {
         "property": "og:title",
-        "content": "Ecommerce Website Design in Dubai &amp;mdash; KIASA"
+        "content": "Ecommerce Website Design in Singapore &amp;mdash; KIASA"
       },
       {
         "property": "og:description",
-        "content": "Ecommerce website design in Dubai. Online stores built with UAE payment gateways, cash on delivery, delivery zones and an Arabic checkout."
+        "content": "Ecommerce website design in Singapore. Online stores built with Singapore payment gateways, cash on delivery, delivery zones and an Arabic checkout."
       },
       {
         "property": "og:url",
@@ -4986,11 +4986,11 @@
       },
       {
         "name": "twitter:title",
-        "content": "Ecommerce Website Design in Dubai &amp;mdash; KIASA"
+        "content": "Ecommerce Website Design in Singapore &amp;mdash; KIASA"
       },
       {
         "name": "twitter:description",
-        "content": "Ecommerce website design in Dubai. Online stores built with UAE payment gateways, cash on delivery, delivery zones and an Arabic checkout."
+        "content": "Ecommerce website design in Singapore. Online stores built with Singapore payment gateways, cash on delivery, delivery zones and an Arabic checkout."
       },
       {
         "name": "twitter:image",
@@ -11332,11 +11332,11 @@
     "key": "web-design-agency-dubai",
     "segment": "web-design-agency-dubai",
     "meta": {
-      "title": "Web Design Agency in Dubai | KIASA",
-      "description": "A Dubai web design agency building custom-coded sites, not templates. Bilingual English and Arabic, from $3,000, with a fixed scope before you commit.",
+      "title": "Web Design Agency in Singapore | KIASA",
+      "description": "A Singapore web design agency building custom-coded sites, not templates. Bilingual English and Arabic, from $3,000, with a fixed scope before you commit.",
       "canonical": "https://kiasa.tech/web-design-agency-dubai",
       "ogImage": "https://kiasa.tech/Assets/Social%20Sharing%20image.jpg",
-      "ogTitle": "Web Design Agency in Dubai — KIASA",
+      "ogTitle": "Web Design Agency in Singapore — KIASA",
       "lang": "en",
       "dir": "ltr",
       "bodyClass": "",
@@ -11357,7 +11357,7 @@
       },
       {
         "name": "description",
-        "content": "A Dubai web design agency building custom-coded sites, not templates. Bilingual English and Arabic, from $3,000, with a fixed scope before you commit."
+        "content": "A Singapore web design agency building custom-coded sites, not templates. Bilingual English and Arabic, from $3,000, with a fixed scope before you commit."
       },
       {
         "name": "robots",
@@ -11377,11 +11377,11 @@
       },
       {
         "property": "og:title",
-        "content": "Web Design Agency in Dubai — KIASA"
+        "content": "Web Design Agency in Singapore — KIASA"
       },
       {
         "property": "og:description",
-        "content": "A Dubai web design agency building custom-coded sites, not templates. Bilingual English and Arabic, from $3,000, with a fixed scope before you commit."
+        "content": "A Singapore web design agency building custom-coded sites, not templates. Bilingual English and Arabic, from $3,000, with a fixed scope before you commit."
       },
       {
         "property": "og:url",
@@ -11413,11 +11413,11 @@
       },
       {
         "name": "twitter:title",
-        "content": "Web Design Agency in Dubai — KIASA"
+        "content": "Web Design Agency in Singapore — KIASA"
       },
       {
         "name": "twitter:description",
-        "content": "A Dubai web design agency building custom-coded sites, not templates. Bilingual English and Arabic, from $3,000, with a fixed scope before you commit."
+        "content": "A Singapore web design agency building custom-coded sites, not templates. Bilingual English and Arabic, from $3,000, with a fixed scope before you commit."
       },
       {
         "name": "twitter:image",

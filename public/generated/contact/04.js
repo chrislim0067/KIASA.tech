@@ -63,7 +63,7 @@
             // homepage's copy: the old /^\+?[0-9]{7,15}$/ accepted a trunk 0 left in after the
             // country code, accepted any 7 digits from anywhere, and rejected dotted numbers.
             // phoneE164 is what gets submitted and hashed — Meta and Google match on E.164, so a
-            // locally-formatted UAE number previously matched nothing at either.
+            // locally-formatted Singapore number previously matched nothing at either.
             let phoneE164 = phone.replace(/\D/g, '');
             if (window.wtPhone) {
                 const p = window.wtPhone.parse(phone, window.__wtCC ? window.__wtCC.cc() : '971');
