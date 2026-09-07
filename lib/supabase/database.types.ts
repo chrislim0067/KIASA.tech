@@ -620,11 +620,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      jsonb_links_ok: {
+        Args: {
+          links: Json
+          max_items: number
+          max_label: number
+          max_url: number
+        }
+        Returns: boolean
+      }
       text_array_matches: {
         Args: { arr: string[]; pattern: string }
         Returns: boolean
       }
       text_array_no_blanks: { Args: { arr: string[] }; Returns: boolean }
+      text_array_ok: {
+        Args: { arr: string[]; max_items: number; max_len: number }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

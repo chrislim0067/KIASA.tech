@@ -170,10 +170,23 @@ await expectRejected('one work-auth row per country',
   wa.insert({ user_id: A.id, country_code: 'GB', is_authorized: true, sponsorship_required_now: false, sponsorship_required_future: false }));
 
 const va = A.client.from('verified_answers');
-await expectRejected('verified answer needs verified_at',
+// Since migration 9, verified_at is derived by a trigger rather than supplied by
+// the client, so these no longer fail the CHECK — the trigger normalises them
+// first. The guarantee is stronger than before: it is not merely that an
+// inconsistent pair is rejected, but that the client cannot choose the value at
+// all. Assert the resulting state rather than a rejection.
+await expectAccepted('verified answer without verified_at is accepted',
   va.insert({ user_id: A.id, question_key: 'k1', answer_text: 'x', source: 'user_entered', is_verified: true }));
-await expectRejected('unverified answer cannot carry verified_at',
+{
+  const { data } = await A.client.from('verified_answers').select('verified_at').eq('question_key', 'k1').single();
+  check('...and verified_at is stamped by the server', data?.verified_at !== null, String(data?.verified_at));
+}
+await expectAccepted('unverified answer carrying verified_at is accepted',
   va.insert({ user_id: A.id, question_key: 'k2', answer_text: 'x', source: 'user_entered', is_verified: false, verified_at: new Date().toISOString() }));
+{
+  const { data } = await A.client.from('verified_answers').select('verified_at').eq('question_key', 'k2').single();
+  check('...and the client-supplied verified_at is discarded', data?.verified_at === null, String(data?.verified_at));
+}
 await expectRejected('locked answer must be verified',
   va.insert({ user_id: A.id, question_key: 'k3', answer_text: 'x', source: 'user_entered', is_verified: false, is_locked: true }));
 await expectRejected('times_used cannot be negative',
@@ -276,8 +289,10 @@ for (const fn of ['text_array_matches', 'text_array_no_blanks']) {
 
 // The trigger function must not be reachable by anyone through the API.
 for (const [label, client] of [['anon', anon], ['authenticated', A.client]]) {
-  const { error } = await client.rpc('set_updated_at');
-  check(`${label} cannot execute set_updated_at()`, Boolean(error), error ? `blocked: ${error.code}` : 'NOT BLOCKED');
+  for (const trigger of ['set_row_timestamps', 'guard_verified_answer_provenance']) {
+    const { error } = await client.rpc(trigger);
+    check(`${label} cannot execute ${trigger}()`, Boolean(error), error ? `blocked: ${error.code}` : 'NOT BLOCKED');
+  }
 }
 
 // authenticated CAN call the two CHECK helpers — that is unavoidable, since a

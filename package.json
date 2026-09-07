@@ -19,8 +19,8 @@
     "db:start": "npx supabase start",
     "db:stop": "npx supabase stop",
     "db:reset": "npx supabase db reset",
-    "db:types": "npx supabase gen types typescript --local --schema public > lib/supabase/database.types.ts",
-    "test:db": "node scripts/test-default-privileges.mjs && node scripts/test-profile-rls.mjs && node scripts/test-profile-cascade.mjs"
+    "db:types": "node scripts/gen-types.mjs",
+    "test:db": "node scripts/test-default-privileges.mjs && node scripts/test-profile-rls.mjs && node scripts/test-security-regressions.mjs && node scripts/test-profile-cascade.mjs && node scripts/test-type-generation.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",

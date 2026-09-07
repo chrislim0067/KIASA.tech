@@ -36,8 +36,25 @@ begin
   foreach target_table in array candidate_tables loop
     execute format('alter table public.%I enable row level security', target_table);
 
-    -- Belt and braces: also applies the policies to the table owner, so a
-    -- future owner-context query cannot silently bypass RLS.
+    -- FORCE makes the policies apply to the table OWNER as well, which plain
+    -- ENABLE does not.
+    --
+    -- It is NOT an absolute boundary, and the earlier comment here overstated
+    -- it. A role with the BYPASSRLS attribute ignores row security whether or
+    -- not it is forced, and on Supabase both `postgres` (the migration/owner
+    -- role) and `service_role` have BYPASSRLS; `supabase_admin` is a superuser.
+    -- Verified against a local database: rolbypassrls = t for postgres and
+    -- service_role.
+    --
+    -- So the accurate statement of the model is:
+    --   * RLS is the user-isolation boundary for the normal API roles
+    --     (anon, authenticated). That is what protects one user from another.
+    --   * service_role is contained here by holding NO grants on these tables
+    --     (see the revoke below), not by RLS — RLS would not stop it.
+    --   * The database owner and administrative roles remain trusted, as they
+    --     must be to run migrations at all.
+    -- FORCE is still worth setting: it removes the accidental case where an
+    -- owner-context query in a function or job reads across users.
     execute format('alter table public.%I force row level security', target_table);
 
     -- anon gets nothing at all; authenticated gets only the four DML verbs.

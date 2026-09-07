@@ -22,11 +22,26 @@
 -- Both are addressed below.
 --
 -- Scope: default privileges are recorded per (creating role, schema), so these
--- statements are issued FOR the role actually running the migration. Objects
--- created in public by a *different* role — Supabase's own tooling running as
--- supabase_admin, which has its own entry — are out of scope and cannot be
--- altered from here without elevated rights. Our migrations run as `postgres`
--- both locally and via `db push`, so the role that matters is covered.
+-- statements are issued FOR the role actually running the migration. Our
+-- migrations run as `postgres` both locally and via `db push`, so the role that
+-- matters is covered.
+--
+-- KNOWN LIMITATION — objects created by supabase_admin are NOT covered.
+-- Supabase installs a second default-ACL entry for schema public owned by
+-- supabase_admin, which grants anon/authenticated/service_role. Anything that
+-- role creates picks those grants up, and `postgres` cannot alter another
+-- role's default privileges. Demonstrated locally: installing pg_trgm into
+-- public produced similarity() with proacl {=X/supabase_admin, ...,
+-- authenticated=X} — executable by PUBLIC and authenticated, untouched by the
+-- statements below.
+--
+-- This is accepted rather than worked around. Altering supabase_admin's
+-- defaults would need elevated hosted permissions we should not request, and
+-- the objects in question are Supabase's own (extensions and managed schemas),
+-- not this application's. Every table and function THIS project creates is
+-- covered, both by these defaults and by the explicit grants in migration 7.
+-- The practical residue: if a future migration installs an extension into
+-- public, review that extension's function privileges by hand.
 
 do $$
 declare

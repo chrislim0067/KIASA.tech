@@ -19,6 +19,35 @@
 import { execFileSync } from 'node:child_process';
 
 const CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_kiasa';
+
+/**
+ * Local-only guard, matching the sibling test scripts. (Review finding L3)
+ *
+ * This script creates and DROPs probe objects, so it must never be pointed at
+ * anything but a throwaway local stack. Its siblings refused a non-loopback
+ * API_URL; this one went straight to `docker exec psql` with no such check.
+ */
+function assertLocalStack() {
+  const raw = execFileSync('npx', ['supabase', 'status', '-o', 'env'], {
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+  });
+  const apiUrl = (raw.match(/^API_URL="?([^"\r\n]*)"?/m) ?? [])[1];
+  if (!apiUrl) throw new Error('Local Supabase is not running (supabase start).');
+  let host;
+  try {
+    host = new URL(apiUrl).hostname;
+  } catch {
+    throw new Error(`Unrecognised API_URL: ${apiUrl}`);
+  }
+  if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(host)) {
+    throw new Error(`Refusing to run against a non-local API URL: ${apiUrl}`);
+  }
+  return apiUrl;
+}
+
+console.log(`local API: ${assertLocalStack()}`);
+
 const sql = (statement) =>
   execFileSync('docker', ['exec', CONTAINER, 'psql', '-U', 'postgres', '-d', 'postgres', '-tAc', statement], {
     encoding: 'utf8',
@@ -117,8 +146,14 @@ for (const role of ['anon', 'service_role']) {
                    where n.nspname='public' and has_function_privilege('public',p.oid,'EXECUTE')`);
   check('PUBLIC cannot execute any public function', pub === '0', `${pub} executable`);
 
-  const trig = sql(`select has_function_privilege('authenticated','public.set_updated_at()','EXECUTE')`);
-  check('authenticated cannot execute set_updated_at()', trig === 'f', trig);
+  // Trigger functions need no EXECUTE grant and must not have one.
+  for (const trigger of ['public.set_row_timestamps()', 'public.guard_verified_answer_provenance()']) {
+    const can = sql(`select has_function_privilege('authenticated','${trigger}','EXECUTE')`);
+    check(`authenticated cannot execute ${trigger}`, can === 'f', can);
+  }
+  const retired = sql(`select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                       where n.nspname='public' and p.proname='set_updated_at'`);
+  check('the retired update-only timestamp function is gone', retired === '0', `${retired} found`);
 
   // has_function_privilege needs a full signature, not a bare name.
   for (const [fn, signature] of Object.entries(CHECK_HELPER_SIGNATURES)) {
