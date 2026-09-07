@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Rajdhani, Syncopate } from 'next/font/google';
 import type { ReactNode } from 'react';
 
+import LivePulse from '@/components/admin/LivePulse';
 import '@/styles/admin.css';
 
 /**
@@ -89,6 +90,9 @@ export default function AdminShell({
         </nav>
 
         <div className="kadmin__who">
+          {/* Polls a four-integer endpoint and refreshes the page when the
+              approval queue changes. See components/admin/LivePulse.tsx. */}
+          <LivePulse />
           <span>{actorEmail ?? 'Signed in'}</span>
           <Link href="/dashboard" className="kadmin__navLink">
             Exit

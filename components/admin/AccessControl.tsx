@@ -31,9 +31,27 @@ export default function AccessControl({
   const [error, setError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
+  /** What the UI shows right now — may briefly lead the server. */
+  const [optimistic, setOptimistic] = useState(status);
 
+  /**
+   * Optimistic by design.
+   *
+   * The decision is shown as done the instant it is clicked, and the request
+   * runs behind it. Approving a queue of signups should feel like clearing
+   * notifications, not like submitting a form and waiting — and the round trip
+   * is 200ms+ from Asia, which is long enough to feel like a stall.
+   *
+   * Safe because the operation is idempotent and fully reversible: the worst
+   * case is a row that looked decided for a moment, then snaps back with an
+   * error attached. The optimistic state is reverted on failure rather than
+   * left lying about what happened.
+   */
   async function decide(next: 'approved' | 'rejected') {
     if (busy) return;
+
+    const previous = optimistic;
+    setOptimistic(next);
     setBusy(true);
     setError(null);
 
@@ -52,14 +70,18 @@ export default function AccessControl({
           : null;
 
       if (!response.ok) {
+        setOptimistic(previous); // put it back — the decision did not happen
         setError(message ?? 'The decision could not be saved.');
         return;
       }
 
       setRejecting(false);
       setReason('');
+      // Reconcile with the server. LivePulse will also refresh other open tabs
+      // within a few seconds.
       router.refresh();
     } catch {
+      setOptimistic(previous);
       setError('The decision could not be saved — the request did not reach the server.');
     } finally {
       setBusy(false);
@@ -101,20 +123,30 @@ export default function AccessControl({
     );
   }
 
+  // Once decided, show the outcome immediately rather than the buttons. On the
+  // pending queue that makes the row visibly resolve the moment it is clicked.
+  if (optimistic !== 'pending' && compact) {
+    return (
+      <span className={`kadmin__badge kadmin__badge--access-${optimistic}`} aria-live="polite">
+        {optimistic}
+      </span>
+    );
+  }
+
   return (
     <span className="kadmin__chips">
-      {status !== 'approved' ? (
+      {optimistic !== 'approved' ? (
         <button
           type="button"
-          className={`kadmin__button kadmin__button--small${compact ? '' : ''}`}
+          className="kadmin__button kadmin__button--small"
           onClick={() => decide('approved')}
           disabled={busy}
         >
-          {busy ? 'Working…' : 'Approve'}
+          Approve
         </button>
       ) : null}
 
-      {status !== 'rejected' ? (
+      {optimistic !== 'rejected' ? (
         <button
           type="button"
           className="kadmin__button kadmin__button--danger kadmin__button--small"
