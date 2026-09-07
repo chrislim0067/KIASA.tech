@@ -20,7 +20,7 @@
     "db:stop": "npx supabase stop",
     "db:reset": "npx supabase db reset",
     "db:types": "node scripts/gen-types.mjs",
-    "test:db": "node scripts/test-default-privileges.mjs && node scripts/test-profile-rls.mjs && node scripts/test-security-regressions.mjs && node scripts/test-whitespace-rules.mjs && node scripts/test-profile-cascade.mjs && node scripts/test-type-generation.mjs"
+    "test:db": "node scripts/test-default-privileges.mjs && node scripts/test-profile-rls.mjs && node scripts/test-security-regressions.mjs && node scripts/test-whitespace-rules.mjs && node scripts/test-validation-parity.mjs && node scripts/test-data-layer.mjs && node scripts/test-profile-cascade.mjs && node scripts/test-type-generation.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
