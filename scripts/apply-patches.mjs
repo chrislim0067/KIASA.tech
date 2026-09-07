@@ -115,36 +115,68 @@ if (hero.includes('/brand/wordmark.js')) {
 // Guarded separately from the block above: those replacements run once, when the
 // W is first swapped for the wordmark, and are skipped forever after. This one
 // has to be able to land on a tree where that has already happened.
-if (hero.includes('_wmFitScale')) {
+if (hero.includes('let _wmFit = 1;')) {
   console.log('hero wordmark fit: already patched, skipping');
 } else {
+  // A module-scoped fit factor. Both the group's scale and its horizontal
+  // offset consume it, and those live in different blocks of animate().
+  hero = replaceOnce(
+    hero,
+    `        let logoGroup, ringMesh;`,
+    `        let logoGroup, ringMesh;
+        // Viewport fit for the 3D brand, recomputed each frame in animate().
+        // Module scope because both the scale and the horizontal offset consume
+        // it, and they live in different blocks.
+        let _wmFit = 1;`,
+    'hero: declare the wordmark fit factor'
+  );
+
   hero = replaceOnce(
     hero,
     `                const baseScale = _isMobileAnim ? 0.9 : 1.0;`,
-    `                // Fit the whole brand — the wordmark and the ring around it —
-                // inside the viewport.
+    `                // Fit the whole brand — wordmark plus ring — into the viewport.
                 //
-                // The hero frames the logo at z -25 from a camera at z 20 through
-                // a 35deg vertical FOV, so the visible width there is
-                // (2 * tan(fov/2) * 45) * aspect. Narrowing the window shrinks
-                // that while the geometry stays ~13 units wide, which is what
-                // clipped KIASA off at both ends. The old 0.9 mobile constant
-                // could not help: it was a step at 1024px decided once at build
-                // time, and this very line overwrites the group's scale every
-                // frame, so anything set on resize was lerped straight back out.
+                // The logo rides 25 units in front of the camera (lZ below is
+                // camera.position.z - 25), so that, NOT the -25 build position,
+                // is the distance the framing must be solved at. Visible width
+                // there is (2 * tan(fov/2) * 25) * aspect, which on a 390px
+                // phone is only 7.28 units against a brand 13.02 across — the
+                // clipping the screenshots showed.
                 //
-                // Measured from a FIXED reference framing rather than the live
-                // camera, deliberately. camera.fov is animated by scroll velocity
-                // and logoGroup is lerped toward the camera, so reading either
-                // here would make the brand breathe during a scroll. Only the
-                // aspect ratio actually matters, so this recomputes on resize and
-                // nowhere else, and stays at 1 on any normal desktop window.
+                // The brand also sits 1.254 right of centre to clear the
+                // headline, and BOTH the size and that offset scale together
+                // (see lX below). Shrinking the letters while leaving the offset
+                // fixed merely pushes a smaller brand off the same edge; that
+                // was measured still-clipped at 390px before this was corrected.
+                //
+                // Measured from a fixed reference framing rather than the live
+                // camera: fov is animated by scroll velocity, so reading it here
+                // would make the brand pulse mid-scroll. Only aspect matters, so
+                // this recomputes on resize and stays 1 above ~900px wide.
+                const _wmOffsetX = Math.max(0, (WORDMARK_SIZE.width - 4.8) * 0.22);
                 const _wmSpan = Math.max(WORDMARK_SIZE.width, ringMesh ? ringMesh.geometry.parameters.radius * 2 : 0);
-                const _wmVisibleW = (2 * Math.tan(35 * Math.PI / 360) * 45) * camera.aspect;
-                const _wmFitScale = Math.min(1, (_wmVisibleW * 0.9) / _wmSpan);
-                const baseScale = _wmFitScale;`,
+                const _wmVisibleW = (2 * Math.tan(35 * Math.PI / 360) * 25) * camera.aspect;
+                _wmFit = Math.min(1, (_wmVisibleW * 0.9) / (_wmSpan + _wmOffsetX * 2));
+                const baseScale = _wmFit;`,
     'hero: scale the wordmark to fit narrow viewports'
   );
+
+  // The resting offset and the scroll orbit are positions, not scale, so they
+  // are not affected by logoGroup.scale and have to be reduced explicitly.
+  hero = replaceOnce(
+    hero,
+    `            let lX = Math.max(0, (WORDMARK_SIZE.width - 4.8) * 0.22), lY = Math.sin(t * 0.6) * 0.3;`,
+    `            let lX = Math.max(0, (WORDMARK_SIZE.width - 4.8) * 0.22) * _wmFit, lY = Math.sin(t * 0.6) * 0.3;`,
+    'hero: scale the wordmark resting offset'
+  );
+
+  hero = replaceOnce(
+    hero,
+    `                lX = Math.sin(progress * Math.PI * 5) * 7;`,
+    `                lX = Math.sin(progress * Math.PI * 5) * 7 * _wmFit;`,
+    'hero: scale the wordmark scroll orbit'
+  );
+
   fs.writeFileSync(HERO, hero);
   console.log('hero wordmark fit: applied');
 }
