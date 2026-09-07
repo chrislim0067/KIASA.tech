@@ -51,6 +51,7 @@ export const CAPABILITIES = [
   'users.list',        // may list and search all users
   'users.read',        // may read another user's profile and statistics
   'users.invite',      // may invite a new user
+  'users.approve',     // may approve or reject a pending account
   'users.delete',      // may delete a user
   'roles.grant',       // may change another user's role
   'audit.read',        // may read the administrative audit log

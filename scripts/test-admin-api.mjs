@@ -205,6 +205,12 @@ async function main() {
   });
   check('anonymous cannot delete', anonDelete.status === 401, `status ${anonDelete.status}`);
 
+  // The live-pulse endpoint is polled every few seconds, so it is the most
+  // frequently hit admin route by a wide margin. It must be exactly as closed
+  // as the rest.
+  const anonPulse = await req('/api/admin/pulse');
+  check('anonymous cannot read the live pulse', anonPulse.status === 401, `status ${anonPulse.status}`);
+
   const anonPage = await req('/admin');
   check(
     'anonymous GET /admin redirects to login',
@@ -253,6 +259,27 @@ async function main() {
   const escalated = sql(`select count(*) from public.user_roles where user_id = '${ordinary.id}'`);
   check('no role was actually granted', escalated === '0', `rows: ${escalated}`);
 
+  // Self-approval over HTTP — the other half of the gate, tested at the API
+  // layer to complement the database-level checks in test-user-approval.mjs.
+  const userApprove = await req(`/api/admin/users/${ordinary.id}/access`, {
+    cookie: userCookie,
+    method: 'PUT',
+    body: { status: 'approved' },
+  });
+  check(
+    'ordinary user cannot approve themselves over HTTP',
+    userApprove.status === 403,
+    `status ${userApprove.status}`
+  );
+
+  const selfApproved = sql(
+    `select count(*) from public.user_access where user_id = '${ordinary.id}' and status = 'approved'`
+  );
+  check('no approval was actually granted', selfApproved === '0', `rows: ${selfApproved}`);
+
+  const userPulse = await req('/api/admin/pulse', { cookie: userCookie });
+  check('ordinary user cannot read the live pulse', userPulse.status === 403, `status ${userPulse.status}`);
+
   const userAdminPage = await req('/admin', { cookie: userCookie });
   check(
     'ordinary user is redirected away from /admin',
@@ -273,6 +300,19 @@ async function main() {
 
   const adminList = await req('/api/admin/users?page=1&pageSize=5', { cookie: adminCookie });
   check('administrator can list users', adminList.status === 200, `status ${adminList.status}`);
+
+  const adminPulse = await req('/api/admin/pulse', { cookie: adminCookie });
+  const pulseBody = await adminPulse.json().catch(() => ({}));
+  check(
+    'administrator can read the live pulse',
+    adminPulse.status === 200 && typeof pulseBody.pulse?.pendingApproval === 'number',
+    `status ${adminPulse.status}`
+  );
+  check(
+    'the pulse returns counts only — no personal data',
+    !/@|email|user_id/i.test(JSON.stringify(pulseBody)),
+    JSON.stringify(pulseBody).slice(0, 120)
+  );
 
   const adminBody = await adminList.json().catch(() => ({}));
   check(

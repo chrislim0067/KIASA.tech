@@ -998,6 +998,44 @@ export type Database = {
           },
         ]
       }
+      user_access: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          reason: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1250,15 +1288,22 @@ export type Database = {
           jobs_total: number | null
           users_active_30d: number | null
           users_admin: number | null
+          users_approved: number | null
           users_new_30d: number | null
           users_new_7d: number | null
+          users_pending_approval: number | null
           users_pending_confirmation: number | null
+          users_rejected: number | null
           users_total: number | null
         }
         Relationships: []
       }
       admin_user_directory: {
         Row: {
+          access_decided_at: string | null
+          access_decided_by: string | null
+          access_reason: string | null
+          access_status: string | null
           account_status: string | null
           applications_failed: number | null
           applications_pending: number | null

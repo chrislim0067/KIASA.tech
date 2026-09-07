@@ -123,6 +123,8 @@ export async function inviteUser(params: {
   readonly email: string;
   readonly redirectTo: string;
   readonly invitedByEmail: string | null;
+  /** Recorded as the approver, since inviting is itself the approval decision. */
+  readonly invitedByUserId?: string | null;
 }): Promise<AdminOpResult<InviteResult>> {
   const email = params.email.trim().toLowerCase();
   const admin = createAdminClient();
@@ -187,6 +189,34 @@ export async function inviteUser(params: {
   const userId = data?.user?.id;
   if (!userId) {
     return fail('upstream_error', 'Supabase accepted the invitation but returned no account.');
+  }
+
+  /**
+   * An invited account is approved on arrival.
+   *
+   * Inviting someone IS the approval decision — an administrator typed their
+   * address deliberately. Making them then wait in the approval queue would
+   * mean the same administrator approving a person they just personally asked
+   * to join, and the invitee would hit a "waiting for approval" screen the
+   * moment they followed the link they were sent.
+   *
+   * A failure here is logged but does not fail the invitation: the account
+   * exists and the mail has gone out, so reporting failure would invite a retry
+   * that only re-sends the email. The account simply lands in the queue, where
+   * an administrator can approve it by hand.
+   */
+  const { error: accessError } = await admin.from('user_access').upsert(
+    {
+      user_id: userId,
+      status: 'approved',
+      decided_by: params.invitedByUserId ?? null,
+      decided_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id' }
+  );
+
+  if (accessError) {
+    logAdminError('users.invite_auto_approve', accessError, { target_user_id: userId });
   }
 
   return { ok: true, value: { userId, email, resent: false } };
@@ -313,6 +343,61 @@ export async function deleteUser(params: {
   }
 
   return { ok: true, value: { userId: targetUserId, email: target.email, mode } };
+}
+
+// ---------------------------------------------------------------------------
+// Approval
+// ---------------------------------------------------------------------------
+/**
+ * Approve or reject an account.
+ *
+ * Written with the secret key — `authenticated` holds only SELECT on
+ * `user_access`, so this is the only path that can decide, and a user cannot
+ * approve themselves.
+ *
+ * Upsert rather than update: a pending account has NO row, because absence is
+ * the default. The first decision creates the row and any later one replaces
+ * it, which also makes the operation idempotent — approving an already
+ * approved account is a no-op rather than an error.
+ */
+export async function setUserAccess(params: {
+  readonly targetUserId: string;
+  readonly actingAdminId: string;
+  readonly status: 'approved' | 'rejected';
+  readonly reason?: string | null;
+}): Promise<AdminOpResult<{ userId: string; status: string; email: string | null }>> {
+  const { targetUserId, actingAdminId, status } = params;
+  const admin = createAdminClient();
+
+  let target: ExistingAccount | null;
+  try {
+    target = await findAccountById(targetUserId);
+  } catch {
+    return fail('upstream_error', 'Could not load that account.');
+  }
+  if (!target) return fail('not_found', 'That account no longer exists.');
+
+  // A rejection reason is an internal note. The database refuses one on an
+  // approval, so it is dropped here rather than left to fail downstream.
+  const reason = status === 'rejected' ? params.reason?.trim().slice(0, 500) || null : null;
+
+  const { error } = await admin.from('user_access').upsert(
+    {
+      user_id: targetUserId,
+      status,
+      decided_by: actingAdminId,
+      decided_at: new Date().toISOString(),
+      reason,
+    },
+    { onConflict: 'user_id' }
+  );
+
+  if (error) {
+    logAdminError('users.set_access', error, { target_user_id: targetUserId, status });
+    return fail('upstream_error', `The account could not be ${status}.`);
+  }
+
+  return { ok: true, value: { userId: targetUserId, status, email: target.email } };
 }
 
 // ---------------------------------------------------------------------------

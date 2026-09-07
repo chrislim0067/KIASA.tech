@@ -13,6 +13,8 @@ import {
   type AccountStatus,
 } from '@/lib/admin/queries';
 import { APP_ROLES, type AppRole } from '@/lib/auth/roles';
+import { ACCESS_STATUSES, type AccessStatus } from '@/lib/auth/access';
+import AccessControl from '@/components/admin/AccessControl';
 import { logAdminError } from '@/lib/admin/api';
 
 /**
@@ -91,6 +93,7 @@ export default async function AdminUsersPage({
   const search = one(sp.search);
   const role = pick<AppRole>(one(sp.role), APP_ROLES);
   const status = pick<AccountStatus>(one(sp.status), ACCOUNT_STATUSES);
+  const accessStatus = pick<AccessStatus>(one(sp.access), ACCESS_STATUSES);
   const sort = pick<UserSortField>(one(sp.sort), USER_SORT_FIELDS) ?? 'registered_at';
   const direction = one(sp.direction) === 'asc' ? 'asc' : 'desc';
 
@@ -105,6 +108,7 @@ export default async function AdminUsersPage({
       search,
       role,
       status,
+      accessStatus,
       sort,
       direction,
       hasApplications: one(sp.hasApplications) === 'true',
@@ -190,6 +194,25 @@ export default async function AdminUsersPage({
         </div>
 
         <div className="kadmin__field">
+          <label className="kadmin__label" htmlFor="f-access">
+            Approval
+          </label>
+          <select
+            id="f-access"
+            name="access"
+            className="kadmin__select"
+            defaultValue={accessStatus ?? ''}
+          >
+            <option value="">Any</option>
+            {ACCESS_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="kadmin__field">
           <label className="kadmin__label" htmlFor="f-size">
             Per page
           </label>
@@ -243,6 +266,7 @@ export default async function AdminUsersPage({
               <tr>
                 <th scope="col">{sortLink('email', 'User')}</th>
                 <th scope="col">Role</th>
+                <th scope="col">Approval</th>
                 <th scope="col">Status</th>
                 <th scope="col">{sortLink('registered_at', 'Registered')}</th>
                 <th scope="col">{sortLink('last_activity_at', 'Last activity')}</th>
@@ -275,6 +299,20 @@ export default async function AdminUsersPage({
                     <span className={`kadmin__badge${u.role === 'admin' ? ' kadmin__badge--admin' : ''}`}>
                       {u.role}
                     </span>
+                  </td>
+                  <td data-label="Approval">
+                    {/*
+                      A pending row gets the buttons inline, because the queue is
+                      the point: an administrator should be able to clear a
+                      morning's signups without opening each profile.
+                    */}
+                    {u.access_status === 'pending' ? (
+                      <AccessControl userId={u.user_id} status={u.access_status} compact />
+                    ) : (
+                      <span className={`kadmin__badge kadmin__badge--access-${u.access_status}`}>
+                        {u.access_status}
+                      </span>
+                    )}
                   </td>
                   <td data-label="Status">
                     <span className={`kadmin__badge kadmin__badge--${u.account_status}`}>

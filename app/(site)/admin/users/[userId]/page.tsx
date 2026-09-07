@@ -5,6 +5,8 @@ import { notFound } from 'next/navigation';
 import AdminShell from '@/components/admin/AdminShell';
 import DeleteUserDialog from '@/components/admin/DeleteUserDialog';
 import RoleControl from '@/components/admin/RoleControl';
+import AccessControl from '@/components/admin/AccessControl';
+import { isAccessStatus, DEFAULT_ACCESS } from '@/lib/auth/access';
 import { requireAdminPage } from '@/lib/admin/page-guard';
 import {
   getUserAccount,
@@ -152,6 +154,9 @@ export default async function AdminUserDetailPage({
   const email = (account.email as string | null) ?? null;
   const role = String(account.role ?? 'user');
   const accountStatus = String(account.account_status ?? 'active');
+  const accessStatus = isAccessStatus(account.access_status) ? account.access_status : DEFAULT_ACCESS;
+  const accessDecidedAt = (account.access_decided_at as string | null) ?? null;
+  const accessReason = (account.access_reason as string | null) ?? null;
   const isSelf = userId === actor.id;
 
   return (
@@ -171,20 +176,48 @@ export default async function AdminUserDetailPage({
           <span className={`kadmin__badge kadmin__badge--${accountStatus}`}>
             {accountStatus.replace(/_/g, ' ')}
           </span>
+          <span className={`kadmin__badge kadmin__badge--access-${accessStatus}`}>
+            {accessStatus}
+          </span>
           {isSelf ? <span className="kadmin__badge">This is you</span> : null}
         </div>
 
         {/*
-          Both controls refuse to act on yourself, and the server refuses too —
-          hiding them here is a courtesy, not the control. See lib/admin/users.
+          All three controls refuse to act on yourself, and the server refuses
+          too — hiding them here is a courtesy, not the control. See
+          lib/admin/users and the route handlers.
         */}
         {!isSelf ? (
           <div className="kadmin__chips">
+            <AccessControl userId={userId} status={accessStatus} />
             <RoleControl userId={userId} currentRole={role === 'admin' ? 'admin' : 'user'} />
             <DeleteUserDialog userId={userId} email={email} displayName={displayName} />
           </div>
         ) : null}
       </div>
+
+      {accessStatus !== 'approved' ? (
+        <div className="kadmin__notice kadmin__notice--warn">
+          <p>
+            <strong>
+              {accessStatus === 'pending'
+                ? 'This account is waiting for approval.'
+                : 'This account was rejected.'}
+            </strong>
+          </p>
+          <p>
+            {accessStatus === 'pending'
+              ? 'They have confirmed their email but cannot use KIASA yet — signing in sends them to a waiting screen.'
+              : 'They cannot use KIASA. Approving reverses this immediately.'}
+            {accessDecidedAt ? ` Decided ${formatDateTime(accessDecidedAt)}.` : ''}
+          </p>
+          {accessReason ? (
+            <p>
+              <strong>Reason (internal):</strong> {accessReason}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* ------------------------------------------------ application stats -- */}
       <section className="kadmin__section" aria-labelledby="u-apps">

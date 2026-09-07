@@ -129,8 +129,33 @@ export default async function AdminDashboardPage() {
                 label="Awaiting confirmation"
                 value={stats.usersPendingConfirmation}
                 tone={stats.usersPendingConfirmation > 0 ? 'idle' : undefined}
+                note="Waiting on them to click their email link."
               />
+              <Stat
+                label="Awaiting approval"
+                value={stats.usersPendingApproval}
+                tone={stats.usersPendingApproval > 0 ? 'danger' : 'idle'}
+                note="Waiting on you."
+              />
+              <Stat label="Rejected" value={stats.usersRejected} tone="idle" />
             </div>
+
+            {stats.usersPendingApproval > 0 ? (
+              <div className="kadmin__notice kadmin__notice--warn" style={{ marginTop: '1rem' }}>
+                <p>
+                  <strong>
+                    {stats.usersPendingApproval} account
+                    {stats.usersPendingApproval === 1 ? '' : 's'} waiting for approval.
+                  </strong>{' '}
+                  They have confirmed their email and cannot use KIASA until you decide.
+                </p>
+                <p>
+                  <Link href="/admin/users?access=pending" className="kadmin__navLink">
+                    Review the queue →
+                  </Link>
+                </p>
+              </div>
+            ) : null}
           </section>
 
           <section className="kadmin__section" aria-labelledby="s-apps">

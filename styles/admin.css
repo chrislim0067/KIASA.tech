@@ -435,6 +435,72 @@ body:has(.kadmin) {
 .kadmin__badge--failed { color: var(--kadmin-danger); border-color: rgba(255, 143, 163, 0.4); }
 .kadmin__badge--needs_intervention { color: var(--kadmin-warn); border-color: rgba(255, 212, 121, 0.35); }
 
+/* The approval gate. Deliberately distinct from account_status above: one asks
+   "has a person let them in", the other "has their email confirmed". */
+.kadmin__badge--access-approved { color: var(--kadmin-success); border-color: rgba(126, 224, 184, 0.35); }
+.kadmin__badge--access-pending {
+  color: var(--kadmin-warn);
+  border-color: rgba(255, 212, 121, 0.45);
+  background: rgba(255, 212, 121, 0.1);
+}
+.kadmin__badge--access-rejected { color: var(--kadmin-danger); border-color: rgba(255, 143, 163, 0.4); }
+
+/* ------------------------------------------------------------ live pulse -- */
+.kadmin__pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.6rem;
+  border: 1px solid var(--kadmin-line-soft);
+  border-radius: 999px;
+  color: var(--kadmin-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.kadmin__pulse--alert {
+  color: var(--kadmin-warn);
+  border-color: rgba(255, 212, 121, 0.45);
+  background: rgba(255, 212, 121, 0.1);
+}
+.kadmin__pulse--alert:hover { background: rgba(255, 212, 121, 0.18); }
+
+.kadmin__pulseCount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.kadmin__pulseDot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--kadmin-success);
+  /* The heartbeat is the whole point: a still dot reads as a static page. */
+  animation: kadmin-pulse 2.4s var(--kadmin-ease) infinite;
+}
+.kadmin__pulseDot--stale { background: var(--kadmin-danger); animation: none; }
+
+@keyframes kadmin-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.82); }
+}
+
+/* A row mid-decision. Dimmed and non-interactive so a second click cannot
+   race the first, without the layout shifting. */
+.kadmin__row--optimistic {
+  opacity: 0.42;
+  pointer-events: none;
+  transition: opacity 0.18s var(--kadmin-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kadmin__pulseDot { animation: none; }
+}
+
 /* ------------------------------------------------------------ pagination -- */
 .kadmin__pager {
   display: flex;
