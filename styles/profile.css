@@ -1,0 +1,349 @@
+/*
+ * Candidate profile.
+ *
+ * Shares the auth screens' palette and the admin surface's typographic
+ * decision: brand faces for the wordmark, a neutral system stack for everything
+ * a person actually reads. A form someone fills in for ten minutes is the last
+ * place for a wide display face.
+ *
+ * Scoped under .kprof, and site.css is deliberately not loaded, for the same
+ * reason auth.css and admin.css do not load it — it carries nav, footer, cursor
+ * and Lenis rules that expect elements these pages never render.
+ */
+
+.kprof {
+  --kprof-bg: #0b0c10;
+  --kprof-text: #edeef2;
+  --kprof-muted: #9aa2b1;
+  --kprof-accent: #cbaaf7;
+  --kprof-accent-dim: rgba(203, 170, 247, 0.13);
+  --kprof-line: rgba(203, 170, 247, 0.24);
+  --kprof-line-soft: rgba(255, 255, 255, 0.09);
+  --kprof-surface: rgba(255, 255, 255, 0.028);
+  --kprof-danger: #ff96a8;
+  --kprof-warn: #f0c977;
+  --kprof-success: #7fdcb4;
+  --kprof-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --kprof-radius: 8px;
+  --kprof-radius-sm: 6px;
+
+  --kprof-head: var(--kprof-font-head), 'Syncopate', 'Segoe UI', sans-serif;
+  --kprof-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+
+  color-scheme: dark;
+  min-height: 100dvh;
+  background: var(--kprof-bg);
+  color: var(--kprof-text);
+  font-family: var(--kprof-ui);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.kprof,
+.kprof *,
+.kprof *::before,
+.kprof *::after { box-sizing: border-box; }
+
+body:has(.kprof) { margin: 0; }
+
+/* ---------------------------------------------------------------- chrome -- */
+.kprof__bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  padding: 1rem clamp(1rem, 4vw, 2.5rem);
+  border-bottom: 1px solid var(--kprof-line);
+  background: rgba(11, 12, 16, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+.kprof__brand {
+  font-family: var(--kprof-head);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--kprof-text);
+  text-decoration: none;
+}
+.kprof__brand:hover { color: var(--kprof-accent); }
+
+.kprof__who {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--kprof-muted);
+  font-size: 0.82rem;
+}
+
+.kprof__main {
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  max-width: 62rem;
+  margin: 0 auto;
+}
+
+.kprof__heading {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+  font-size: clamp(1.35rem, 3vw, 1.6rem);
+  letter-spacing: -0.01em;
+}
+
+.kprof__lede {
+  margin: 0 0 1.75rem;
+  max-width: 62ch;
+  color: var(--kprof-muted);
+}
+
+.kprof__back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--kprof-muted);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.kprof__back:hover { color: var(--kprof-accent); }
+
+/* -------------------------------------------------------------- progress -- */
+.kprof__progress {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius);
+  background: var(--kprof-surface);
+}
+
+.kprof__progressBar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.kprof__progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--kprof-accent);
+  transition: width 0.4s var(--kprof-ease);
+}
+.kprof__progressFill--done { background: var(--kprof-success); }
+
+.kprof__progressText {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: var(--kprof-muted);
+}
+
+/* ---------------------------------------------------------------- steps -- */
+.kprof__steps { display: grid; gap: 0.7rem; }
+
+.kprof__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius);
+  background: var(--kprof-surface);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.18s var(--kprof-ease), background 0.18s var(--kprof-ease);
+}
+.kprof__step:hover { border-color: var(--kprof-line); background: rgba(255, 255, 255, 0.05); }
+
+/* A step that is still blocking gets the warm border, so the eye lands on
+   what is left rather than on what is finished. */
+.kprof__step--todo { border-color: rgba(240, 201, 119, 0.4); }
+.kprof__step--done { opacity: 0.72; }
+
+.kprof__stepMark {
+  flex: none;
+  width: 1.55rem;
+  height: 1.55rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--kprof-line-soft);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.kprof__stepMark--done { border-color: rgba(127, 220, 180, 0.5); color: var(--kprof-success); }
+.kprof__stepMark--todo { border-color: rgba(240, 201, 119, 0.5); color: var(--kprof-warn); }
+
+.kprof__stepBody { min-width: 0; }
+.kprof__stepTitle { font-weight: 600; margin-bottom: 0.15rem; }
+.kprof__stepNote { color: var(--kprof-muted); font-size: 0.88rem; }
+
+/* ---------------------------------------------------------------- forms -- */
+.kprof__form { display: grid; gap: 1.1rem; max-width: 44rem; }
+
+.kprof__fieldset {
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius);
+  background: var(--kprof-surface);
+  padding: 1.15rem;
+  margin: 0;
+}
+.kprof__legend {
+  padding: 0 0.4rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.kprof__grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
+.kprof__field { display: grid; gap: 0.35rem; min-width: 0; }
+.kprof__field--wide { grid-column: 1 / -1; }
+
+.kprof__label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--kprof-muted);
+}
+.kprof__req { color: var(--kprof-warn); }
+
+.kprof__input,
+.kprof__select,
+.kprof__textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--kprof-radius-sm);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--kprof-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  transition: border-color 0.18s var(--kprof-ease), box-shadow 0.18s var(--kprof-ease);
+}
+.kprof__textarea { min-height: 6rem; resize: vertical; }
+.kprof__input:focus-visible,
+.kprof__select:focus-visible,
+.kprof__textarea:focus-visible {
+  outline: none;
+  border-color: var(--kprof-accent);
+  box-shadow: 0 0 0 3px var(--kprof-accent-dim);
+}
+.kprof__input[aria-invalid='true'] { border-color: var(--kprof-danger); }
+.kprof__select option { background: #12131a; color: var(--kprof-text); }
+
+.kprof__hint { font-size: 0.8rem; color: var(--kprof-muted); }
+.kprof__error { font-size: 0.82rem; color: var(--kprof-danger); }
+
+.kprof__checks { display: flex; flex-wrap: wrap; gap: 0.5rem 1.1rem; }
+.kprof__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.kprof__actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+
+.kprof__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.15rem;
+  border: 1px solid var(--kprof-accent);
+  border-radius: var(--kprof-radius-sm);
+  background: var(--kprof-accent);
+  color: #16062a;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s var(--kprof-ease);
+}
+.kprof__button:hover { opacity: 0.88; }
+.kprof__button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.kprof__button--ghost {
+  background: transparent;
+  border-color: var(--kprof-line);
+  color: var(--kprof-text);
+}
+.kprof__button--ghost:hover { background: var(--kprof-accent-dim); opacity: 1; }
+
+.kprof__button--danger {
+  background: transparent;
+  border-color: rgba(255, 150, 168, 0.5);
+  color: var(--kprof-danger);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+}
+.kprof__button--danger:hover { background: rgba(255, 150, 168, 0.1); opacity: 1; }
+
+/* --------------------------------------------------------------- notice -- */
+.kprof__notice {
+  padding: 0.85rem 1.05rem;
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius);
+  font-size: 0.92rem;
+}
+.kprof__notice--ok { border-color: rgba(127, 220, 180, 0.4); background: rgba(127, 220, 180, 0.09); }
+.kprof__notice--bad { border-color: rgba(255, 150, 168, 0.45); background: rgba(255, 150, 168, 0.09); }
+.kprof__notice--warn { border-color: rgba(240, 201, 119, 0.45); background: rgba(240, 201, 119, 0.09); }
+
+/* ----------------------------------------------------------------- list -- */
+.kprof__list { display: grid; gap: 0.6rem; margin: 0 0 1.25rem; padding: 0; list-style: none; }
+
+.kprof__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius);
+  background: var(--kprof-surface);
+}
+.kprof__itemBody { min-width: 0; }
+.kprof__itemTitle { font-weight: 600; }
+.kprof__itemNote { color: var(--kprof-muted); font-size: 0.86rem; }
+
+.kprof__empty {
+  padding: 1.5rem;
+  border: 1px dashed var(--kprof-line-soft);
+  border-radius: var(--kprof-radius);
+  color: var(--kprof-muted);
+  text-align: center;
+}
+
+.kprof__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.kprof__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kprof *, .kprof *::before, .kprof *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

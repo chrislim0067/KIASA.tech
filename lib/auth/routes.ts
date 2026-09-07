@@ -22,7 +22,7 @@
  * but has not been approved. It needs a session to say anything useful, so it
  * belongs here too — and the approval gate itself lives in the page, not here.
  */
-export const PROTECTED_PREFIXES = ['/dashboard', '/admin', '/pending'] as const;
+export const PROTECTED_PREFIXES = ['/dashboard', '/admin', '/pending', '/profile'] as const;
 
 /** Signed-in visitors are redirected to DASHBOARD — no point showing these. */
 export const AUTH_ONLY_ROUTES = ['/login', '/signup'] as const;
