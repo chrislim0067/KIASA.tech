@@ -43,7 +43,7 @@ function localEnv() {
   };
 }
 
-const { url: API_URL, key: PUBLISHABLE_KEY, secret: SECRET_KEY } = localEnv();
+const { url: API_URL, key: PUBLISHABLE_KEY } = localEnv();
 const PORT = process.env.ADMIN_TEST_PORT ?? '3199';
 const BASE = `http://127.0.0.1:${PORT}`;
 const CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_kiasa';

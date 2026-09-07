@@ -40,6 +40,12 @@ Both of those matter. The gallery's `_setGalleryModalIsolation` marks every
 `document.body.children` entry `inert` when a modal opens — with a wrapper still
 in place it would inert the modal itself and trap the user.
 
+## Administrator system
+
+Roles, user management and application analytics live under `/admin`.
+Architecture, security review, deployment runbook and rollback plan:
+[docs/ADMIN.md](docs/ADMIN.md).
+
 ## Layout
 
 ```

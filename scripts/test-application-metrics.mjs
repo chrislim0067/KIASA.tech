@@ -39,10 +39,10 @@ function localEnv() {
   if (!url || !/127\.0\.0\.1|localhost/.test(url)) {
     throw new Error('Local Supabase is not running, or the API URL is not local.');
   }
-  return { url, key: env.PUBLISHABLE_KEY || env.ANON_KEY, secret: env.SECRET_KEY || env.SERVICE_ROLE_KEY };
+  return { url, key: env.PUBLISHABLE_KEY || env.ANON_KEY };
 }
 
-const { url: API_URL, key: PUBLISHABLE_KEY, secret: SECRET_KEY } = localEnv();
+const { url: API_URL, key: PUBLISHABLE_KEY } = localEnv();
 const CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_kiasa';
 const sql = (statement) =>
   execFileSync('docker', ['exec', CONTAINER, 'psql', '-U', 'postgres', '-d', 'postgres', '-tAc', statement], {
