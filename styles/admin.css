@@ -177,28 +177,60 @@ body:has(.kadmin) {
   margin-bottom: 0.9rem;
 }
 
+/* These were 0.8rem muted grey with 0.2em tracking — the same weight as the
+   labels inside the tiles, so the page read as one undifferentiated field of
+   boxes with no way to tell where ACCOUNTS ended and APPLICATIONS began. A
+   section heading has to out-rank the things under it. */
 .kadmin__sectionTitle {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   font-family: var(--kadmin-head);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--kadmin-muted);
+  color: var(--kadmin-text);
+}
+/* A short accent rule, so the eye catches the start of a section while scanning
+   down rather than having to read each heading. */
+.kadmin__sectionTitle::before {
+  content: '';
+  width: 1.5rem;
+  height: 2px;
+  flex: none;
+  background: var(--kadmin-accent);
 }
 
 /* ------------------------------------------------------------- stat grid -- */
+/*
+ * Flex, not grid.
+ *
+ * The grid was `repeat(auto-fit, minmax(11rem, 1fr))` over a shared background
+ * with 1px gaps acting as hairline dividers. Two things went wrong with that:
+ * a row of seven counters left the seventh stranded on its own line beside a
+ * wide grey void (the shared background showing through the empty tracks), and
+ * `1fr` stretched a row of four to ~400px each so a single digit floated in a
+ * mostly empty box.
+ *
+ * Flex wrapping with a capped tile width fixes both: the last row simply ends,
+ * leaving page background rather than an empty cell, and no tile grows past a
+ * width where its number still reads as a number.
+ */
 .kadmin__stats {
-  display: grid;
-  gap: 1px;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  border: 1px solid var(--kadmin-line-soft);
-  background: var(--kadmin-line-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
 }
 
 .kadmin__stat {
-  padding: 1.1rem 1.25rem;
-  background: var(--kadmin-bg);
+  flex: 1 1 11rem;
+  max-width: 16rem;
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--kadmin-line-soft);
+  background: var(--kadmin-surface);
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -207,9 +239,19 @@ body:has(.kadmin) {
 .kadmin__statLabel {
   font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  /* 0.16em of tracking on 11px caps pushed the words apart faster than the eye
+     groups them, which is most of why these were hard to scan. */
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--kadmin-muted);
+  line-height: 1.3;
+  /* Reserve two lines. A label like "Awaiting confirmation" wraps while its
+     neighbours do not, which dropped that tile's number a line below every
+     other number in the row and broke the horizontal read. */
+  min-height: 2.6em;
+  /* --kadmin-muted (#8892b0) on a near-black ground is about 5.3:1 — legible in
+     isolation, but not for a 11px uppercase label. This is the label you have
+     to read to know what the number means. */
+  color: rgba(255, 255, 255, 0.66);
 }
 
 .kadmin__statValue {
@@ -226,8 +268,13 @@ body:has(.kadmin) {
 .kadmin__statValue--idle { color: var(--kadmin-muted); }
 
 .kadmin__statNote {
+  /* Pinned to the bottom so tiles with a note and tiles without still line their
+     numbers up on the same baseline, instead of the note dragging one tile's
+     value upward and leaving the rest with dead space beneath. */
+  margin-top: auto;
+  padding-top: 0.45rem;
   font-size: 0.72rem;
-  line-height: 1.45;
+  line-height: 1.4;
   color: var(--kadmin-muted);
 }
 
