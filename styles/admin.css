@@ -1,0 +1,530 @@
+/*
+ * Administrator surface.
+ *
+ * Built on the same tokens as styles/auth.css — same background, same violet
+ * accent, same Syncopate/Rajdhani pairing — so /admin reads as part of KIASA
+ * rather than a bolted-on tool. Nothing here restyles the marketing site: every
+ * rule is scoped under .kadmin, and site.css is deliberately not loaded for the
+ * same reason auth.css does not load it (it carries nav, footer, cursor and
+ * Lenis rules that expect elements these pages never render).
+ *
+ * The table is the one place that needed real thought. A user list is wide, and
+ * the requirement is explicit that it must not overflow horizontally on small
+ * screens. Below 900px the rows stop being table rows and become stacked cards,
+ * each cell labelled from its data-label attribute — so the same markup serves
+ * both without a second component or a horizontal scrollbar.
+ */
+
+.kadmin {
+  --kadmin-bg: #020204;
+  --kadmin-text: #ffffff;
+  --kadmin-muted: #8892b0;
+  --kadmin-accent: #d8b4fe;
+  --kadmin-accent-dim: rgba(216, 180, 254, 0.15);
+  --kadmin-line: rgba(216, 180, 254, 0.22);
+  --kadmin-line-soft: rgba(255, 255, 255, 0.08);
+  --kadmin-surface: rgba(255, 255, 255, 0.025);
+  --kadmin-surface-raised: rgba(255, 255, 255, 0.045);
+  --kadmin-danger: #ff8fa3;
+  --kadmin-warn: #ffd479;
+  --kadmin-success: #7ee0b8;
+  --kadmin-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --kadmin-head: var(--kadmin-font-head), 'Syncopate', 'Segoe UI', sans-serif;
+  --kadmin-body: var(--kadmin-font-body), 'Rajdhani', 'Segoe UI', sans-serif;
+
+  color-scheme: dark;
+  min-height: 100dvh;
+  background: var(--kadmin-bg);
+  color: var(--kadmin-text);
+  font-family: var(--kadmin-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------------------------------------------------------- chrome -- */
+.kadmin__bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  padding: 1rem clamp(1rem, 4vw, 2.5rem);
+  border-bottom: 1px solid var(--kadmin-line);
+  background: rgba(2, 2, 4, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+.kadmin__brand {
+  font-family: var(--kadmin-head);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--kadmin-text);
+  text-decoration: none;
+}
+.kadmin__brand:hover { color: var(--kadmin-accent); }
+
+.kadmin__tag {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--kadmin-line);
+  color: var(--kadmin-accent);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.kadmin__nav { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+.kadmin__navLink {
+  padding: 0.4rem 0.85rem;
+  border: 1px solid transparent;
+  color: var(--kadmin-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.2s var(--kadmin-ease), border-color 0.2s var(--kadmin-ease);
+}
+.kadmin__navLink:hover { color: var(--kadmin-text); border-color: var(--kadmin-line-soft); }
+.kadmin__navLink[aria-current='page'] {
+  color: var(--kadmin-accent);
+  border-color: var(--kadmin-line);
+  background: var(--kadmin-accent-dim);
+}
+
+.kadmin__who {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--kadmin-muted);
+  font-size: 0.82rem;
+}
+
+.kadmin__main {
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  max-width: 100rem;
+  margin: 0 auto;
+}
+
+.kadmin__heading {
+  margin: 0 0 0.4rem;
+  font-family: var(--kadmin-head);
+  font-weight: 700;
+  font-size: clamp(1.05rem, 3vw, 1.4rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.kadmin__lede {
+  margin: 0 0 1.75rem;
+  max-width: 68ch;
+  color: var(--kadmin-muted);
+  line-height: 1.6;
+}
+
+.kadmin__section { margin-top: 2.5rem; }
+
+.kadmin__sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.kadmin__sectionTitle {
+  margin: 0;
+  font-family: var(--kadmin-head);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--kadmin-muted);
+}
+
+/* ------------------------------------------------------------- stat grid -- */
+.kadmin__stats {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  border: 1px solid var(--kadmin-line-soft);
+  background: var(--kadmin-line-soft);
+}
+
+.kadmin__stat {
+  padding: 1.1rem 1.25rem;
+  background: var(--kadmin-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.kadmin__statLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--kadmin-muted);
+}
+
+.kadmin__statValue {
+  font-family: var(--kadmin-head);
+  font-size: clamp(1.3rem, 3.5vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.1;
+  /* Tabular figures so a column of numbers lines up as it changes. */
+  font-variant-numeric: tabular-nums;
+}
+.kadmin__statValue--accent { color: var(--kadmin-accent); }
+.kadmin__statValue--success { color: var(--kadmin-success); }
+.kadmin__statValue--danger { color: var(--kadmin-danger); }
+.kadmin__statValue--idle { color: var(--kadmin-muted); }
+
+.kadmin__statNote {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--kadmin-muted);
+}
+
+/* ---------------------------------------------------------------- notice -- */
+.kadmin__notice {
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--kadmin-line);
+  background: var(--kadmin-accent-dim);
+  color: var(--kadmin-text);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.kadmin__notice--warn { border-color: rgba(255, 212, 121, 0.4); background: rgba(255, 212, 121, 0.09); }
+.kadmin__notice--danger { border-color: rgba(255, 143, 163, 0.45); background: rgba(255, 143, 163, 0.1); }
+.kadmin__notice--success { border-color: rgba(126, 224, 184, 0.4); background: rgba(126, 224, 184, 0.09); }
+.kadmin__notice p { margin: 0 0 0.5rem; }
+.kadmin__notice p:last-child { margin-bottom: 0; }
+
+/* --------------------------------------------------------------- filters -- */
+.kadmin__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--kadmin-line-soft);
+  background: var(--kadmin-surface);
+}
+
+.kadmin__field { display: grid; gap: 0.35rem; min-width: 0; }
+.kadmin__field--grow { flex: 1 1 16rem; }
+
+.kadmin__label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--kadmin-muted);
+}
+
+.kadmin__input,
+.kadmin__select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--kadmin-text);
+  font-family: var(--kadmin-body);
+  font-size: 0.95rem;
+  line-height: 1.3;
+  transition: border-color 0.25s var(--kadmin-ease), box-shadow 0.25s var(--kadmin-ease);
+}
+.kadmin__input:focus-visible,
+.kadmin__select:focus-visible {
+  outline: none;
+  border-color: var(--kadmin-accent);
+  box-shadow: 0 0 0 3px var(--kadmin-accent-dim);
+}
+.kadmin__select option { background: #0b0b12; color: var(--kadmin-text); }
+
+/* --------------------------------------------------------------- buttons -- */
+.kadmin__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--kadmin-accent);
+  border-radius: 2px;
+  background: var(--kadmin-accent);
+  color: #12001f;
+  font-family: var(--kadmin-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s var(--kadmin-ease), background 0.2s var(--kadmin-ease);
+}
+.kadmin__button:hover { opacity: 0.86; }
+.kadmin__button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.kadmin__button--ghost {
+  background: transparent;
+  border-color: var(--kadmin-line);
+  color: var(--kadmin-text);
+}
+.kadmin__button--ghost:hover { background: var(--kadmin-accent-dim); opacity: 1; }
+
+.kadmin__button--danger {
+  background: transparent;
+  border-color: rgba(255, 143, 163, 0.55);
+  color: var(--kadmin-danger);
+}
+.kadmin__button--danger:hover { background: rgba(255, 143, 163, 0.12); opacity: 1; }
+
+.kadmin__button--small { padding: 0.4rem 0.7rem; font-size: 0.72rem; letter-spacing: 0.1em; }
+
+/* ----------------------------------------------------------------- table -- */
+.kadmin__tableWrap { border: 1px solid var(--kadmin-line-soft); background: var(--kadmin-surface); }
+
+.kadmin__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.kadmin__table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--kadmin-muted);
+  border-bottom: 1px solid var(--kadmin-line-soft);
+  white-space: nowrap;
+}
+
+.kadmin__table th a { color: inherit; text-decoration: none; }
+.kadmin__table th a:hover { color: var(--kadmin-accent); }
+
+.kadmin__table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+
+.kadmin__table tbody tr:last-child td { border-bottom: none; }
+.kadmin__table tbody tr:hover { background: var(--kadmin-surface-raised); }
+
+.kadmin__num { font-variant-numeric: tabular-nums; text-align: right; }
+
+.kadmin__primaryCell { display: grid; gap: 0.15rem; }
+.kadmin__primaryCell a { color: var(--kadmin-text); text-decoration: none; font-weight: 600; }
+.kadmin__primaryCell a:hover { color: var(--kadmin-accent); text-decoration: underline; }
+.kadmin__sub { color: var(--kadmin-muted); font-size: 0.8rem; word-break: break-word; }
+
+/*
+ * Below 900px the table stops being a table. Each row becomes a card and each
+ * cell is prefixed with its column name from data-label, so the list stays
+ * readable on a phone without a horizontal scrollbar and without a second
+ * markup path to keep in sync.
+ */
+@media (max-width: 900px) {
+  .kadmin__table thead { display: none; }
+  .kadmin__table,
+  .kadmin__table tbody,
+  .kadmin__table tr,
+  .kadmin__table td { display: block; width: 100%; }
+
+  .kadmin__table tr {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--kadmin-line-soft);
+  }
+
+  .kadmin__table td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.35rem 1rem;
+    border: none;
+    text-align: left;
+  }
+
+  .kadmin__table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--kadmin-muted);
+  }
+
+  .kadmin__num { text-align: right; }
+}
+
+/* ---------------------------------------------------------------- badges -- */
+.kadmin__badge {
+  display: inline-block;
+  padding: 0.18rem 0.5rem;
+  border: 1px solid var(--kadmin-line-soft);
+  border-radius: 2px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--kadmin-muted);
+}
+.kadmin__badge--admin { color: var(--kadmin-accent); border-color: var(--kadmin-line); background: var(--kadmin-accent-dim); }
+.kadmin__badge--active { color: var(--kadmin-success); border-color: rgba(126, 224, 184, 0.35); }
+.kadmin__badge--invited { color: var(--kadmin-warn); border-color: rgba(255, 212, 121, 0.35); }
+.kadmin__badge--pending_confirmation { color: var(--kadmin-warn); border-color: rgba(255, 212, 121, 0.35); }
+.kadmin__badge--banned,
+.kadmin__badge--deleted { color: var(--kadmin-danger); border-color: rgba(255, 143, 163, 0.4); }
+.kadmin__badge--bid_bot { color: var(--kadmin-accent); border-color: var(--kadmin-line); background: var(--kadmin-accent-dim); }
+.kadmin__badge--submitted,
+.kadmin__badge--confirmed { color: var(--kadmin-success); border-color: rgba(126, 224, 184, 0.35); }
+.kadmin__badge--failed { color: var(--kadmin-danger); border-color: rgba(255, 143, 163, 0.4); }
+.kadmin__badge--needs_intervention { color: var(--kadmin-warn); border-color: rgba(255, 212, 121, 0.35); }
+
+/* ------------------------------------------------------------ pagination -- */
+.kadmin__pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  color: var(--kadmin-muted);
+  font-size: 0.85rem;
+}
+.kadmin__pagerLinks { display: flex; gap: 0.5rem; }
+.kadmin__pagerLinks a,
+.kadmin__pagerLinks span {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--kadmin-line-soft);
+  color: var(--kadmin-text);
+  text-decoration: none;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.kadmin__pagerLinks a:hover { border-color: var(--kadmin-accent); color: var(--kadmin-accent); }
+.kadmin__pagerLinks span { opacity: 0.35; cursor: not-allowed; }
+
+/* ------------------------------------------------------- states / panels -- */
+.kadmin__empty {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--kadmin-muted);
+  line-height: 1.6;
+}
+.kadmin__empty strong { display: block; color: var(--kadmin-text); margin-bottom: 0.4rem; }
+
+.kadmin__panels {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+}
+
+.kadmin__panel {
+  padding: 1.25rem;
+  border: 1px solid var(--kadmin-line-soft);
+  background: var(--kadmin-surface);
+}
+
+.kadmin__dl { display: grid; gap: 0.55rem; margin: 0; }
+.kadmin__dlRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.kadmin__dlRow:last-child { border-bottom: none; padding-bottom: 0; }
+.kadmin__dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--kadmin-muted);
+}
+.kadmin__dd { margin: 0; text-align: right; word-break: break-word; }
+.kadmin__dd--muted { color: var(--kadmin-muted); }
+
+.kadmin__chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+.kadmin__back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--kadmin-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.kadmin__back:hover { color: var(--kadmin-accent); }
+
+/* ---------------------------------------------------------------- dialog -- */
+.kadmin__dialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(2, 2, 4, 0.78);
+  backdrop-filter: blur(4px);
+}
+
+.kadmin__dialog {
+  width: min(32rem, 100%);
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: clamp(1.25rem, 4vw, 1.9rem);
+  border: 1px solid var(--kadmin-line);
+  background: #07070c;
+}
+
+.kadmin__dialogTitle {
+  margin: 0 0 0.6rem;
+  font-family: var(--kadmin-head);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kadmin__dialogBody { color: var(--kadmin-muted); line-height: 1.6; font-size: 0.92rem; }
+.kadmin__dialogBody strong { color: var(--kadmin-text); }
+.kadmin__dialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+.kadmin__list { margin: 0.5rem 0 0; padding-left: 1.1rem; }
+.kadmin__list li { margin-bottom: 0.25rem; }
+
+/* Respect a reduced-motion preference: every transition above is decorative. */
+@media (prefers-reduced-motion: reduce) {
+  .kadmin *,
+  .kadmin *::before,
+  .kadmin *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
