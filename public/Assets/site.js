@@ -260,7 +260,7 @@
 
     /* Currency toggle removed — Stripe/shop retired; prices are no longer displayed. */
 
-    /* ===== Dubai clock (nav) ===== */
+    /* ===== Singapore clock (nav) ===== */
     (function () {
         var el = document.getElementById('dubai-time');
         if (!el) return;

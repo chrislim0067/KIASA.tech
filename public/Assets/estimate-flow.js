@@ -997,7 +997,7 @@
   /* ── validation feedback ──────────────────────────────────────────────────────────────────── */
   function currentValid() {
     var st = STEPS[S.i];
-    /* The phone step defers to wt-phone.js, which knows the per-country length rules — a UAE
+    /* The phone step defers to wt-phone.js, which knows the per-country length rules — a Singapore
        mobile and a US number are not the same shape and the engine's digit count cannot tell them
        apart. The engine keeps its own looser rule for the Node tests, where wtPhone does not exist,
        so this is an upgrade at runtime rather than a second source of truth. */

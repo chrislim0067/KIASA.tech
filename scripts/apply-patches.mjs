@@ -110,4 +110,43 @@ if (hero.includes('/brand/wordmark.js')) {
   console.log(`hero wordmark: ${applied} replacement(s) applied`);
 }
 
+/* ------------------------------ hero wordmark: fit the brand to the viewport */
+
+// Guarded separately from the block above: those replacements run once, when the
+// W is first swapped for the wordmark, and are skipped forever after. This one
+// has to be able to land on a tree where that has already happened.
+if (hero.includes('_wmFitScale')) {
+  console.log('hero wordmark fit: already patched, skipping');
+} else {
+  hero = replaceOnce(
+    hero,
+    `                const baseScale = _isMobileAnim ? 0.9 : 1.0;`,
+    `                // Fit the whole brand — the wordmark and the ring around it —
+                // inside the viewport.
+                //
+                // The hero frames the logo at z -25 from a camera at z 20 through
+                // a 35deg vertical FOV, so the visible width there is
+                // (2 * tan(fov/2) * 45) * aspect. Narrowing the window shrinks
+                // that while the geometry stays ~13 units wide, which is what
+                // clipped KIASA off at both ends. The old 0.9 mobile constant
+                // could not help: it was a step at 1024px decided once at build
+                // time, and this very line overwrites the group's scale every
+                // frame, so anything set on resize was lerped straight back out.
+                //
+                // Measured from a FIXED reference framing rather than the live
+                // camera, deliberately. camera.fov is animated by scroll velocity
+                // and logoGroup is lerped toward the camera, so reading either
+                // here would make the brand breathe during a scroll. Only the
+                // aspect ratio actually matters, so this recomputes on resize and
+                // nowhere else, and stays at 1 on any normal desktop window.
+                const _wmSpan = Math.max(WORDMARK_SIZE.width, ringMesh ? ringMesh.geometry.parameters.radius * 2 : 0);
+                const _wmVisibleW = (2 * Math.tan(35 * Math.PI / 360) * 45) * camera.aspect;
+                const _wmFitScale = Math.min(1, (_wmVisibleW * 0.9) / _wmSpan);
+                const baseScale = _wmFitScale;`,
+    'hero: scale the wordmark to fit narrow viewports'
+  );
+  fs.writeFileSync(HERO, hero);
+  console.log('hero wordmark fit: applied');
+}
+
 console.log('patches done');

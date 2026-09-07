@@ -809,7 +809,7 @@
         .h-project:nth-child(even).card-visible { transform: perspective(800px) translateY(0) rotateY(0deg); }
 
 
-        /* --- Dubai Clock in Nav --- */
+        /* --- Singapore Clock in Nav --- */
         .nav-clock { font-family: var(--font-num); font-size: 0.65rem; letter-spacing: 0.2em; color: rgba(255,255,255,0.35); white-space: nowrap; margin-left: auto; margin-right: 2rem; }
         .nav-clock-label { color: rgba(255,255,255,0.2); margin-right: 0.4em; }
         @media (max-width: 1024px) { .nav-clock { display: none; } }

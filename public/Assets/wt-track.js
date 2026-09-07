@@ -353,7 +353,7 @@
         var phoneEl = form.querySelector('input[type=tel]:not([type=checkbox]), input[name*=phone i]:not([type=checkbox]), input[name*=mobile i]:not([type=checkbox]), input[name*=whatsapp i]:not([type=checkbox])');
         var nameEl  = form.querySelector('input[name*=name i]:not([name*=company i]):not([name*=brand i]):not([name*=user i])');
         if (emailEl && emailEl.value) pii.email = emailEl.value.trim().toLowerCase();
-        // E.164, not bare digits. Meta and Google match hashed phone numbers in E.164, so a UAE
+        // E.164, not bare digits. Meta and Google match hashed phone numbers in E.164, so a Singapore
         // visitor typing the local "050 902 7130" was hashed as "0509027130" and matched NOTHING at
         // either — every phone-based enhanced-matching signal was silently wasted. wtPhone.normalise
         // never throws and falls back to bare digits, so a missing wt-phone.js costs matching quality
