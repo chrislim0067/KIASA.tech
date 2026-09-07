@@ -302,6 +302,10 @@
         // ==========================================
         let scene, camera, renderer, composer, masterPass, bloomPass;
         let logoGroup, ringMesh;
+        // Viewport fit for the 3D brand, recomputed each frame in animate(). Module
+        // scope because both the scale and the horizontal offset consume it, and
+        // they live in different blocks.
+        let _wmFit = 1;
         let particles, bokehParticles, glassOrbs = [], projectCards = [], uniformsMap = [];
         let _buildEnvMap = null;   // re-bakes the PMREM environment; needed again after a context restore
         // Keep the composer's targets exactly the size of the drawing buffer, and bloom at half the
@@ -2717,11 +2721,22 @@
                 // the right edge anyway. At 390x844 that was the difference
                 // between a right edge of 7.15 (clipped) and 6.20 (fits) against
                 // a 6.56 limit.
+                // The logo rides 25 units in front of the camera — lZ below is
+                // camera.position.z - 25 — so that, NOT the -25 build position,
+                // is the distance the framing has to be solved at. Visible width
+                // there is (2 * tan(fov/2) * 25) * aspect.
+                //
+                // The brand is 13.02 across (the ring, wider than the 10.5
+                // wordmark) and sits 1.254 to the right of centre to clear the
+                // headline. Both the size AND that offset scale together, which
+                // is why _wmFit is applied to lX further down as well: shrinking
+                // the letters while leaving the offset fixed just pushes a
+                // smaller brand off the same edge.
                 const _wmOffsetX = Math.max(0, (WORDMARK_SIZE.width - 4.8) * 0.22);
-                const _wmSpan = Math.max(WORDMARK_SIZE.width, ringMesh ? ringMesh.geometry.parameters.radius * 2 : 0) + _wmOffsetX * 2;
-                const _wmVisibleW = (2 * Math.tan(35 * Math.PI / 360) * 45) * camera.aspect;
-                const _wmFitScale = Math.min(1, (_wmVisibleW * 0.9) / _wmSpan);
-                const baseScale = _wmFitScale;
+                const _wmSpan = Math.max(WORDMARK_SIZE.width, ringMesh ? ringMesh.geometry.parameters.radius * 2 : 0);
+                const _wmVisibleW = (2 * Math.tan(35 * Math.PI / 360) * 25) * camera.aspect;
+                _wmFit = Math.min(1, (_wmVisibleW * 0.9) / (_wmSpan + _wmOffsetX * 2));
+                const baseScale = _wmFit;
                 const audioScale = baseScale * (1.0 + bass * 0.04);
                 logoGroup.scale.setScalar(logoGroup.scale.x + (audioScale - logoGroup.scale.x) * 0.15);
             }
@@ -2762,12 +2777,12 @@
             // (changing playbackRate every frame forces constant re-buffering)
 
             // W logo: centered at rest, drifts + orbits on scroll
-            let lX = Math.max(0, (WORDMARK_SIZE.width - 4.8) * 0.22), lY = Math.sin(t * 0.6) * 0.3;
+            let lX = Math.max(0, (WORDMARK_SIZE.width - 4.8) * 0.22) * _wmFit, lY = Math.sin(t * 0.6) * 0.3;
             let lZ = camera.position.z - 25;
             if (isModalOpen) {
                 lX = 10; lY = 0;
             } else if (progress > 0.02) {
-                lX = Math.sin(progress * Math.PI * 5) * 7;
+                lX = Math.sin(progress * Math.PI * 5) * 7 * _wmFit;
                 lY = Math.cos(progress * Math.PI * 3) * 3 + Math.sin(t * 0.6) * 0.4;
             }
             logoGroup.position.x += ((lX + mouseParallax.x * 1.5) - logoGroup.position.x) * 0.04;
