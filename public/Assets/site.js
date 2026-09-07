@@ -265,7 +265,7 @@
         var el = document.getElementById('dubai-time');
         if (!el) return;
         function update() {
-            el.textContent = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Dubai', hour: '2-digit', minute: '2-digit' });
+            el.textContent = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit' });
         }
         update();
         setInterval(update, 30000);

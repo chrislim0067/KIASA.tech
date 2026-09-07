@@ -267,7 +267,7 @@
     (function () {
       var el = document.getElementById('dubai-time');
       if (!el) return;
-      var u = function () { el.textContent = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Dubai', hour: '2-digit', minute: '2-digit' }); };
+      var u = function () { el.textContent = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit' }); };
       u(); setInterval(u, 30000);
     })();
 
