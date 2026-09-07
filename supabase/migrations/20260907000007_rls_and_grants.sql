@@ -202,25 +202,49 @@ declare
   -- Only these may be executable by authenticated, and only because CHECK
   -- constraints evaluate them as the inserting user.
   check_helpers text[] := array['text_array_matches', 'text_array_no_blanks'];
+
+  -- The functions THIS migration set owns.
+  --
+  -- Every assertion below is scoped to these by name. The original version
+  -- asserted over every function in `public`. That holds on a pristine local
+  -- database but is wrong on a hosted Supabase project: the platform installs
+  -- its own helpers there — `rls_auto_enable` among them — which are EXECUTE-able
+  -- by PUBLIC by design and are not ours to revoke. Asserting over them made this
+  -- migration fail on the first real deployment, while proving nothing about our
+  -- own least-privilege posture.
+  --
+  -- Scoping by name keeps the assertion's intent exactly: no function we create
+  -- may be reachable by PUBLIC, anon or service_role. Names that do not exist yet
+  -- at this point in the sequence simply never match, which is harmless.
+  migration_functions text[] := array[
+    'set_updated_at', 'text_array_matches', 'text_array_no_blanks',
+    'text_array_ok', 'jsonb_links_ok', 'is_blank_or_invisible',
+    'set_row_timestamps', 'guard_verified_answer_provenance',
+    'set_event_created_at', 'refuse_row_update', 'guard_job_status_transition',
+    'set_audit_created_at', 'guard_user_role_subject',
+    'set_attempt_created_at', 'guard_application_status_transition'
+  ];
   offending text;
 begin
-  -- Nothing in public may be executable by PUBLIC.
+  -- None of our functions may be executable by PUBLIC.
   select string_agg(p.proname, ', ')
     into offending
   from pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
+    and p.proname = any(migration_functions)
     and has_function_privilege('public', p.oid, 'EXECUTE');
   if offending is not null then
     raise exception 'PUBLIC can still execute: %', offending;
   end if;
 
-  -- anon must not be able to execute anything.
+  -- anon must not be able to execute any of them.
   select string_agg(p.proname, ', ')
     into offending
   from pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
+    and p.proname = any(migration_functions)
     and has_function_privilege('anon', p.oid, 'EXECUTE');
   if offending is not null then
     raise exception 'anon can still execute: %', offending;
@@ -232,6 +256,7 @@ begin
   from pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
+    and p.proname = any(migration_functions)
     and has_function_privilege('service_role', p.oid, 'EXECUTE');
   if offending is not null then
     raise exception 'service_role can still execute: %', offending;
@@ -244,6 +269,7 @@ begin
   from pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
+    and p.proname = any(migration_functions)
     and has_function_privilege('authenticated', p.oid, 'EXECUTE')
     and not (p.proname = any(check_helpers));
   if offending is not null then
@@ -274,6 +300,7 @@ begin
   from pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
+    and p.proname = any(migration_functions)
     and (
       p.prosecdef
       or p.proconfig is null
