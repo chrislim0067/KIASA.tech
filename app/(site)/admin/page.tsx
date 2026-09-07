@@ -43,10 +43,16 @@ function Stat({
   note?: string;
   tone?: 'accent' | 'success' | 'danger' | 'idle';
 }) {
+  // A zero is still the truthful answer, but it is not news. Rendering a row of
+  // them at full brightness gave every counter the same visual weight, so the
+  // one number that had actually moved did not stand out from the ones that had
+  // not. Zeros drop back unless the caller has asked for a specific tone.
+  const resolvedTone = tone ?? (value === 0 ? 'idle' : undefined);
+
   return (
     <div className="kadmin__stat">
       <span className="kadmin__statLabel">{label}</span>
-      <span className={`kadmin__statValue${tone ? ` kadmin__statValue--${tone}` : ''}`}>
+      <span className={`kadmin__statValue${resolvedTone ? ` kadmin__statValue--${resolvedTone}` : ''}`}>
         {typeof value === 'number' ? nf.format(value) : value}
       </span>
       {note ? <span className="kadmin__statNote">{note}</span> : null}
