@@ -58,10 +58,21 @@ const TABLES = [
   'work_experiences', 'education_entries', 'skills', 'certifications',
   'projects', 'languages', 'verified_answers',
 ];
+/**
+ * The helpers a CHECK constraint evaluates in the inserting user's context, so
+ * `authenticated` must hold EXECUTE on each. is_blank_or_invisible is included
+ * because text_array_ok and jsonb_links_ok call it, and a nested call in a
+ * SECURITY INVOKER function is still permission-checked against the original
+ * caller. text_array_no_blanks was dropped in migration 11.
+ */
 const CHECK_HELPER_SIGNATURES = {
   text_array_matches: 'public.text_array_matches(text[], text)',
-  text_array_no_blanks: 'public.text_array_no_blanks(text[])',
+  text_array_ok: 'public.text_array_ok(text[], integer, integer)',
+  jsonb_links_ok: 'public.jsonb_links_ok(jsonb, integer, integer, integer)',
+  is_blank_or_invisible: 'public.is_blank_or_invisible(text)',
 };
+/** Functions that must no longer exist at all. */
+const REMOVED_FUNCTIONS = ['text_array_no_blanks', 'set_updated_at'];
 const API_ROLES = ['anon', 'authenticated', 'service_role'];
 
 let failed = 0;
@@ -135,7 +146,7 @@ for (const role of ['anon', 'service_role']) {
   check('RLS enabled and forced on all 11', rls === '11', `${rls}/11`);
 }
 
-section('3. The 3 helper functions');
+section('3. The helper functions');
 for (const role of ['anon', 'service_role']) {
   const n = sql(`select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
                  where n.nspname='public' and has_function_privilege('${role}',p.oid,'EXECUTE')`);
@@ -151,9 +162,13 @@ for (const role of ['anon', 'service_role']) {
     const can = sql(`select has_function_privilege('authenticated','${trigger}','EXECUTE')`);
     check(`authenticated cannot execute ${trigger}`, can === 'f', can);
   }
-  const retired = sql(`select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-                       where n.nspname='public' and p.proname='set_updated_at'`);
-  check('the retired update-only timestamp function is gone', retired === '0', `${retired} found`);
+  // Superseded functions must be dropped, not merely left unreferenced: an
+  // unused function is still an RPC surface and still invites future misuse.
+  for (const fn of REMOVED_FUNCTIONS) {
+    const retired = sql(`select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                         where n.nspname='public' and p.proname='${fn}'`);
+    check(`the superseded ${fn}() is gone`, retired === '0', `${retired} found`);
+  }
 
   // has_function_privilege needs a full signature, not a bare name.
   for (const [fn, signature] of Object.entries(CHECK_HELPER_SIGNATURES)) {

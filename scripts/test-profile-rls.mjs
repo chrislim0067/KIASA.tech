@@ -281,10 +281,31 @@ for (const table of ALL_TABLES) {
 /* ------------------------------------------------- 5. helper functions */
 section('5. Helper functions cannot be abused');
 
+/**
+ * The CHECK helpers, with arguments that would succeed if the call were
+ * permitted — so a PASS below means the call was refused, not that it happened
+ * to error on a bad argument.
+ */
+const CHECK_HELPERS = [
+  ['text_array_matches', { arr: ['GB'], pattern: '^[A-Z]{2}$' }, true],
+  ['text_array_ok', { arr: ['ok'], max_items: 10, max_len: 100 }, true],
+  ['jsonb_links_ok', { links: [{ label: 'Site', url: 'https://example.com' }], max_items: 20, max_url: 2048, max_label: 200 }, true],
+  // 'ok' is visible, so the blank test is false. Asserting the real answer
+  // rather than a uniform `true` keeps this from passing on a wrong result.
+  ['is_blank_or_invisible', { value: 'ok' }, false],
+];
+
 // anon must not be able to execute any of them.
-for (const fn of ['text_array_matches', 'text_array_no_blanks']) {
-  const { error } = await anon.rpc(fn, fn === 'text_array_matches' ? { arr: ['GB'], pattern: '^[A-Z]{2}$' } : { arr: ['x'] });
+for (const [fn, args] of CHECK_HELPERS) {
+  const { error } = await anon.rpc(fn, args);
   check(`anon cannot execute ${fn}()`, Boolean(error), error ? `blocked: ${error.code}` : 'NOT BLOCKED');
+}
+
+// The helper dropped in migration 11 must not be reachable by anyone.
+for (const [label, client] of [['anon', anon], ['authenticated', A.client]]) {
+  const { error } = await client.rpc('text_array_no_blanks', { arr: ['x'] });
+  check(`${label} cannot execute the dropped text_array_no_blanks()`, Boolean(error),
+    error ? `blocked: ${error.code}` : 'NOT BLOCKED');
 }
 
 // The trigger function must not be reachable by anyone through the API.
@@ -300,13 +321,16 @@ for (const [label, client] of [['anon', anon], ['authenticated', A.client]]) {
 // they are harmless: pure, IMMUTABLE, search_path='', they touch no table, and
 // they return a boolean derived solely from the arguments passed in. There is
 // no table reference to point at another user's row.
-{
-  const { data, error } = await A.client.rpc('text_array_no_blanks', { arr: ['ok'] });
-  check('authenticated may call the CHECK helper (required by the constraint)', !error && data === true, error?.message ?? `returned ${data}`);
+for (const [fn, args, expected] of CHECK_HELPERS) {
+  const { data, error } = await A.client.rpc(fn, args);
+  check(`authenticated may call ${fn}() (required by the constraint)`,
+    !error && data === expected, error?.message ?? `returned ${data}, expected ${expected}`);
 }
 {
   // Proof it cannot be turned into a data read: it accepts only text[]/text.
-  const { error } = await A.client.rpc('text_array_no_blanks', { arr: 'select * from public.profiles' });
+  const { error } = await A.client.rpc('text_array_ok', {
+    arr: 'select * from public.profiles', max_items: 10, max_len: 100,
+  });
   check('CHECK helper rejects a non-array argument', Boolean(error), error ? `blocked: ${error.code}` : 'NOT BLOCKED');
 }
 // And it changes nothing: A's row count is unaffected by calling it.

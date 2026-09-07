@@ -620,6 +620,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_blank_or_invisible: { Args: { value: string }; Returns: boolean }
       jsonb_links_ok: {
         Args: {
           links: Json
@@ -633,7 +634,6 @@ export type Database = {
         Args: { arr: string[]; pattern: string }
         Returns: boolean
       }
-      text_array_no_blanks: { Args: { arr: string[] }; Returns: boolean }
       text_array_ok: {
         Args: { arr: string[]; max_items: number; max_len: number }
         Returns: boolean

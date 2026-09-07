@@ -85,15 +85,23 @@ section('3. Temporary files are cleaned up');
 section('4. The success path still replaces the file correctly');
 {
   const r = run();
-  if (r.status === 0) {
+  const succeeded = r.status === 0;
+  // Asserted on the measured exit status, not on a literal, and reported once
+  // under one label whichever way it goes.
+  check('generation succeeds against the local stack', succeeded,
+    succeeded ? (r.stdout ?? '').trim() : `exit ${r.status}: ${(r.stderr ?? '').split('\n')[0]}`);
+
+  if (succeeded) {
     const after = hash(TARGET);
-    check('generation succeeds against the local stack', true, (r.stdout ?? '').trim());
-    check('regenerated file is valid and non-empty', fs.statSync(TARGET).size > 500);
+    check('regenerated file is valid and non-empty', fs.statSync(TARGET).size > 500, `${fs.statSync(TARGET).size} bytes`);
     check('regenerated content matches the committed file', after === before,
       after === before ? 'byte-identical' : 'DIFFERS — schema drift or an uncommitted change');
   } else {
-    check('generation succeeds against the local stack', false, `exit ${r.status}: ${(r.stderr ?? '').split('\n')[0]}`);
-    check('types file survived the failed run', hash(TARGET) === before);
+    // The run failed, so the only thing left worth proving is that it failed
+    // safely. These are different assertions, not the same one relabelled.
+    check('types file survived the failed run', hash(TARGET) === before, `${fs.statSync(TARGET).size} bytes`);
+    check('types file was not truncated by the failed run', fs.statSync(TARGET).size === beforeSize,
+      `${fs.statSync(TARGET).size} vs ${beforeSize}`);
   }
 }
 
