@@ -94,11 +94,67 @@ export default async function DashboardPage() {
   // The gate, applied after the role is known so administrators are exempt.
   if (!showAdminLink && !canUseProduct(accessStatus)) redirect(PENDING_ROUTE);
 
+  /**
+   * How far through the profile they are.
+   *
+   * Read here so the dashboard can say something useful instead of only
+   * offering a link — "3 of 4" is a reason to click; "Profile" on its own is
+   * not. The four counted here are exactly the facts
+   * `buildCompletenessReport()` treats as blocking, kept as four cheap counts
+   * rather than assembling the whole candidate snapshot for a progress number.
+   */
+  const [profileRow, authCount, expCount, prefsRow] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('legal_first_name, legal_last_name, contact_email')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('work_authorizations')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id),
+    supabase
+      .from('work_experiences')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id),
+    supabase.from('job_preferences').select('user_id').eq('user_id', user.id).maybeSingle(),
+  ]);
+
+  const p = profileRow.data;
+  const identityDone = Boolean(
+    p?.legal_first_name?.trim() && p?.legal_last_name?.trim() && p?.contact_email?.trim()
+  );
+
+  const profileDone =
+    Number(identityDone) +
+    Number((authCount.count ?? 0) > 0) +
+    Number((expCount.count ?? 0) > 0) +
+    Number(prefsRow.data !== null);
+  const profileTotal = 4;
+  const profileReady = profileDone === profileTotal;
+
   return (
     <AuthShell title="Welcome to KIASA" variant="dashboard">
       <p className="kauth__subtitle">
-        You are signed in. This is a placeholder while the application dashboard is built.
+        {profileReady
+          ? 'Your profile is complete. Job discovery and applications are being built next.'
+          : 'Start by completing your profile — KIASA needs it before it can apply for anything on your behalf.'}
       </p>
+
+      {/*
+        The profile card. This page previously offered no route into /profile at
+        all, so the screens existed and nobody could reach them.
+      */}
+      <Link
+        href="/profile"
+        className="kauth__row"
+        style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
+      >
+        <span className="kauth__rowLabel">Your profile</span>
+        <span className="kauth__email">
+          {profileReady ? 'Complete ✓' : `${profileDone} of ${profileTotal} steps done →`}
+        </span>
+      </Link>
 
       {fullName ? (
         <div className="kauth__row">
@@ -120,8 +176,21 @@ export default async function DashboardPage() {
       ) : null}
 
       <div className="kauth__actions">
+        {/*
+          The primary action, and it changes with state: an incomplete profile
+          is the one thing a candidate should be doing, so it leads. Once
+          complete it steps back to a secondary style rather than disappearing —
+          people need to edit a profile, not only fill one in.
+        */}
+        <Link
+          className={`kauth__button${profileReady ? ' kauth__button--ghost' : ''}`}
+          href="/profile"
+        >
+          {profileReady ? 'View profile' : 'Complete your profile'}
+        </Link>
+
         {showAdminLink ? (
-          <Link className="kauth__button" href={ADMIN_ROOT}>
+          <Link className="kauth__button kauth__button--ghost" href={ADMIN_ROOT}>
             Open admin
           </Link>
         ) : null}
