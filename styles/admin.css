@@ -40,6 +40,36 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * Border-box, scoped to the admin screens.
+ *
+ * Nothing in this project declares box-sizing globally — app/globals.css is
+ * deliberately near-empty — so form controls fall back to content-box. That
+ * makes .kadmin__input and .kadmin__select (width:100% plus 1.5rem of
+ * horizontal padding and a 1px border) render ~26px WIDER than their grid
+ * track, overhanging the panel edge and, on a narrow viewport, pushing the page
+ * sideways. Buttons escape it only because UA stylesheets already give them
+ * border-box, which is what makes the mismatch obvious.
+ *
+ * Scoped to .kadmin rather than declared on * for the same reason auth.css
+ * scopes it: the legacy marketing pages are byte-faithful and their cascade
+ * must not change.
+ */
+.kadmin,
+.kadmin *,
+.kadmin *::before,
+.kadmin *::after {
+  box-sizing: border-box;
+}
+
+/* body keeps the UA default margin: 8px, and .kadmin is min-height:100dvh, so
+   the document would always be 16px taller than the viewport — a scrollbar on
+   every admin page even when the content fits. Same fix, and the same reason,
+   as the auth screens. */
+body:has(.kadmin) {
+  margin: 0;
+}
+
 /* ---------------------------------------------------------------- chrome -- */
 .kadmin__bar {
   position: sticky;
@@ -97,6 +127,11 @@
 }
 
 .kadmin__who {
+  /* A long sign-in address has no break opportunity, so without this it forces
+     the sticky bar wider than the viewport on a phone and the whole page
+     scrolls sideways. min-width:0 lets the flex item shrink at all. */
+  min-width: 0;
+  overflow-wrap: anywhere;
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -107,7 +142,11 @@
 
 .kadmin__main {
   padding: clamp(1.5rem, 4vw, 2.5rem);
-  max-width: 100rem;
+  /* 100rem (1600px) let a row of six counters stretch to ~265px each, so a
+     single digit sat in a mostly empty box; a row of four reached ~400px. A
+     dashboard reads at a normal measure — this keeps the tiles dense without
+     changing the full-bleed treatment. */
+  max-width: 82rem;
   margin: 0 auto;
 }
 
