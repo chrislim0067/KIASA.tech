@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import AuthShell from '@/components/auth/AuthShell';
@@ -7,6 +8,7 @@ import SignOutForm from '@/components/auth/SignOutForm';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { LOGIN } from '@/lib/auth/routes';
+import { isAppRole, isAdminRole, DEFAULT_ROLE, ADMIN_ROOT } from '@/lib/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +45,27 @@ export default async function DashboardPage() {
   const fullName =
     typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : null;
 
+  /**
+   * Whether to offer the administrator link.
+   *
+   * Read with the caller's OWN session through the `user_roles_select_own`
+   * policy — no elevated credential, and a user can only ever see their own
+   * row. Any failure resolves to the ordinary role, so a database hiccup hides
+   * the link rather than showing it to the wrong person.
+   *
+   * This is presentation only. It grants nothing: /admin and every /api/admin
+   * route re-check authorization server-side, so removing this link would not
+   * lock an administrator out, and forging it would not let anyone in.
+   */
+  const { data: roleRow } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  const role = isAppRole(roleRow?.role) ? roleRow.role : DEFAULT_ROLE;
+  const showAdminLink = isAdminRole(role);
+
   return (
     <AuthShell title="Welcome to KIASA" variant="dashboard">
       <p className="kauth__subtitle">
@@ -61,7 +84,20 @@ export default async function DashboardPage() {
         <span className="kauth__email">{user.email}</span>
       </div>
 
+      {showAdminLink ? (
+        <div className="kauth__row">
+          <span className="kauth__rowLabel">Role</span>
+          <span className="kauth__email">Administrator</span>
+        </div>
+      ) : null}
+
       <div className="kauth__actions">
+        {showAdminLink ? (
+          <Link className="kauth__button" href={ADMIN_ROOT}>
+            Open admin
+          </Link>
+        ) : null}
+
         {/* Posts to /auth/signout, which clears the session and answers 303 so
             the browser performs a real document load of the homepage. */}
         <SignOutForm />
