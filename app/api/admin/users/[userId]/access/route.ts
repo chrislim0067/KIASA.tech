@@ -1,6 +1,8 @@
 import { guardApi, apiOk, apiError, isUuid, readJsonBody, logAdminError } from '@/lib/admin/api';
 import { setUserAccess } from '@/lib/admin/users';
 import { recordAudit } from '@/lib/admin/audit';
+import { sendEmail, isEmailConfigured } from '@/lib/notifications/email';
+import { approvedEmail, rejectedEmail } from '@/lib/notifications/templates';
 
 /**
  * PUT /api/admin/users/[userId]/access — approve or reject an account.
@@ -68,6 +70,32 @@ export async function PUT(request: Request, context: { params: Promise<{ userId:
       return apiError(result.failure === 'not_found' ? 'not_found' : 'upstream_error', result.message);
     }
 
+    /**
+     * Tell the person.
+     *
+     * Awaited, but incapable of failing the request: sendEmail never throws and
+     * has its own timeout. The decision is already committed at this point, so
+     * a mail outage must not surface as an error that invites the administrator
+     * to click Approve again.
+     *
+     * The outcome is recorded in the audit entry and returned to the UI, so
+     * "approved but not emailed" is visible rather than assumed. Silently
+     * failing here is how you end up believing people were told when they
+     * were not.
+     */
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
+    let delivery: string = 'skipped_no_address';
+
+    if (result.value.email) {
+      const message =
+        status === 'approved'
+          ? approvedEmail({ to: result.value.email, siteUrl })
+          : rejectedEmail({ to: result.value.email, siteUrl, reason });
+
+      const outcome = await sendEmail(message);
+      delivery = outcome.sent ? 'sent' : outcome.reason;
+    }
+
     await recordAudit({
       action,
       actorUserId: user.id,
@@ -77,12 +105,24 @@ export async function PUT(request: Request, context: { params: Promise<{ userId:
       result: 'succeeded',
       // The reason is administrator-written free text, scrubbed by recordAudit
       // like every other detail value.
-      detail: { status, reason },
+      detail: { status, reason, email: delivery },
     });
+
+    const decided = status === 'approved' ? 'Account approved.' : 'Account rejected.';
+    const emailNote =
+      delivery === 'sent'
+        ? ' They have been emailed.'
+        : delivery === 'not_configured'
+          ? ' No email was sent — email is not configured on this deployment.'
+          : delivery === 'skipped_no_address'
+            ? ''
+            : ' The notification email could not be delivered.';
 
     return apiOk({
       user: { id: result.value.userId, access_status: result.value.status },
-      message: status === 'approved' ? 'Account approved.' : 'Account rejected.',
+      emailDelivery: delivery,
+      emailConfigured: isEmailConfigured(),
+      message: decided + emailNote,
     });
   } catch (error) {
     logAdminError('users.access', error, { actor_user_id: user.id, target_user_id: userId });

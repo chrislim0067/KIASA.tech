@@ -63,37 +63,33 @@ export default async function DashboardPage() {
    * missing — the only person who could approve them would be locked out of the
    * page where approving happens.
    */
-  const { data: accessRow } = await supabase
-    .from('user_access')
-    .select('status')
-    .eq('user_id', user.id)
-    .maybeSingle();
+  /**
+   * Access and role, in ONE round trip rather than two.
+   *
+   * These were sequential awaits: the access read finished, then the role read
+   * started, so the page paid two full Supabase round trips back to back before
+   * it could render anything. They are independent questions about the same
+   * user, so they go together.
+   *
+   * The role read is presentation only — it decides whether to offer the
+   * administrator link. It grants nothing: /admin and every /api/admin route
+   * re-check authorization server-side, so removing the link would not lock an
+   * administrator out and forging it would not let anyone in.
+   */
+  const [accessResult, roleResult] = await Promise.all([
+    supabase.from('user_access').select('status').eq('user_id', user.id).maybeSingle(),
+    supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle(),
+  ]);
 
-  const accessStatus = isAccessStatus(accessRow?.status) ? accessRow.status : DEFAULT_ACCESS;
+  const accessStatus = isAccessStatus(accessResult.data?.status)
+    ? accessResult.data.status
+    : DEFAULT_ACCESS;
+
+  const role = isAppRole(roleResult.data?.role) ? roleResult.data.role : DEFAULT_ROLE;
+  const showAdminLink = isAdminRole(role);
 
   const fullName =
     typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : null;
-
-  /**
-   * Whether to offer the administrator link.
-   *
-   * Read with the caller's OWN session through the `user_roles_select_own`
-   * policy — no elevated credential, and a user can only ever see their own
-   * row. Any failure resolves to the ordinary role, so a database hiccup hides
-   * the link rather than showing it to the wrong person.
-   *
-   * This is presentation only. It grants nothing: /admin and every /api/admin
-   * route re-check authorization server-side, so removing this link would not
-   * lock an administrator out, and forging it would not let anyone in.
-   */
-  const { data: roleRow } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  const role = isAppRole(roleRow?.role) ? roleRow.role : DEFAULT_ROLE;
-  const showAdminLink = isAdminRole(role);
 
   // The gate, applied after the role is known so administrators are exempt.
   if (!showAdminLink && !canUseProduct(accessStatus)) redirect(PENDING_ROUTE);

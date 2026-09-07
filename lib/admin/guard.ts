@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { cache } from 'react';
 import type { User } from '@supabase/supabase-js';
 
 import { createClient } from '@/lib/supabase/server';
@@ -48,8 +49,15 @@ export type AuthzResult = ({ readonly ok: true } & AdminContext) | AuthzFailure;
  *
  * Exported because the site header needs it to decide whether to render the
  * Admin link. That is presentation only — it grants nothing.
+ *
+ * Wrapped in React's `cache()`, which memoises for the lifetime of ONE server
+ * render. An admin page and the components inside it can each ask "who is this
+ * and what are they" without any of them having to thread the answer through
+ * props, and the `getUser()` round trip to Supabase Auth happens once per
+ * request instead of once per caller. The cache is per-request by construction,
+ * so there is no possibility of one user's answer being served to another.
  */
-export async function getCallerRole(): Promise<{ user: User | null; role: AppRole }> {
+export const getCallerRole = cache(async (): Promise<{ user: User | null; role: AppRole }> => {
   if (!isSupabaseConfigured()) return { user: null, role: DEFAULT_ROLE };
 
   const supabase = await createClient();
@@ -73,7 +81,7 @@ export async function getCallerRole(): Promise<{ user: User | null; role: AppRol
   }
 
   return { user, role: data.role };
-}
+});
 
 /**
  * Resolve the caller's administrative context without throwing.
