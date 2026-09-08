@@ -4,6 +4,8 @@ import Link from 'next/link';
 import ProfileShell from '@/components/profile/ProfileShell';
 import ImportConsole from '@/components/resume/ImportConsole';
 import { buildResumePrompt } from '@/lib/resume/prompt';
+import { importPastedResume } from '@/lib/resume/actions';
+import { RESUME_ROUTE } from '@/lib/resume/paths';
 import { requireCandidate } from '@/lib/candidate/session';
 import { getCandidateSnapshot, buildCompletenessReport } from '@/lib/profile';
 
@@ -133,7 +135,11 @@ export default async function ProfilePage({
         stay out of the JavaScript every candidate downloads.
       */}
       {!ready ? (
-        <ImportConsole prompt={buildResumePrompt()} />
+        <ImportConsole
+          prompt={buildResumePrompt()}
+          action={importPastedResume}
+          uploadHref={RESUME_ROUTE}
+        />
       ) : null}
 
       <div className="kprof__progress">

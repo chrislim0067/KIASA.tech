@@ -87,6 +87,7 @@ export async function startResumeImport(_prev: FormState, form: FormData): Promi
 
   const admin = createAdminClient();
   const importId = await createImport(admin, user.id, {
+    sourceKind: 'upload',
     storagePath: path,
     // Only ever displayed, but a filename comes from the user's disk, so it is
     // length-capped here rather than trusted to be reasonable.
@@ -107,6 +108,68 @@ export async function startResumeImport(_prev: FormState, form: FormData): Promi
   }
 
   await markParsed(admin, importId, result.data, result.model);
+
+  revalidatePath(RESUME_ROUTE);
+  redirect(`${RESUME_ROUTE}/${importId}`);
+}
+
+/* -------------------------------------------------------------------- paste */
+
+/**
+ * Take a draft the candidate produced in Claude themselves.
+ *
+ * The console validated this in the browser already. That counts for nothing
+ * here: browser validation is for fast feedback, and a server action is a POST
+ * endpoint anyone can call. The same bytes go through the same schema again,
+ * and only then does a row exist.
+ *
+ * No API key, no cost per résumé, and — because the schema is the database's
+ * constraints in another form — no lower a standard than the upload path.
+ */
+export async function importPastedResume(_prev: FormState, form: FormData): Promise<FormState> {
+  const { user } = await requireCandidate();
+
+  if (!isAdminConfigured()) {
+    return { ok: false, message: 'Résumé import is not switched on yet.' };
+  }
+
+  const raw = text(form, 'draft');
+  if (!raw) return { ok: false, message: 'Nothing was pasted.' };
+
+  // Bounded before parsing: JSON.parse on an unbounded string from a POST body
+  // is an easy way to spend a lot of memory on nothing.
+  if (raw.length > 400_000) {
+    return { ok: false, message: 'That is far larger than a résumé. Paste just the JSON.' };
+  }
+
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return { ok: false, message: 'That is not valid JSON.' };
+  }
+
+  const draft = parseExtraction(value);
+  if (!draft) {
+    return {
+      ok: false,
+      message: 'That draft does not match what a profile can hold. Check the console for details.',
+    };
+  }
+
+  const admin = createAdminClient();
+  const importId = await createImport(admin, user.id, {
+    sourceKind: 'pasted',
+    storagePath: null,
+    fileName: null,
+    fileSizeBytes: null,
+  });
+
+  if (!importId) {
+    return { ok: false, message: 'The import could not be started. Try again.' };
+  }
+
+  await markParsed(admin, importId, draft, 'pasted-by-candidate');
 
   revalidatePath(RESUME_ROUTE);
   redirect(`${RESUME_ROUTE}/${importId}`);
