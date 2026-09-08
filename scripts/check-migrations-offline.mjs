@@ -116,8 +116,23 @@ for (const { name } of versions) {
 
 /* ---------------------------------------------------------------- checksums */
 
+/**
+ * Hash the CONTENT, not the platform.
+ *
+ * git normalises line endings on checkout: with core.autocrlf=true a Windows
+ * working tree holds CRLF while a Linux CI runner holds LF for the very same
+ * committed blob. Hashing the raw bytes therefore made every migration look
+ * "edited in place" the moment the manifest crossed platforms -- recorded on
+ * Windows, checked on ubuntu-latest, twenty false failures.
+ *
+ * Normalising CRLF to LF first makes the manifest describe the migration
+ * rather than the checkout it happened to be recorded from. A real edit still
+ * changes the hash; a checkout on a different platform no longer does.
+ */
 const sha256 = (name) =>
-  createHash('sha256').update(readFileSync(join(DIR, name))).digest('hex');
+  createHash('sha256')
+    .update(readFileSync(join(DIR, name), 'utf8').replace(/\r\n/g, '\n'))
+    .digest('hex');
 
 const current = Object.fromEntries(versions.map(({ name }) => [name, sha256(name)]));
 
