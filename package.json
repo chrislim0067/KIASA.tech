@@ -30,6 +30,7 @@
     "scan:secrets": "node scripts/scan-secrets.mjs",
     "test:secrets": "node scripts/test-secret-scan.mjs",
     "test:docs": "node scripts/test-docs-commands.mjs",
+    "test:exposure": "node scripts/test-exposure-diagnostic.mjs",
     "test:db": "node scripts/test-default-privileges.mjs && node scripts/test-profile-rls.mjs && node scripts/test-security-regressions.mjs && node scripts/test-whitespace-rules.mjs && node scripts/test-validation-parity.mjs && node scripts/test-data-layer.mjs && node scripts/test-job-state-and-url.mjs && node scripts/test-job-fetch.mjs && node scripts/test-job-extraction.mjs && node scripts/test-job-intake.mjs && node scripts/test-profile-cascade.mjs && node scripts/test-resume-import.mjs && node scripts/test-type-generation.mjs && node scripts/test-admin-authorization.mjs && node scripts/test-application-metrics.mjs && node scripts/test-user-approval.mjs",
     "test:admin": "node scripts/test-admin-authorization.mjs && node scripts/test-application-metrics.mjs && node scripts/test-user-approval.mjs",
     "test:admin:api": "node scripts/test-admin-api.mjs",

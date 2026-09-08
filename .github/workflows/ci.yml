@@ -93,6 +93,16 @@ jobs:
       - name: Documentation command hygiene
         run: npm run test:docs
 
+      # The exposure diagnostic's LOGIC, offline, with injected Docker
+      # responses. The diagnostic itself is deliberately NOT run here: a runner
+      # is a different machine on a different network, so anything it measured
+      # would say nothing about the developer's Windows host, and a green check
+      # would be actively misleading. What CI can honestly assert is that the
+      # reasoning fails closed -- that a container which cannot be inspected
+      # produces UNKNOWN_OR_INCOMPLETE rather than a clean result.
+      - name: Exposure diagnostic logic (offline)
+        run: npm run test:exposure
+
       # Same reasoning as the scanner: the manifest checker is tested before it
       # is trusted. It previously reported an unrecorded migration and exited 0,
       # which no assertion anywhere would have caught.

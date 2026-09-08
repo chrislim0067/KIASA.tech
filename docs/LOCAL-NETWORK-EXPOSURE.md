@@ -194,6 +194,21 @@ a hardcoded port list, probes IPv4 and IPv6 separately, and prints one of
 `UNKNOWN_OR_INCOMPLETE` (exit 3, 0, 1, 2). It is a diagnostic, **not a security
 gate**, and CI does not run it — see §6.
 
+**It fails closed.** Every container Docker lists is a candidate, and every
+candidate must be fully inspected before any verdict is possible. An inspection
+that fails, returns nothing, returns unparseable JSON, or carries a malformed
+binding or a nonsense host port forces `UNKNOWN_OR_INCOMPLETE` — the readable
+subset is never classified on its own. A wildcard binding can never produce
+`LOOPBACK_ONLY_VERIFIED`, a `HostIp` declared on a specific non-loopback address
+counts as exposed even if that address is not one of this host's interfaces, and
+exit 0 additionally requires that both IP families were actually testable.
+
+If the stack is stopped it says so and **stops there**: it does not tell you to
+start it, because on this machine starting it is the unsafe action (§3.2). The
+decision logic is covered by offline unit tests
+(`npm run test:exposure`) that inject fake Docker responses, so CI verifies the
+reasoning without pretending to measure a Windows host it cannot see.
+
 **The manual way**
 
 1. *Published Docker port mappings* — the binding, per family:
@@ -311,6 +326,14 @@ be satisfied by anything in this repository: CLI 2.117.0 exposes no
 bind-address setting, so on a clean checkout every port publishes on all
 interfaces. A gate that every developer and every runner fails is a gate that
 gets disabled, and a disabled gate protects nothing.
+
+There is a second reason, and it is the more important one: a GitHub Actions
+runner is a different machine on a different network. Whatever it measured
+would say nothing about the Windows host, and reporting it as a green check
+would be the most misleading outcome available. What CI *can* honestly verify
+is the decision logic, so it runs `npm run test:exposure` — offline unit tests
+with injected Docker responses — and leaves the measurement to the machine that
+actually publishes the ports.
 
 The honest position is that this is a **residual, unresolved risk on the
 developer machine**, mitigated only by the machine-level steps in §5, and that

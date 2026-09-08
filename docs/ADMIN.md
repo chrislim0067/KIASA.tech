@@ -668,21 +668,49 @@ from `node_modules` and refuses to fall back to `npx`. A bare `supabase` on
 PATH is whatever happens to be installed, and the version that migrates
 production should be the version the migrations were proven against.
 
-**3. Verify the production baseline before migrating.**
+**3. Establish what the hosted project has actually applied.**
+
+> The hosted migration history is **currently unverified**. Nothing in this
+> repository knows it, and no command in this document has been run against
+> production. Do not assume any particular range is already applied.
+
 ```bash
 node scripts/supabase.mjs link --project-ref <ref>
-node scripts/supabase.mjs migration list      # confirm 1–13 are applied
+node scripts/supabase.mjs migration list
 ```
-If they are not, stop — this branch assumes them.
 
-**4. Apply migrations.**
+Read the output. It is the only source of truth for what is applied remotely.
+
+**4. Review the full pending plan before pushing anything.**
+
+`db push` does **not** apply a fixed range. It applies **every** migration the
+linked project considers pending — which, with `supabase/migrations/` currently
+holding twenty migrations, may include all of them. Print the plan first:
+
 ```bash
-node scripts/supabase.mjs db push             # applies 14–17
+node scripts/supabase.mjs db push --dry-run
 ```
-Each aborts on its own verification failure, so a partial or wrong apply fails
-loudly rather than silently.
 
-**5. First administrator.**
+`--dry-run` is supported by the pinned CLI 2.117.0 and documented by it as
+"Print the migrations that would be applied, but don't actually apply them."
+Confirm the listed set is exactly what you intend to apply, and stop if it is
+not.
+
+**5. Apply migrations.**
+```bash
+node scripts/supabase.mjs db push
+```
+Each migration aborts on its own verification failure, so a partial or wrong
+apply fails loudly rather than silently. That is a safeguard against a broken
+migration, not against pushing more migrations than you meant to — only step 4
+protects you from that.
+
+*Historical note:* migrations 14–17 are the ones that introduced the
+administrator surface described in this document (roles and the audit log,
+applications and attempts, the user directory, platform stats). That is what
+they added; it is **not** a statement that they are the pending set today.
+
+**6. First administrator.**
 ```bash
 SUPABASE_SECRET_KEY=… node scripts/bootstrap-admin.mjs you@kiasa.tech
 node scripts/bootstrap-admin.mjs --list
@@ -696,7 +724,7 @@ frontend* (published in the client bundle); *migration inserting a user id* (the
 id does not exist until that person registers, and it commits a real person's
 identity to the repository).
 
-**6. Merge to `main`** — Vercel deploys production.
+**7. Merge to `main`** — Vercel deploys production.
 
 ### Production verification checklist
 
