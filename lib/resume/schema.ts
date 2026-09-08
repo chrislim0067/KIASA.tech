@@ -1,12 +1,16 @@
 import { z } from 'zod';
 
+// Imported from `lib/profile/schema` directly rather than through the barrel.
+// The barrel also re-exports the data layer, and this module is reachable from
+// a Client Component — going through it would compile every query function into
+// the JavaScript a candidate downloads. `schema` is nothing but constants.
 import {
   EXPERIENCE_EMPLOYMENT_TYPES,
   WORK_MODES,
   SKILL_PROFICIENCIES,
   TEXT_LIMITS,
   PATTERNS,
-} from '@/lib/profile';
+} from '@/lib/profile/schema';
 
 /**
  * The shape a resume is read into.

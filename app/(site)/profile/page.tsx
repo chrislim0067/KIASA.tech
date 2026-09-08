@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import ProfileShell from '@/components/profile/ProfileShell';
+import ImportConsole from '@/components/resume/ImportConsole';
+import { buildResumePrompt } from '@/lib/resume/prompt';
 import { requireCandidate } from '@/lib/candidate/session';
 import { getCandidateSnapshot, buildCompletenessReport } from '@/lib/profile';
 
@@ -124,22 +126,14 @@ export default async function ProfilePage({
       {/*
         The shortcut, offered before the list of steps rather than after it.
         Someone landing on an empty profile should see the one-minute route
-        before the twenty-minute one — and it is a link, not a redirect, because
-        typing it in by hand stays a first-class way through.
+        before the twenty-minute one — and it opens in place, because sending
+        them to another page to start a task they might abandon loses them.
+
+        The prompt is built on the server so `zod` and the field definitions
+        stay out of the JavaScript every candidate downloads.
       */}
       {!ready ? (
-        <Link href="/profile/resume" className="kprof__step kresume__promo">
-          <span className="kprof__stepMark" aria-hidden="true">
-            ⇪
-          </span>
-          <span className="kprof__stepBody">
-            <span className="kprof__stepTitle">Import your résumé</span>
-            <span className="kprof__stepNote">
-              Upload a PDF and we will fill most of this in. You check everything before any of
-              it is saved.
-            </span>
-          </span>
-        </Link>
+        <ImportConsole prompt={buildResumePrompt()} />
       ) : null}
 
       <div className="kprof__progress">
