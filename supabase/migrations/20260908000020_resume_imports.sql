@@ -41,10 +41,22 @@ create table public.resume_imports (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
 
+  -- HOW THE DRAFT GOT HERE.
+  --
+  -- 'upload' is a PDF in the private bucket, read by a model server-side.
+  -- 'pasted' is a draft the candidate produced in Claude themselves and pasted
+  -- in — the same review and the same confirmation, with no API key and no cost
+  -- per résumé. Recorded rather than inferred from a null path, because "where
+  -- did this come from" is a question worth being able to answer directly.
+  source_kind text not null default 'upload'
+    constraint resume_imports_source_kind_allowed check (source_kind in ('upload', 'pasted')),
+
   -- Where the original sits in the private `resumes` bucket. Kept so a review
   -- can be reopened against the source, and so deletion can clean up the file.
-  storage_path text not null
-    constraint resume_imports_storage_path_length check (length(storage_path) between 1 and 500),
+  -- Null for a pasted draft: there is no file, and inventing a path for one
+  -- would make the delete path lie about what it removed.
+  storage_path text
+    constraint resume_imports_storage_path_length check (storage_path is null or length(storage_path) between 1 and 500),
   file_name text
     constraint resume_imports_file_name_length check (file_name is null or length(file_name) <= 300),
   file_size_bytes integer

@@ -30,6 +30,9 @@
   --kprof-head: var(--kprof-font-head), 'Syncopate', 'Segoe UI', sans-serif;
   --kprof-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;
+  /* The import console only. A <dialog> opened with showModal() paints in the
+     top layer but is still a DOM descendant of .kprof, so it inherits this. */
+  --kprof-mono: ui-monospace, SFMono-Regular, 'Cascadia Mono', Menlo, Consolas, monospace;
 
   color-scheme: dark;
   min-height: 100dvh;
@@ -184,8 +187,12 @@ body:has(.kprof) { margin: 0; }
 .kprof__stepMark--todo { border-color: rgba(240, 201, 119, 0.5); color: var(--kprof-warn); }
 
 .kprof__stepBody { min-width: 0; }
-.kprof__stepTitle { font-weight: 600; margin-bottom: 0.15rem; }
-.kprof__stepNote { color: var(--kprof-muted); font-size: 0.88rem; }
+
+/* Both are <span>, so they need an explicit block display. Without it they run
+   together on one line — "About youLegal name, contact email…" — and the
+   margin-bottom below silently does nothing, which is what shipped. */
+.kprof__stepTitle { display: block; font-weight: 600; margin-bottom: 0.15rem; }
+.kprof__stepNote { display: block; color: var(--kprof-muted); font-size: 0.88rem; }
 
 /* ---------------------------------------------------------------- forms -- */
 .kprof__form { display: grid; gap: 1.1rem; max-width: 44rem; }
@@ -478,3 +485,175 @@ body:has(.kprof) { margin: 0; }
 }
 
 .kresume__discard .kprof__hint { margin: 0; }
+
+/* ---------------------------------------------------------------------------
+   Import console
+   ---------------------------------------------------------------------------
+   A terminal look, on purpose. The person is the one doing the work here —
+   copying an instruction out and pasting an answer back — and a console says
+   that honestly, where a form would imply the machine did it for them.
+   -------------------------------------------------------------------------- */
+
+.kconsole__trigger {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  border-color: var(--kprof-line);
+  background: var(--kprof-accent-dim);
+  margin-bottom: 1.5rem;
+}
+
+.kconsole {
+  width: min(46rem, calc(100vw - 2rem));
+  max-height: min(46rem, calc(100vh - 2rem));
+  padding: 0;
+  border: 1px solid var(--kprof-line);
+  border-radius: var(--kprof-radius);
+  background: var(--kprof-bg);
+  color: var(--kprof-text);
+  overflow: hidden;
+}
+
+.kconsole::backdrop {
+  background: rgba(4, 5, 8, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.kconsole__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--kprof-line-soft);
+  background: var(--kprof-surface);
+}
+
+.kconsole__title {
+  font-family: var(--kprof-mono, ui-monospace, SFMono-Regular, 'Cascadia Mono', Menlo, monospace);
+  font-size: 0.8rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--kprof-muted);
+}
+
+.kconsole__close {
+  border: 0;
+  background: none;
+  color: var(--kprof-muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  cursor: pointer;
+  border-radius: var(--kprof-radius-sm);
+}
+.kconsole__close:hover { color: var(--kprof-text); background: rgba(255, 255, 255, 0.06); }
+
+/* The dialog is a fixed height with one scrolling region, so the channel at the
+   bottom stays where the eye left it instead of the whole page growing. */
+.kconsole__body {
+  padding: 1.1rem;
+  overflow-y: auto;
+  max-height: calc(min(46rem, 100vh - 2rem) - 7.5rem);
+  display: grid;
+  gap: 1.35rem;
+}
+
+.kconsole__step { display: grid; gap: 0.6rem; }
+
+.kconsole__stepTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.kconsole__num {
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--kprof-line);
+  color: var(--kprof-accent);
+  font-size: 0.78rem;
+}
+
+.kconsole__hint { margin: 0; color: var(--kprof-muted); font-size: 0.88rem; }
+
+.kconsole__row { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+
+.kconsole__details { font-size: 0.85rem; color: var(--kprof-muted); }
+.kconsole__details summary { cursor: pointer; }
+
+.kconsole__pre {
+  margin: 0.6rem 0 0;
+  padding: 0.8rem;
+  max-height: 14rem;
+  overflow: auto;
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius-sm);
+  background: rgba(0, 0, 0, 0.35);
+  font-family: var(--kprof-mono, ui-monospace, SFMono-Regular, 'Cascadia Mono', Menlo, monospace);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--kprof-muted);
+}
+
+.kconsole__input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius-sm);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--kprof-text);
+  font-family: var(--kprof-mono, ui-monospace, SFMono-Regular, 'Cascadia Mono', Menlo, monospace);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+.kconsole__input:focus { outline: none; border-color: var(--kprof-line); }
+
+/* The channel. Fixed minimum height so it does not jump as lines arrive. */
+.kconsole__channel {
+  min-height: 8rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius-sm);
+  background: rgba(0, 0, 0, 0.4);
+  font-family: var(--kprof-mono, ui-monospace, SFMono-Regular, 'Cascadia Mono', Menlo, monospace);
+  font-size: 0.76rem;
+  line-height: 1.7;
+}
+
+.kconsole__line { display: flex; gap: 0.55rem; }
+.kconsole__mark { flex: none; width: 0.8rem; opacity: 0.8; }
+
+.kconsole__line--in { color: var(--kprof-text); }
+.kconsole__line--out { color: var(--kprof-accent); }
+.kconsole__line--ok { color: var(--kprof-success); }
+.kconsole__line--err { color: var(--kprof-danger); }
+.kconsole__line--note { color: var(--kprof-muted); }
+
+.kconsole__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
+  border-top: 1px solid var(--kprof-line-soft);
+  background: var(--kprof-surface);
+}
+
+.kconsole__status {
+  font-family: var(--kprof-mono, ui-monospace, SFMono-Regular, 'Cascadia Mono', Menlo, monospace);
+  font-size: 0.76rem;
+  color: var(--kprof-muted);
+}
+
+.kconsole__foot .kprof__button:disabled { opacity: 0.4; cursor: not-allowed; }
