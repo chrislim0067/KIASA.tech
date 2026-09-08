@@ -33,8 +33,17 @@ interface Step {
   readonly required: boolean;
 }
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ imported?: string }>;
+}) {
   const { supabase, user } = await requireCandidate();
+
+  // Set by the résumé confirm action, so the page that follows an import says
+  // what actually happened instead of leaving someone to work it out by
+  // comparing the list against what they remember.
+  const { imported } = await searchParams;
 
   const snapshotResult = await getCandidateSnapshot(supabase, user.id);
 
@@ -106,6 +115,33 @@ export default async function ProfilePage() {
       lede="KIASA uses this to fill in applications on your behalf. Nothing is invented — anything you leave blank is treated as unknown and will be asked about rather than guessed."
       email={user.email ?? null}
     >
+      {imported ? (
+        <div className="kprof__notice kprof__notice--ok" style={{ marginBottom: '1.5rem' }}>
+          <strong>Résumé imported.</strong> {imported.slice(0, 400)}
+        </div>
+      ) : null}
+
+      {/*
+        The shortcut, offered before the list of steps rather than after it.
+        Someone landing on an empty profile should see the one-minute route
+        before the twenty-minute one — and it is a link, not a redirect, because
+        typing it in by hand stays a first-class way through.
+      */}
+      {!ready ? (
+        <Link href="/profile/resume" className="kprof__step kresume__promo">
+          <span className="kprof__stepMark" aria-hidden="true">
+            ⇪
+          </span>
+          <span className="kprof__stepBody">
+            <span className="kprof__stepTitle">Import your résumé</span>
+            <span className="kprof__stepNote">
+              Upload a PDF and we will fill most of this in. You check everything before any of
+              it is saved.
+            </span>
+          </span>
+        </Link>
+      ) : null}
+
       <div className="kprof__progress">
         <div className="kprof__progressBar">
           <div
