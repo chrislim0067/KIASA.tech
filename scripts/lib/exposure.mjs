@@ -24,6 +24,8 @@
  * a clean result.
  */
 
+import { isIP } from 'node:net';
+
 export const CLASSES = {
   NOT_RUNNING: { name: 'STACK_NOT_RUNNING', code: 3 },
   LOOPBACK: { name: 'LOOPBACK_ONLY_VERIFIED', code: 0 },
@@ -31,10 +33,48 @@ export const CLASSES = {
   UNKNOWN: { name: 'UNKNOWN_OR_INCOMPLETE', code: 2 },
 };
 
-const LOOPBACK_V4 = /^127\./;
-const isLoopbackHostIp = (ip) =>
-  LOOPBACK_V4.test(ip) || ip === '::1' || ip === '[::1]' || ip === 'localhost';
+/** Docker's own spelling for "every interface". */
 const isWildcardHostIp = (ip) => ip === '0.0.0.0' || ip === '::' || ip === '[::]' || ip === '';
+
+/**
+ * Parse a Docker `HostIp` with a REAL address parser.
+ *
+ * The previous version tested loopback with `/^127\./`, which is a string
+ * prefix and not an address check: `127.evil` matched, was recorded as
+ * loopback, and could carry a run to LOOPBACK_ONLY_VERIFIED. Family was
+ * decided by "does it contain a colon", which is the same class of guess.
+ *
+ * Returns `{ ok: true, … }` or `{ ok: false, reason }`. Anything that is not a
+ * string, or is a non-empty string that `net.isIP` refuses, fails closed —
+ * unparseable evidence is missing evidence, never benign.
+ */
+export function parseHostIp(hostIp) {
+  if (typeof hostIp !== 'string') {
+    return {
+      ok: false,
+      reason: `HostIp is ${hostIp === undefined ? 'missing' : typeof hostIp}, expected a string`,
+    };
+  }
+  if (isWildcardHostIp(hostIp)) {
+    // '' is Docker's "all interfaces"; family is unknown from the string alone.
+    const family = hostIp === '::' || hostIp === '[::]' ? 6 : hostIp === '0.0.0.0' ? 4 : 0;
+    return { ok: true, hostIp, family, wildcard: true, loopback: false };
+  }
+
+  // A bracketed IPv6 literal is valid in a host:port context.
+  const bare = hostIp.startsWith('[') && hostIp.endsWith(']') ? hostIp.slice(1, -1) : hostIp;
+  const family = isIP(bare);
+  if (family !== 4 && family !== 6) {
+    return { ok: false, reason: `HostIp ${JSON.stringify(hostIp)} is not a valid IP address` };
+  }
+
+  const loopback =
+    family === 4
+      ? bare.split('.')[0] === '127'
+      : bare === '::1' || bare.toLowerCase() === '0:0:0:0:0:0:0:1';
+
+  return { ok: true, hostIp, family, wildcard: false, loopback };
+}
 
 /**
  * Collect published bindings for every candidate container.
@@ -162,15 +202,24 @@ export function discoverBindings({ listContainers, inspectContainer }) {
           containerHadProblem = true;
           continue;
         }
-        const hostIp = typeof b.HostIp === 'string' ? b.HostIp : '';
+        const parsed = parseHostIp(b.HostIp);
+        if (!parsed.ok) {
+          result.errors.push({
+            kind: 'invalid-host-ip',
+            container: name,
+            detail: `${containerPort}: ${parsed.reason}`,
+          });
+          containerHadProblem = true;
+          continue;
+        }
         pending.push({
           container: name,
           containerPort,
-          hostIp,
+          hostIp: parsed.hostIp,
           hostPort,
-          family: hostIp.includes(':') ? 6 : 4,
-          wildcard: isWildcardHostIp(hostIp),
-          loopback: isLoopbackHostIp(hostIp),
+          family: parsed.family,
+          wildcard: parsed.wildcard,
+          loopback: parsed.loopback,
         });
       }
     }
@@ -289,24 +338,42 @@ export function classify(evidence) {
     };
   }
 
-  if (externalTested.v4 === 0 && externalTested.v6 === 0) {
+  /*
+   * EXIT 0 REQUIRES POSITIVE, VALID COVERAGE OF BOTH FAMILIES.
+   *
+   * The previous logic only rejected `v6 === 0` and the both-zero case, so
+   * `{ v4: 0, v6: 1 }` fell through to LOOPBACK_ONLY_VERIFIED — announcing a
+   * verified result while IPv4, the family every measurement on this machine
+   * found exposed, had never been probed at all. A family that was not tested
+   * is not a family that passed.
+   */
+  const counts = { v4: externalTested?.v4, v6: externalTested?.v6 };
+  const badCount = (n) => !Number.isInteger(n) || n < 0;
+  if (badCount(counts.v4) || badCount(counts.v6)) {
     return {
       ...CLASSES.UNKNOWN,
       notes: [
-        'No non-loopback interface was available to test against, so external',
-        'reachability was never exercised.',
+        'External-coverage counts are missing or not whole numbers, so how much',
+        'of the host was actually probed is unknown.',
+        `  IPv4: ${JSON.stringify(counts.v4)}   IPv6: ${JSON.stringify(counts.v6)}`,
       ],
     };
   }
 
-  if (externalTested.v6 === 0) {
+  const untested = [];
+  if (counts.v4 === 0) untested.push('IPv4');
+  if (counts.v6 === 0) untested.push('IPv6');
+  if (untested.length > 0) {
     return {
       ...CLASSES.UNKNOWN,
       notes: [
-        'Every binding is loopback-scoped and nothing answered externally on IPv4,',
-        'but IPv6 could not be tested: this host has no routable non-loopback IPv6',
-        'address. The IPv4 result is real; the IPv6 result is absent, so the',
-        'overall answer is incomplete rather than verified.',
+        `Every binding is loopback-scoped and nothing answered externally, but ` +
+          `${untested.join(' and ')} ${untested.length > 1 ? 'were' : 'was'} never tested:`,
+        `  IPv4 interfaces probed: ${counts.v4}`,
+        `  IPv6 interfaces probed: ${counts.v6}`,
+        '',
+        'An untested family is not a passing family. Both must be positively',
+        'covered before this can be called verified.',
       ],
     };
   }
@@ -315,7 +382,7 @@ export function classify(evidence) {
     ...CLASSES.LOOPBACK,
     notes: [
       'Every published binding is loopback-scoped, and no port answered on any',
-      `non-loopback address across ${externalTested.v4} IPv4 and ${externalTested.v6} IPv6 interface(s).`,
+      `non-loopback address across ${counts.v4} IPv4 and ${counts.v6} IPv6 interface(s).`,
       '',
       'This describes THIS host at THIS moment. It is not a property of the',
       'repository: nothing here can pin the bind address.',

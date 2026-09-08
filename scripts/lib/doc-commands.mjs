@@ -157,6 +157,27 @@ export const STALE_CLAIMS = [
     why: '`db push` applies all pending migrations, not a fixed range',
     test: (text) => /applies\s+14\s*[‐-―-]\s*17\b/i.test(text),
   },
+  {
+    id: 'asserted-applied-migration-range',
+    // Matches an ASSERTION that a fixed range is applied, in either voice:
+    // "migrations 1–13 applied", "has migrations 1-13 applied".
+    // Deliberately does NOT match the historical note "migrations 14–17 are
+    // the ones that introduced …", which describes what they contain rather
+    // than claiming what production currently has.
+    why: 'the hosted migration history is unverified; never assert a fixed applied range',
+    test: (text) =>
+      /migrations?\s+\d+\s*[‐-―-]\s*\d+\s+(?:are\s+|is\s+|were\s+|has\s+been\s+)?applied/i.test(text),
+  },
+  {
+    id: 'hardcoded-migration-count',
+    // A literal count of the migration directory goes stale the next time one
+    // is added, and this document is read while pointing at production.
+    why: 'do not hardcode how many migrations exist; read the directory',
+    test: (text) =>
+      /\b(?:holding|contains?|currently\s+has|there\s+are)\s+(?:twenty|thirty|forty|\d{1,3})\s+migrations\b/i.test(
+        text
+      ),
+  },
 ];
 
 /* ------------------------------------------------------------ the scanner */

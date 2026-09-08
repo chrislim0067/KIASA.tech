@@ -225,6 +225,42 @@ check(
   )
 );
 
+/* The two claims removed from docs/ADMIN.md in this pass. */
+for (const sample of [
+  'Not confirmed that production has migrations 1–13 applied.',
+  'Not confirmed that production has migrations 1-13 applied.',
+  'migrations 1–20 are applied',
+  'migrations 5–9 were applied',
+]) {
+  check(
+    `asserting a fixed applied range is rejected: "${sample.slice(0, 48)}"`,
+    STALE_CLAIMS.some((c) => c.test(sample))
+  );
+}
+
+for (const sample of [
+  'with `supabase/migrations/` currently holding twenty migrations',
+  'the directory contains 20 migrations',
+  'there are 20 migrations',
+]) {
+  check(
+    `a hardcoded migration count is rejected: "${sample.slice(0, 48)}"`,
+    STALE_CLAIMS.some((c) => c.test(sample))
+  );
+}
+
+for (const sample of [
+  'migrations 14–17 are the ones that introduced the administrator surface',
+  'The hosted migration history is unverified.',
+  'It applies every migration the linked project considers pending',
+  'read the directory, and read the plan',
+]) {
+  check(
+    `honest/historical wording is accepted: "${sample.slice(0, 48)}"`,
+    !STALE_CLAIMS.some((c) => c.test(sample))
+  );
+}
+
 /* ------------------------------------------- 5. the repository itself */
 
 section('5. Tracked documentation');

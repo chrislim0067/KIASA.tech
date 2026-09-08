@@ -37,7 +37,7 @@ headers confirm `Server: Vercel` and `X-Nextjs-Prerender`.
 |---|---|---|
 | GitHub account | `gh` not authenticated | Repository set not enumerated; deployed repo inferred from production behaviour instead. |
 | Vercel | no CLI, no token | Project settings, domains, env vars and deployment logs unverified. |
-| Supabase (hosted) | no CLI auth, no keys | **Not confirmed that production has migrations 1–13 applied.** The local migration set is the only source of truth used here. |
+| Supabase (hosted) | no CLI auth, no keys | **The hosted migration history is unverified.** No fixed range is assumed to be applied or pending; the local migration set is the only source of truth used here. Establish the remote state with `migration list` before any push (see [Deployment](#deployment)). |
 | Docker (KIASA) | n/a | No Dockerfile or compose file exists in the repository. |
 
 Everything below marked *verified* was verified against a local stack.
@@ -684,8 +684,10 @@ Read the output. It is the only source of truth for what is applied remotely.
 **4. Review the full pending plan before pushing anything.**
 
 `db push` does **not** apply a fixed range. It applies **every** migration the
-linked project considers pending — which, with `supabase/migrations/` currently
-holding twenty migrations, may include all of them. Print the plan first:
+linked project considers pending, which may be every migration in
+`supabase/migrations/`. Do not assume a count here — this document would go
+stale the next time one is added; read the directory, and read the plan. Print
+it first:
 
 ```bash
 node scripts/supabase.mjs db push --dry-run
