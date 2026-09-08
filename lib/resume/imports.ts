@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { AdminClient } from '@/lib/supabase/admin';
+import type { Database } from '@/lib/supabase/database.types';
 import type { ExtractFailureClass } from '@/lib/resume/extract';
 import { parseExtraction, type ResumeExtraction } from '@/lib/resume/schema';
 
@@ -30,35 +31,26 @@ import { parseExtraction, type ResumeExtraction } from '@/lib/resume/schema';
 /* -------------------------------------------------------------------- types */
 
 /**
- * The row shape.
+ * The row shape, projected from the generated schema.
  *
- * HAND-WRITTEN, TEMPORARILY. Everywhere else in this codebase a row type is
- * projected from `lib/supabase/database.types.ts` so that a schema change
- * surfaces as a compile error. That file is regenerated from a running
- * database, and the local stack is unreachable at the time of writing
- * (see docs/ADMIN.md), so this mirrors migration 20 by hand instead.
+ * Previously hand-written, because `resume_imports` was missing from
+ * `lib/supabase/database.types.ts` and no database was reachable to regenerate
+ * it. It is generated now, so the table is the source of truth again and a
+ * migration that changes a column surfaces here as a compile error.
  *
- * It is not left to trust: `scripts/test-resume-import.mjs` reads
- * `information_schema.columns` and fails if this list and the table disagree in
- * either direction. Regenerate the types and delete this block as soon as a
- * database is reachable.
+ * Three columns are narrowed past what the generator can express. Postgres
+ * CHECK constraints restrict them to a fixed vocabulary, but a CHECK is not a
+ * type the generator can read, so it emits `string`. The narrowing is still
+ * enforced by the database and is verified against
+ * `information_schema.columns` by `scripts/test-resume-import.mjs`.
  */
-export interface ResumeImportRow {
-  id: string;
-  user_id: string;
+type ResumeImportTable = Database['public']['Tables']['resume_imports'];
+
+export interface ResumeImportRow
+  extends Omit<ResumeImportTable['Row'], 'source_kind' | 'status' | 'failure_class'> {
   source_kind: 'upload' | 'pasted';
-  storage_path: string | null;
-  file_name: string | null;
-  file_size_bytes: number | null;
   status: ResumeImportStatus;
   failure_class: ExtractFailureClass | null;
-  failure_code: string | null;
-  extracted: unknown;
-  model: string | null;
-  parsed_at: string | null;
-  confirmed_at: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 export const RESUME_IMPORT_STATUSES = [
@@ -98,14 +90,17 @@ function hydrate(row: ResumeImportRow): ResumeImport {
 }
 
 /**
- * `resume_imports` is absent from the generated `Database` type until it is
- * regenerated, so the table is reached through a deliberately narrow untyped
- * view of the client. Confined to this file, and every read is re-validated by
- * `hydrate` on the way out.
+ * The table, typed against the generated schema.
+ *
+ * The single cast is on the CLIENT, not on any payload. Callers take
+ * `unknown` because the candidate's session client is built by
+ * `createServerClient` without a schema generic, so its static type is looser
+ * than what it actually is at runtime; both it and `AdminClient` are
+ * `SupabaseClient<Database>` in practice. Narrowing here means every column
+ * name and every payload below is checked against the real schema.
  */
-type AnyTableClient = SupabaseClient<never, 'public', never>;
-const table = (client: unknown) =>
-  (client as unknown as AnyTableClient).from('resume_imports' as never);
+type ResumeImportClient = SupabaseClient<Database>;
+const table = (client: unknown) => (client as ResumeImportClient).from('resume_imports');
 
 /* ------------------------------------------------------- candidate's session */
 
@@ -166,7 +161,7 @@ export async function saveDraft(
   draft: ResumeExtraction
 ): Promise<boolean> {
   const { error } = await table(supabase)
-    .update({ extracted: draft } as never)
+    .update({ extracted: draft })
     .eq('id', importId)
     .eq('status', 'parsed');
 
@@ -184,7 +179,7 @@ export async function saveDraft(
  */
 export async function discardImport(supabase: unknown, importId: string): Promise<boolean> {
   const { error } = await table(supabase)
-    .update({ status: 'discarded', failure_class: null, failure_code: null } as never)
+    .update({ status: 'discarded', failure_class: null, failure_code: null })
     .eq('id', importId)
     .in('status', ['parsed', 'failed']);
 
@@ -219,7 +214,7 @@ export async function createImport(
       file_name: file.fileName,
       file_size_bytes: file.fileSizeBytes,
       status: 'parsing',
-    } as never)
+    })
     .select('id')
     .maybeSingle<{ id: string }>();
 
@@ -242,7 +237,7 @@ export async function markParsed(
       parsed_at: new Date().toISOString(),
       failure_class: null,
       failure_code: null,
-    } as never)
+    })
     .eq('id', importId);
 
   return !error;
@@ -267,7 +262,7 @@ export async function markFailed(
       status: 'failed',
       failure_class: failureClass,
       failure_code: failureCode.slice(0, 100),
-    } as never)
+    })
     .eq('id', importId);
 
   return !error;
@@ -282,7 +277,7 @@ export async function markFailed(
  */
 export async function markConfirmed(admin: AdminClient, importId: string): Promise<boolean> {
   const { error } = await table(admin)
-    .update({ status: 'confirmed', confirmed_at: new Date().toISOString() } as never)
+    .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
     .eq('id', importId)
     .eq('status', 'parsed');
 

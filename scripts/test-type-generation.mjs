@@ -56,7 +56,7 @@ section('1. Generation failure leaves the existing file intact');
 /* ------------------------------------------------------- 2. loopback guard */
 section('2. Non-loopback databases are refused without contacting them');
 for (const url of [
-  'postgresql://postgres:pw@db.abcdefghijklmnop.supabase.co:5432/postgres',
+  'postgresql://postgres:pw@db.abcdefghijklmnop.supabase.co:5432/postgres', // secret-scan:allow postgres-url-with-password -- placeholder host, literal password "pw", never connected to
   'postgresql://postgres:pw@203.0.113.10:5432/postgres',
   'postgresql://postgres:pw@example.com:5432/postgres',
 ]) {

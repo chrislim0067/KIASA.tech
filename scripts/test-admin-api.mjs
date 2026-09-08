@@ -43,9 +43,26 @@ function localEnv() {
   };
 }
 
-const { url: API_URL, key: PUBLISHABLE_KEY } = localEnv();
+const { url: API_URL, key: PUBLISHABLE_KEY, secret: SECRET_KEY } = localEnv();
 const PORT = process.env.ADMIN_TEST_PORT ?? '3199';
 const BASE = `http://127.0.0.1:${PORT}`;
+
+/**
+ * The environment the spawned Next server needs.
+ *
+ * Every value comes from `supabase status` on the LOCAL stack, which this
+ * file has already refused to run without. Passing them explicitly is what
+ * lets the suite run on a clean checkout and in CI: inheriting only
+ * process.env meant the server started with no Supabase configuration at
+ * all, the admin surface answered 503 to everything, and the suite could
+ * only pass on a machine that happened to have a hand-made .env.local.
+ */
+const SERVER_ENV = {
+  NEXT_PUBLIC_SUPABASE_URL: API_URL,
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
+  SUPABASE_SECRET_KEY: SECRET_KEY,
+  NEXT_PUBLIC_SITE_URL: BASE,
+};
 const CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_kiasa';
 
 const sql = (statement) =>
@@ -121,7 +138,7 @@ async function startServer() {
   server = spawn('npm', ['start', '--', '-p', PORT], {
     cwd: process.cwd(),
     shell: process.platform === 'win32',
-    env: { ...process.env, PORT },
+    env: { ...process.env, ...SERVER_ENV, PORT },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 

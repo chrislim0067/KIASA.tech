@@ -27,12 +27,33 @@ function localEnv() {
   if (!env.API_URL || !/127\.0\.0\.1|localhost/.test(env.API_URL)) {
     throw new Error('Local Supabase is not running, or the API URL is not local.');
   }
-  return { url: env.API_URL, key: env.PUBLISHABLE_KEY || env.ANON_KEY };
+  return {
+    url: env.API_URL,
+    key: env.PUBLISHABLE_KEY || env.ANON_KEY,
+    secret: env.SECRET_KEY || env.SERVICE_ROLE_KEY,
+  };
 }
 
-const { url: API_URL, key: PUBLISHABLE_KEY } = localEnv();
+const { url: API_URL, key: PUBLISHABLE_KEY, secret: SECRET_KEY } = localEnv();
 const PORT = process.env.PROFILE_TEST_PORT ?? '3197';
 const BASE = `http://127.0.0.1:${PORT}`;
+
+/**
+ * The environment the spawned Next server needs.
+ *
+ * Every value comes from `supabase status` on the LOCAL stack, which this
+ * file has already refused to run without. Passing them explicitly is what
+ * lets the suite run on a clean checkout and in CI: inheriting only
+ * process.env meant the server started with no Supabase configuration at
+ * all, the admin surface answered 503 to everything, and the suite could
+ * only pass on a machine that happened to have a hand-made .env.local.
+ */
+const SERVER_ENV = {
+  NEXT_PUBLIC_SUPABASE_URL: API_URL,
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
+  SUPABASE_SECRET_KEY: SECRET_KEY,
+  NEXT_PUBLIC_SITE_URL: BASE,
+};
 const CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_kiasa';
 
 const sql = (s) =>
@@ -89,6 +110,7 @@ let server;
 async function startServer() {
   server = spawn('npm', ['start', '--', '-p', PORT], {
     shell: process.platform === 'win32',
+    env: { ...process.env, ...SERVER_ENV, PORT },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   server.stdout.on('data', () => {});
@@ -194,7 +216,11 @@ async function main() {
 
   section('The hub reports what is still missing');
   const hub = await req('/profile', approvedCookie);
-  const html = await hub.text();
+  // React inserts an empty comment between adjacent expressions when it
+  // server-renders, so `{doneCount} of {requiredSteps.length} required` arrives
+  // as `0<!-- --> of <!-- -->4 required`. Strip those separators before matching
+  // text, or every assertion about rendered copy breaks on markup React chose.
+  const html = (await hub.text()).split('<!-- -->').join('');
   check('a fresh profile is not reported as ready', !/Your profile is ready/.test(html));
   check('the required-step count is shown', /of 4 required/.test(html), 'expected "0 of 4 required"');
   check(
