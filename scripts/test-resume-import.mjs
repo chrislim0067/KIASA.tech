@@ -220,7 +220,7 @@ async function main() {
   const importId = sql(
     `insert into public.resume_imports (user_id, storage_path, status, extracted, model, parsed_at)
      values ('${alice.id}', '${alice.id}/${randomUUID()}.pdf', 'parsed',
-             '{"legal_first_name":"Alice","work_experiences":[]}'::jsonb, 'claude-opus-5', now())
+             '{"legal_first_name":"Alice","work_experiences":[]}'::jsonb, 'google/gemini-2.5-flash', now())
      returning id`
   );
   check('the server can create one', /^[0-9a-f-]{36}$/.test(importId), importId);

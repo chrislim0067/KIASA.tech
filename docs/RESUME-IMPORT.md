@@ -19,7 +19,8 @@ easiest to break. So:
 | Step | What happens | Where |
 |---|---|---|
 | Upload | Browser → private `resumes` bucket, under the candidate's own session | `components/resume/ResumeUpload.tsx` |
-| Parse | One Claude call, PDF sent inline as a base64 document block | `lib/resume/extract.ts` |
+| Extract | PDF text read **on this server**; the file never leaves it | `lib/resume/pdf-text.ts` |
+| Parse | One OpenRouter call carrying only the extracted text | `lib/resume/openrouter.ts` |
 | Draft | Stored in `resume_imports.extracted` — a proposal, not a fact | `lib/resume/imports.ts` |
 | Review | Everything shown, everything editable, everything droppable | `components/resume/ReviewForm.tsx` |
 | Confirm | Written through the candidate's own session and the ordinary data layer | `lib/resume/apply.ts` |
@@ -54,18 +55,47 @@ adds no new path by which the secret key touches candidate data.
    one employer is worse than listing one twice: a duplicate can be deleted, a
    merged-away role cannot be recovered.
 
+## The provider, and what it receives
+
+**OpenRouter is the only AI API this application may call.** There is no second
+provider and no fallback — a fallback is a second thing to secure, a second
+billing surface, and a second set of failure modes that only appear when the
+first provider is already having a bad day. Direct Anthropic API use is
+intentionally unsupported. Claude Max, if it is ever used, remains a separate
+capability the user drives on their own computer; there is no backend path to it
+and there must not be one.
+
+**The PDF never leaves this server.** The earlier implementation base64-encoded
+the file into the request, because that provider read PDFs natively. It worked,
+and it meant a third party received the whole document — the embedded
+photograph, the producer metadata, the revision history a PDF quietly carries.
+Now `lib/resume/pdf-text.ts` extracts the text layer locally with `unpdf`
+(2 MB, zero dependencies, no native module, no worker thread — the smallest
+thing that runs on a Vercel Node runtime), and only that text is sent.
+
+Local extraction also makes the failure modes honest. A scanned résumé has no
+text layer; extracting here lets the product *say so* and offer the paste path,
+instead of sending an empty document to a model and receiving a fluent,
+entirely invented career history back.
+
+Bounded before anything is sent: 10 MB file, 30 pages, 80 000 characters, a
+20-second parse timeout, and a 200-character floor below which the document is
+treated as a scan.
+
 ## Configuration
 
 ```
-ANTHROPIC_API_KEY=      # server-side only, never NEXT_PUBLIC_
-SUPABASE_SECRET_KEY=    # already required by the admin surface
+OPENROUTER_API_KEY=       # server-side only, never NEXT_PUBLIC_
+OPENROUTER_BASE_URL=      # optional; defaults to https://openrouter.ai/api/v1
+OPENROUTER_RESUME_MODEL=  # optional; defaults to google/gemini-2.5-flash
+SUPABASE_SECRET_KEY=      # already required by the admin surface
 ```
 
-Read in exactly one module (`lib/resume/extract.ts`), which begins with
-`import 'server-only'` — so the build fails if anything reachable from a client
-component imports it.
+The key is read in exactly one module (`lib/resume/openrouter.ts`), which begins
+with `import 'server-only'` — so the build fails if anything reachable from a
+client component imports it.
 
-With `ANTHROPIC_API_KEY` unset, `/profile/resume` says import is not switched on
+With `OPENROUTER_API_KEY` unset, `/profile/resume` says import is not switched on
 and the profile can still be filled in by hand. Nothing else degrades.
 
 On Vercel, add it as a plain (non-public) environment variable and redeploy.

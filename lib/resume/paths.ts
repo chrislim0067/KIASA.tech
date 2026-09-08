@@ -12,7 +12,7 @@ export const RESUME_BUCKET = 'resumes';
 
 export const RESUME_ROUTE = '/profile/resume';
 
-/** The only accepted upload type. Claude reads PDFs natively; nothing else applies. */
+/** The only accepted upload type. Text is extracted from it server-side. */
 export const RESUME_MIME = 'application/pdf';
 
 /** Matches the `resumes` bucket's own `file_size_limit`. */

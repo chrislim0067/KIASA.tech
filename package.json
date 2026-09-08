@@ -29,6 +29,7 @@
     "check:exposure": "node scripts/check-local-exposure.mjs",
     "scan:secrets": "node scripts/scan-secrets.mjs",
     "test:secrets": "node scripts/test-secret-scan.mjs",
+    "test:resume:provider": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-resume-provider.mjs",
     "test:docs": "node scripts/test-docs-commands.mjs",
     "test:exposure": "node scripts/test-exposure-diagnostic.mjs",
     "test:db": "node scripts/test-default-privileges.mjs && node scripts/test-profile-rls.mjs && node scripts/test-security-regressions.mjs && node scripts/test-whitespace-rules.mjs && node scripts/test-validation-parity.mjs && node scripts/test-data-layer.mjs && node scripts/test-job-state-and-url.mjs && node scripts/test-job-fetch.mjs && node scripts/test-job-extraction.mjs && node scripts/test-job-intake.mjs && node scripts/test-profile-cascade.mjs && node scripts/test-resume-import.mjs && node scripts/test-type-generation.mjs && node scripts/test-admin-authorization.mjs && node scripts/test-application-metrics.mjs && node scripts/test-user-approval.mjs",
@@ -38,7 +39,6 @@
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.124.0",
     "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.115.0",
     "gsap": "3.12.5",
@@ -46,6 +46,7 @@
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "three": "0.160.0",
+    "unpdf": "1.8.1",
     "zod": "^4.5.4"
   },
   "devDependencies": {
