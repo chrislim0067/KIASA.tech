@@ -100,6 +100,11 @@ create table public.resume_imports (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
+  -- An upload has a file; a pasted draft does not. Written as a biconditional
+  -- so neither half can drift: no fileless upload, and no orphan path left
+  -- behind on a paste for a delete to trip over.
+  constraint resume_imports_upload_has_file
+    check ((source_kind = 'upload') = (storage_path is not null)),
   -- A failure says why; anything else does not pretend to have failed.
   constraint resume_imports_failure_has_class
     check ((status = 'failed') = (failure_class is not null)),
@@ -190,6 +195,13 @@ begin
       using errcode = 'restrict_violation';
   end if;
 
+  -- How a draft got here is a fact about the past. Letting a pasted import
+  -- relabel itself as an upload would make it claim a file it never had.
+  if new.source_kind is distinct from old.source_kind then
+    raise exception 'resume_imports.source_kind is immutable'
+      using errcode = 'restrict_violation';
+  end if;
+
   -- Belt and braces over the RLS policy above: policies apply to `authenticated`
   -- only, and this says the same thing about `current_user` so a future role
   -- added to the table does not quietly inherit the ability to self-confirm.
@@ -204,8 +216,8 @@ end;
 $$;
 
 comment on function public.guard_resume_import_subject() is
-  'BEFORE UPDATE on resume_imports: pins the owner and the source file, and '
-  'refuses client-side self-confirmation.';
+  'BEFORE UPDATE on resume_imports: pins the owner, the source file and how the '
+  'draft got here, and refuses client-side self-confirmation.';
 
 create trigger resume_imports_zz_subject_immutable
   before update on public.resume_imports
