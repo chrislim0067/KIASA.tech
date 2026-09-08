@@ -20,7 +20,7 @@
  * Cross-platform: no shell redirection, no shell-specific syntax. Output is
  * captured through the child process's stdout and written by Node.
  */
-import { spawnSync } from 'node:child_process';
+import { supabaseSpawn } from './lib/supabase-cli.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -57,7 +57,7 @@ function looksValid(text) {
 }
 
 const dbUrl = process.env.DB_URL;
-const args = ['supabase', 'gen', 'types', 'typescript', '--schema', 'public'];
+const args = ['gen', 'types', 'typescript', '--schema', 'public'];
 
 if (dbUrl) {
   assertLocal(dbUrl);
@@ -88,11 +88,9 @@ function fail(message, detail = '') {
   process.exit(1);
 }
 
-const result = spawnSync('npx', args, {
-  encoding: 'utf8',
-  maxBuffer: 32 * 1024 * 1024,
-  shell: process.platform === 'win32', // npx is a .cmd shim on Windows
-});
+// The repository-local pinned CLI. Never `npx`, which would download a
+// different version rather than failing when it is missing.
+const result = supabaseSpawn(args);
 
 if (result.error) fail('could not run the Supabase CLI', String(result.error.message));
 if (result.status !== 0) fail(`Supabase CLI exited with code ${result.status}`, result.stderr ?? '');

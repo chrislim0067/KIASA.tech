@@ -37,7 +37,7 @@ headers confirm `Server: Vercel` and `X-Nextjs-Prerender`.
 |---|---|---|
 | GitHub account | `gh` not authenticated | Repository set not enumerated; deployed repo inferred from production behaviour instead. |
 | Vercel | no CLI, no token | Project settings, domains, env vars and deployment logs unverified. |
-| Supabase (hosted) | no CLI auth, no keys | **Not confirmed that production has migrations 1–13 applied.** The local migration set is the only source of truth used here. |
+| Supabase (hosted) | no CLI auth, no keys | **The hosted migration history is unverified.** No fixed range is assumed to be applied or pending; the local migration set is the only source of truth used here. Establish the remote state with `migration list` before any push (see [Deployment](#deployment)). |
 | Docker (KIASA) | n/a | No Dockerfile or compose file exists in the repository. |
 
 Everything below marked *verified* was verified against a local stack.
@@ -663,21 +663,56 @@ The admin surface will report "not configured" until step 2.
 `SUPABASE_SECRET_KEY` (from Supabase → Project Settings → API), and
 `NEXT_PUBLIC_SITE_URL=https://www.kiasa.tech`. Redeploy.
 
-**3. Verify the production baseline before migrating.**
-```bash
-supabase link --project-ref <ref>
-supabase migration list      # confirm 1–13 are applied
-```
-If they are not, stop — this branch assumes them.
+These steps go through `scripts/supabase.mjs`, which runs the **pinned** CLI
+from `node_modules` and refuses to fall back to `npx`. A bare `supabase` on
+PATH is whatever happens to be installed, and the version that migrates
+production should be the version the migrations were proven against.
 
-**4. Apply migrations.**
-```bash
-supabase db push             # applies 14–17
-```
-Each aborts on its own verification failure, so a partial or wrong apply fails
-loudly rather than silently.
+**3. Establish what the hosted project has actually applied.**
 
-**5. First administrator.**
+> The hosted migration history is **currently unverified**. Nothing in this
+> repository knows it, and no command in this document has been run against
+> production. Do not assume any particular range is already applied.
+
+```bash
+node scripts/supabase.mjs link --project-ref <ref>
+node scripts/supabase.mjs migration list
+```
+
+Read the output. It is the only source of truth for what is applied remotely.
+
+**4. Review the full pending plan before pushing anything.**
+
+`db push` does **not** apply a fixed range. It applies **every** migration the
+linked project considers pending, which may be every migration in
+`supabase/migrations/`. Do not assume a count here — this document would go
+stale the next time one is added; read the directory, and read the plan. Print
+it first:
+
+```bash
+node scripts/supabase.mjs db push --dry-run
+```
+
+`--dry-run` is supported by the pinned CLI 2.117.0 and documented by it as
+"Print the migrations that would be applied, but don't actually apply them."
+Confirm the listed set is exactly what you intend to apply, and stop if it is
+not.
+
+**5. Apply migrations.**
+```bash
+node scripts/supabase.mjs db push
+```
+Each migration aborts on its own verification failure, so a partial or wrong
+apply fails loudly rather than silently. That is a safeguard against a broken
+migration, not against pushing more migrations than you meant to — only step 4
+protects you from that.
+
+*Historical note:* migrations 14–17 are the ones that introduced the
+administrator surface described in this document (roles and the audit log,
+applications and attempts, the user directory, platform stats). That is what
+they added; it is **not** a statement that they are the pending set today.
+
+**6. First administrator.**
 ```bash
 SUPABASE_SECRET_KEY=… node scripts/bootstrap-admin.mjs you@kiasa.tech
 node scripts/bootstrap-admin.mjs --list
@@ -691,7 +726,7 @@ frontend* (published in the client bundle); *migration inserting a user id* (the
 id does not exist until that person registers, and it commits a real person's
 identity to the repository).
 
-**6. Merge to `main`** — Vercel deploys production.
+**7. Merge to `main`** — Vercel deploys production.
 
 ### Production verification checklist
 
