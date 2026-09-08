@@ -46,7 +46,8 @@ import { parseExtraction, type ResumeExtraction } from '@/lib/resume/schema';
 export interface ResumeImportRow {
   id: string;
   user_id: string;
-  storage_path: string;
+  source_kind: 'upload' | 'pasted';
+  storage_path: string | null;
   file_name: string | null;
   file_size_bytes: number | null;
   status: ResumeImportStatus;
@@ -77,7 +78,7 @@ export function isResumeImportStatus(value: unknown): value is ResumeImportStatu
 
 /** Every column, as one string literal — Supabase's typings require a literal. */
 const COLUMNS =
-  'id, user_id, storage_path, file_name, file_size_bytes, status, failure_class, failure_code, extracted, model, parsed_at, confirmed_at, created_at, updated_at';
+  'id, user_id, source_kind, storage_path, file_name, file_size_bytes, status, failure_class, failure_code, extracted, model, parsed_at, confirmed_at, created_at, updated_at';
 
 /**
  * An import with its draft already validated.
@@ -192,15 +193,28 @@ export async function discardImport(supabase: unknown, importId: string): Promis
 
 /* ----------------------------------------------------------- server-side only */
 
-/** Create the row for a file already stored in the `resumes` bucket. */
+/**
+ * Create the row.
+ *
+ * `storage_path` is required for an upload and forbidden for a paste — the
+ * table states that as a biconditional, so getting it wrong here is a
+ * constraint violation rather than a row that quietly claims a file it does not
+ * have.
+ */
 export async function createImport(
   admin: AdminClient,
   userId: string,
-  file: { storagePath: string; fileName: string | null; fileSizeBytes: number | null }
+  file: {
+    sourceKind: 'upload' | 'pasted';
+    storagePath: string | null;
+    fileName: string | null;
+    fileSizeBytes: number | null;
+  }
 ): Promise<string | null> {
   const { data, error } = await table(admin)
     .insert({
       user_id: userId,
+      source_kind: file.sourceKind,
       storage_path: file.storagePath,
       file_name: file.fileName,
       file_size_bytes: file.fileSizeBytes,

@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useActionState, useCallback, useRef, useState } from 'react';
 
+import { IDLE, type FormState } from '@/lib/candidate/form-state';
 import type { ResumeExtraction } from '@/lib/resume/schema';
 
 /**
@@ -63,15 +64,22 @@ function extractJson(raw: string): string | null {
 
 export default function ImportConsole({
   prompt,
+  action,
+  uploadHref,
   triggerLabel = 'Import your résumé',
-  triggerNote = 'Paste it through Claude and check everything before it is saved.',
+  triggerNote = 'Run it through Claude and check everything before it is saved.',
 }: {
   prompt: string;
+  /** Takes the validated draft and hands back a review screen. */
+  action: (prev: FormState, form: FormData) => Promise<FormState>;
+  /** The upload route, for people who would rather not do this by hand. */
+  uploadHref: string;
   triggerLabel?: string;
   triggerNote?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const areaRef = useRef<HTMLTextAreaElement>(null);
+  const [state, submit, sending] = useActionState(action, IDLE);
 
   const [lines, setLines] = useState<Line[]>([
     { kind: 'note', text: 'ready. nothing is saved until you confirm.' },
@@ -268,14 +276,42 @@ export default function ImportConsole({
           </section>
         </div>
 
-        <footer className="kconsole__foot">
+        {/*
+          A real form, so the draft is re-validated on the server before a row
+          exists. The browser check above is for speed, never for trust.
+
+          It carries the draft as JSON rather than as a field per value: the
+          console has already proved this object satisfies the schema, and
+          flattening it into form fields only to reassemble it would be a second
+          place for the shape to go wrong.
+        */}
+        <form
+          action={submit}
+          className="kconsole__foot"
+          onSubmit={() => log('out', 'sending the draft for review…')}
+        >
+          <input type="hidden" name="draft" value={draft ? JSON.stringify(draft) : ''} />
+
           <span className="kconsole__status">
-            {draft ? 'Ready to review' : 'Waiting for a valid paste'}
+            {!state.ok && state.message
+              ? state.message
+              : draft
+                ? 'Ready to review'
+                : 'Waiting for a valid paste'}
           </span>
-          <button type="button" className="kprof__button" disabled={!draft}>
-            Continue to review →
-          </button>
-        </footer>
+
+          <div className="kconsole__row">
+            {/* The other way in, kept visible. Someone whose résumé will not
+                paste cleanly should not have to find the upload route by
+                guessing at a URL. */}
+            <a className="kprof__button kprof__button--ghost" href={uploadHref}>
+              Upload a PDF instead
+            </a>
+            <button type="submit" className="kprof__button" disabled={!draft || sending}>
+              {sending ? 'Sending…' : 'Continue to review →'}
+            </button>
+          </div>
+        </form>
       </dialog>
     </>
   );

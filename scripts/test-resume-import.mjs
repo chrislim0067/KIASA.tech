@@ -118,6 +118,7 @@ const PDF_BYTES = Buffer.from(
 const DECLARED_COLUMNS = [
   'id',
   'user_id',
+  'source_kind',
   'storage_path',
   'file_name',
   'file_size_bytes',
