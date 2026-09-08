@@ -98,12 +98,46 @@ the above behaviourally with throwaway users: refused inserts, cross-user reads
 and writes, self-confirmation, subject pinning, and — over plain HTTP, not by
 reading a flag — that an uploaded résumé is not fetchable without a session.
 
-It also checks the hand-written `ResumeImportRow` in `lib/resume/imports.ts`
-against `information_schema.columns` in both directions. That type is
-hand-written only because the generated `database.types.ts` could not be
-regenerated when the feature was built; **regenerate the types and delete it**
-once a database is reachable:
+It also checks `ResumeImportRow` in `lib/resume/imports.ts` against
+`information_schema.columns` in both directions.
 
+That type is no longer hand-written. `resume_imports` is present in the
+generated `lib/supabase/database.types.ts`, and the row type is projected from
+it:
+
+```ts
+type ResumeImportTable = Database['public']['Tables']['resume_imports'];
+
+export interface ResumeImportRow
+  extends Omit<ResumeImportTable['Row'], 'source_kind' | 'status' | 'failure_class'> {
+  source_kind: 'upload' | 'pasted';
+  status: ResumeImportStatus;
+  failure_class: ExtractFailureClass | null;
+}
 ```
-npx supabase gen types typescript --local > lib/supabase/database.types.ts
+
+Three columns are narrowed past what the generator can express: Postgres CHECK
+constraints restrict them to a fixed vocabulary, and a CHECK is not a type the
+generator can read, so it emits `string`. Those three are exactly what the
+`information_schema` comparison in the test still guards. Nothing in that file
+uses `as never` any more — a misspelled column is a compile error.
+
+### Regenerating the types
+
+```bash
+npm run db:types
 ```
+
+That is the only supported way, and it is not a convenience wrapper. It runs
+the **pinned** Supabase CLI (an exact devDependency, asserted by
+`npm run check:cli`), generates into a temporary file, validates the result,
+and replaces the committed file only after that validation passes — so a failed
+generation leaves the existing types untouched.
+
+Do not generate types by redirecting a CLI into the file. A shell truncates the
+target the moment it opens it, before the command has run at all, so a failure
+leaves an empty `database.types.ts` and a broken build. For the same reason,
+never invoke the CLI through `npx`: that downloads whatever the registry
+currently calls latest instead of the version the migrations were proven
+against. `scripts/test-docs-commands.mjs` fails the build if either pattern
+reappears in documentation.

@@ -1,18 +1,125 @@
 # Local Supabase network exposure
 
-Measured against Supabase CLI **2.117.0** on Windows 11 with Docker Desktop.
+Supabase CLI **2.117.0**, Docker Desktop **29.5.3**, Windows 11.
 
-## The claim that was wrong
+This document separates three things that are easy to blur together, and the
+blurring is what made its previous version wrong:
 
-An earlier Stage 0 report said "nothing was exposed beyond the host". That was
-incorrect, and it was stated on the basis that `supabase status` prints
-loopback URLs. What `supabase status` prints is the address you are told to
-*connect to*, not the address the container is *published on*. They are not the
-same thing, and the difference is the whole issue.
+* **Measured** — observed on this machine, with the command that produced it.
+* **Documented expectation** — what Docker's documentation says a setting does.
+* **Unverified** — plausible, not demonstrated. Never write this as fact.
 
-## What is actually true
+---
 
-Every published port is bound to `0.0.0.0` — all interfaces:
+## 1. The claim that was wrong, twice
+
+**First error.** An early Stage 0 report said "nothing was exposed beyond the
+host", reasoning from `supabase status` printing loopback URLs. `supabase
+status` prints the address you are told to *connect to*. It says nothing about
+the address the container is *published on*. Those are different facts.
+
+**Second error.** The correction then recommended a top-level Docker daemon
+key and asserted it fixed the whole stack:
+
+```json
+{ "ip": "127.0.0.1" }
+```
+
+with the words "Supabase CLI does not name one, so this covers the whole
+stack" and "Ports then publish as `127.0.0.1:54321->8000/tcp`". Both were
+**unverified**. The second states a measurement that was never taken.
+
+The top-level `ip` key sets the default host binding address, and it is
+observable on the **default bridge** network:
+
+```
+$ docker network inspect bridge --format '{{json .Options}}'
+{"com.docker.network.bridge.default_bridge":"true", ...
+ "com.docker.network.bridge.host_binding_ipv4":"0.0.0.0", ...}
+```
+
+*(measured)* — the option exists there and is currently the wildcard.
+
+Supabase does not use the default bridge. Docker Compose creates a
+**user-defined** bridge network per project, `supabase_network_<project_id>`.
+On this machine an unrelated user-defined bridge carries no such option at all:
+
+```
+$ docker network inspect githubmailscaaner_default --format '{{json .Options}}'
+{"com.docker.network.enable_ipv4":"true","com.docker.network.enable_ipv6":"false"}
+```
+
+*(measured)* — no `host_binding_ipv4` key is present on a user-defined network.
+
+So the top-level `ip` key is **not evidence** that ports on Supabase's
+user-defined network bind to loopback. That is the defect this rewrite fixes.
+
+---
+
+## 2. The documented mechanism for user-defined networks
+
+For networks created *after* the setting is applied, Docker documents
+per-driver defaults:
+
+```json
+{
+  "default-network-opts": {
+    "bridge": {
+      "com.docker.network.bridge.host_binding_ipv4": "127.0.0.1"
+    }
+  }
+}
+```
+
+Reference:
+<https://docs.docker.com/engine/network/port-publishing/#setting-the-default-bind-address-for-containers>
+
+Three caveats, and all three matter here:
+
+1. **It applies at network-creation time.** A network that already exists keeps
+   the options it was created with. Changing the daemon default does not
+   retro-fit it.
+
+2. **An existing project network may therefore need to be recreated** before
+   the new default takes effect. On this machine that happens to be free:
+
+   ```
+   $ docker network ls --filter name=supabase
+   (no results while the stack is stopped)
+   ```
+
+   *(measured)* — the CLI removes its project network on `supabase stop` and
+   creates a fresh one on `supabase start`, so the next start picks up a new
+   daemon default with no manual step. **Do not** delete a network, volume or
+   container to force this. If a stale network ever does persist, the safe
+   sequence is `npm run db:stop` then `npm run db:start`, which removes and
+   recreates only the CLI's own network. Supabase data lives in Docker
+   *volumes*, which `stop` does not touch.
+
+3. **The option name ends in `ipv4`, and means it.** It does not constrain IPv6
+   publishing. Docker publishes an IPv6 host listener separately, and the
+   earlier measurement on this machine showed exactly that:
+   `0.0.0.0:54322->5432/tcp, [::]:54322->5432/tcp`. Note also that
+   `EnableIPv6=false` on the *container network* did not prevent a `[::]`
+   *host-side* binding — those are different layers. **IPv4 and IPv6 must be
+   checked separately, always.**
+
+The Supabase CLI itself sets no network options at all — the pinned 2.117.0
+binary contains no occurrence of `host_binding_ipv4` or any
+`com.docker.network.*` key *(measured)*. Whatever the daemon default is at
+network-creation time is what applies.
+
+**None of this is a promise that the setting works here.** It is what Docker
+documents. Until it has been applied and the result measured on this machine,
+its effect on the Supabase stack is **unverified**.
+
+---
+
+## 3. What has actually been measured
+
+### 3.1 While the stack was running (2026-09-08)
+
+Every published port was bound to the wildcard on both families:
 
 ```
 supabase_kong_kiasa       0.0.0.0:54321->8000/tcp, [::]:54321->8000/tcp
@@ -22,101 +129,164 @@ supabase_inbucket_kiasa   0.0.0.0:54324->8025/tcp, [::]:54324->8025/tcp
 supabase_analytics_kiasa  0.0.0.0:54327->4000/tcp, [::]:54327->4000/tcp
 ```
 
-Measured by connecting to each host interface in turn — every port answered on
-every non-loopback address, including the machine's LAN address:
+TCP connects to each host **IPv4** address succeeded on all five ports:
 
 ```
 198.18.192.77   54321 54322 54323 54324 54327   all OPEN
 192.168.100.28  54321 54322 54323 54324 54327   all OPEN   <- LAN
-192.168.206.1   ... all OPEN   (VMware VMnet1)
-192.168.226.1   ... all OPEN   (VMware VMnet8)
-172.21.224.1    ... all OPEN   (Hyper-V Default Switch)
-172.19.64.1     ... all OPEN   (WSL)
+192.168.206.1 / 192.168.226.1 / 172.21.224.1 / 172.19.64.1  all OPEN
 ```
 
-Port **54322 is Postgres**, and the local stack's credentials are
-`postgres:postgres` — identical on every machine and published in Supabase's
-own documentation. Anything that can route to this host can open a superuser
-connection to the development database.
+Port **54322 is PostgreSQL**, and the local stack's password is the well-known
+default published in Supabase's own documentation.
 
-Whether a *remote* host can complete that connection also depends on the host
-firewall. On this machine it can: both active interfaces are categorised
-**Public**, and the Public firewall profile is **disabled**.
+**IPv6 LAN reachability was not probed in that session.** Only IPv4 addresses
+were enumerated. The `[::]` bindings above are a strong indication, but an
+indication is not a measurement, so IPv6 is recorded as **unverified**.
+
+### 3.2 Host firewall (measured, current)
 
 ```
-Name      Enabled   DefaultInboundAction
-Domain    True      NotConfigured
-Private   False     NotConfigured
+Name      Enabled   DefaultInboundAction        InterfaceAlias        NetworkCategory
+Domain    True      NotConfigured               Local Area Connection Public
+Private   False     NotConfigured               Ethernet              Public
 Public    False     NotConfigured
 ```
 
-So on an untrusted network — a café, a coworking space, a conference — the
-development database is reachable by anyone on the same segment. This is a real
-exposure, not a theoretical one.
+Both active interfaces are **Public**, and the **Public profile is disabled**.
+There is no host-level inbound filtering on the interfaces in use. Firewall
+rules are only enforced while their profile is enabled, so adding a block rule
+without first enabling the profile would achieve nothing.
 
-## Why the repository cannot fix it
+### 3.3 Current classification
 
-There is **no supported configuration key** in Supabase CLI 2.117.0 that sets
-the host bind address for local containers. This was checked against the
-CLI's own generated template (`supabase init` with 2.117.0), which is the
-authoritative list of what the version accepts. The only host-facing keys are
-`port` values. Nothing named `bind_address`, `bind_ip`, `host_ip`,
-`listen_address` or equivalent exists.
+```
+UNKNOWN_OR_INCOMPLETE
+```
 
-Two keys look relevant and are not:
+The stack is stopped, so nothing can be measured right now; and it was
+deliberately **not started** to complete this document, because starting it
+while the Public firewall profile is disabled would place a superuser Postgres
+port on a Public-categorised network with no inbound filtering. That is a real
+risk to take for a documentation change, so it was not taken.
 
-* **`[db.network_restrictions] allowed_cidrs = ["0.0.0.0/0"]`** — flagged in
-  review as "unrestricted database CIDRs". These are the stock template
-  defaults and they configure the **hosted** project's network restrictions,
-  applied through the management API. They have no effect on local container
-  binding. The block is also `enabled = false`. Setting them to a narrower CIDR
-  would change nothing locally and would be misleading to a reader.
+IPv4 exposure is **measured and real** (§3.1). IPv6 is **unverified**. The
+mitigation in §2 is **documented but unverified on this machine**. Nothing here
+is classified as `LOOPBACK_ONLY_VERIFIED`.
 
-* **`[realtime] ip_version`** — selects IPv4 or IPv6 for realtime's own
-  binding. It does not control the Docker publish address.
+---
 
-Inventing a key here would be worse than the exposure: it would read as solved
-in review while behaving identically.
+## 4. How to verify it yourself
 
-## Mitigations that do work
+Run these on the host that publishes the ports — not inside a container, not
+inside WSL, not on a CI runner. Those are different network namespaces and the
+answer does not transfer.
 
-Both are machine-level, outside the repository. Neither is applied
-automatically, because both change behaviour for every container on the
-machine, not only this project.
+**The quick way**
 
-### 1. Docker: make loopback the default publish address (recommended)
+```bash
+npm run check:exposure
+```
 
-The Docker daemon supports a default host IP for published ports that do not
-name one. Supabase CLI does not name one, so this covers the whole stack.
+Read-only. It discovers the published bindings from Docker rather than trusting
+a hardcoded port list, probes IPv4 and IPv6 separately, and prints one of
+`STACK_NOT_RUNNING`, `LOOPBACK_ONLY_VERIFIED`, `EXTERNALLY_EXPOSED` or
+`UNKNOWN_OR_INCOMPLETE` (exit 3, 0, 1, 2). It is a diagnostic, **not a security
+gate**, and CI does not run it — see §6.
 
-Edit `%USERPROFILE%\.docker\daemon.json` (Docker Desktop → Settings → Docker
-Engine) and add the `ip` key:
+**The manual way**
+
+1. *Published Docker port mappings* — the binding, per family:
+
+   ```bash
+   docker ps --filter "name=supabase" --format "{{.Names}}\t{{.Ports}}"
+   docker inspect supabase_db_kiasa --format "{{json .NetworkSettings.Ports}}"
+   ```
+
+   `0.0.0.0:` is an IPv4 wildcard; `[::]:` is an IPv6 wildcard; `127.0.0.1:`
+   and `[::1]:` are loopback-scoped.
+
+2. *Listening addresses, as the OS sees them* — the host-side truth, which on
+   Docker Desktop is a Windows process proxying into the Linux VM:
+
+   ```powershell
+   Get-NetTCPConnection -State Listen |
+     Where-Object LocalPort -in 54321,54322,54323,54324,54327 |
+     Select-Object LocalAddress,LocalPort,OwningProcess
+   ```
+
+3. *Loopback still works* (it must, or the test suites break):
+
+   ```powershell
+   Test-NetConnection 127.0.0.1 -Port 54322 -InformationLevel Quiet
+   ```
+
+4. *IPv4 LAN reachability* — substitute your own address:
+
+   ```powershell
+   Get-NetIPAddress -AddressFamily IPv4 |
+     Where-Object { -not $_.IPAddress.StartsWith('127.') } |
+     Select-Object InterfaceAlias,IPAddress
+   Test-NetConnection 192.168.100.28 -Port 54322 -InformationLevel Quiet
+   ```
+
+5. *IPv6 reachability* — checked separately, because §2 caveat 3:
+
+   ```powershell
+   Get-NetIPAddress -AddressFamily IPv6 |
+     Where-Object { $_.PrefixOrigin -ne 'WellKnown' -and -not $_.IPAddress.StartsWith('fe80') } |
+     Select-Object InterfaceAlias,IPAddress
+   Test-NetConnection ::1 -Port 54322 -InformationLevel Quiet
+   ```
+
+   A `fe80::` link-local address is not routable off the link and needs a scope
+   id; a global or unique-local address is the one that matters.
+
+The strongest evidence is a probe **from a second machine** on the same
+network. A probe from the host proves a socket is listening; it cannot fully
+establish what a remote host can or cannot reach, because that also depends on
+the firewall.
+
+---
+
+## 5. Mitigations
+
+Both are **machine-level and outside this repository**. Neither is applied
+automatically and neither was applied while writing this: no Docker setting,
+firewall rule, adapter, service or registry value was changed, and no
+container, volume or data was deleted. Apply them yourself, deliberately.
+
+### 5.1 Docker: default the bind address for new bridge networks
+
+Docker Desktop → Settings → Docker Engine (`%USERPROFILE%\.docker\daemon.json`):
 
 ```json
 {
   "builder": { "gc": { "defaultKeepStorage": "20GB", "enabled": true } },
   "experimental": false,
-  "ip": "127.0.0.1"
+  "default-network-opts": {
+    "bridge": {
+      "com.docker.network.bridge.host_binding_ipv4": "127.0.0.1"
+    }
+  }
 }
 ```
 
-Apply & Restart, then `npm run db:stop && npm run db:start`. Ports then publish
-as `127.0.0.1:54321->8000/tcp`.
+Apply & Restart, then `npm run db:stop && npm run db:start` so the project
+network is created under the new default. **Then measure** — §4 — and do not
+record it as fixed until `check:exposure` reports `LOOPBACK_ONLY_VERIFIED`.
 
-This does not affect container-to-container traffic: Kong reaching Postgres,
-Studio reaching pg-meta and so on all run over the project's internal Docker
-network and never touch the published host ports. The test suites connect over
-loopback and `docker exec`, so they are unaffected.
+Expected not to affect container-to-container traffic (Kong→Postgres,
+Studio→pg-meta) because that runs over the project's internal network and never
+touches published host ports; the test suites use loopback and `docker exec`.
+That expectation is **documented, not yet measured here**.
 
-Trade-off: any container you deliberately want reachable from another device
-(previewing a dev server on a phone, for example) then needs an explicit
-`-p 0.0.0.0:PORT:PORT`.
+Remember caveat 3: this key is IPv4. Verify IPv6 separately.
 
-### 2. Windows Firewall: block the ports inbound
+### 5.2 Windows Firewall: block the ports inbound
 
-Rules are only enforced while the profile they apply to is enabled, so the
-first command is not optional on this machine — the Public profile is
-currently off.
+The first command is not optional on this machine — rules do nothing while the
+profile is off.
 
 ```powershell
 # Run as Administrator.
@@ -127,19 +297,21 @@ New-NetFirewallRule -DisplayName "Block Supabase local stack (inbound)" `
   -LocalPort 54321-54329 -Profile Public,Private
 ```
 
-Loopback traffic is not filtered by Windows Firewall, so local development and
-every test suite continue to work.
+Windows Firewall does not filter loopback, so local development and every test
+suite continue to work. Enabling a firewall profile can affect other
+applications; that is a deliberate decision for the machine's owner.
 
-Verify with the diagnostic:
+---
 
-```
-npm run check:exposure
-```
+## 6. Why this is not a CI gate
 
-## Why this is not a CI gate
+`scripts/check-local-exposure.mjs` reports and exits with a meaningful code,
+but no CI job runs it. The condition worth asserting — loopback only — cannot
+be satisfied by anything in this repository: CLI 2.117.0 exposes no
+bind-address setting, so on a clean checkout every port publishes on all
+interfaces. A gate that every developer and every runner fails is a gate that
+gets disabled, and a disabled gate protects nothing.
 
-`scripts/check-local-exposure.mjs` reports; it does not fail the build. A gate
-would fail on every developer machine and on the CI runner alike, because the
-condition it would assert cannot be satisfied by anything in this repository —
-and a check that every clean checkout fails is one that gets disabled. It is a
-diagnostic, and this document is the honest statement of the residual risk.
+The honest position is that this is a **residual, unresolved risk on the
+developer machine**, mitigated only by the machine-level steps in §5, and that
+its status is `UNKNOWN_OR_INCOMPLETE` until someone measures it.

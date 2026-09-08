@@ -663,16 +663,21 @@ The admin surface will report "not configured" until step 2.
 `SUPABASE_SECRET_KEY` (from Supabase → Project Settings → API), and
 `NEXT_PUBLIC_SITE_URL=https://www.kiasa.tech`. Redeploy.
 
+These steps go through `scripts/supabase.mjs`, which runs the **pinned** CLI
+from `node_modules` and refuses to fall back to `npx`. A bare `supabase` on
+PATH is whatever happens to be installed, and the version that migrates
+production should be the version the migrations were proven against.
+
 **3. Verify the production baseline before migrating.**
 ```bash
-supabase link --project-ref <ref>
-supabase migration list      # confirm 1–13 are applied
+node scripts/supabase.mjs link --project-ref <ref>
+node scripts/supabase.mjs migration list      # confirm 1–13 are applied
 ```
 If they are not, stop — this branch assumes them.
 
 **4. Apply migrations.**
 ```bash
-supabase db push             # applies 14–17
+node scripts/supabase.mjs db push             # applies 14–17
 ```
 Each aborts on its own verification failure, so a partial or wrong apply fails
 loudly rather than silently.

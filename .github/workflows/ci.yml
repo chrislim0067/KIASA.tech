@@ -86,6 +86,13 @@ jobs:
       - name: Secret scan
         run: node scripts/scan-secrets.mjs
 
+      # Documentation is executable: contributors copy commands out of it. This
+      # fails if an unsafe one reappears -- `npx supabase` (an unpinned CLI), a
+      # direct `supabase gen types`, or a `>` redirect into database.types.ts,
+      # which truncates the file before the command has even run.
+      - name: Documentation command hygiene
+        run: npm run test:docs
+
       # Same reasoning as the scanner: the manifest checker is tested before it
       # is trusted. It previously reported an unrecorded migration and exited 0,
       # which no assertion anywhere would have caught.
