@@ -4,8 +4,16 @@ out/
 build/
 *.tsbuildinfo
 next-env.d.ts
-.env*.local
 .DS_Store
+
+# Environment files.
+#
+# `.env*.local` alone left a gap: a plain `.env`, `.env.production` or
+# `.env.development` would have been committed — into a public repository. The
+# example file is the one deliberate exception, and carries names only.
+.env
+.env.*
+!.env.example
 
 # Verification artefacts
 verify-shots/

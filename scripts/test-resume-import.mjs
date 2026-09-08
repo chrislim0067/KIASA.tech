@@ -22,8 +22,9 @@
  *      candidate's résumé file.
  *   4. The résumé bucket is private.
  *
- * It also checks the hand-written `ResumeImportRow` against the real table,
- * since that type is temporarily not generated (see lib/resume/imports.ts).
+ * It also checks `ResumeImportRow` against the real table. That type is now
+ * projected from the generated schema, so this guards the three columns narrowed
+ * past what the generator can express (source_kind, status, failure_class).
  */
 import { execFileSync } from 'node:child_process';
 import { randomUUID, randomBytes } from 'node:crypto';
@@ -53,7 +54,7 @@ const { url: API_URL, key: PUBLISHABLE_KEY, secret: SECRET_KEY } = localEnv();
 const CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_kiasa';
 
 const sql = (s) =>
-  execFileSync('docker', ['exec', CONTAINER, 'psql', '-U', 'postgres', '-d', 'postgres', '-tAc', s], {
+  execFileSync('docker', ['exec', CONTAINER, 'psql', '-U', 'postgres', '-d', 'postgres', '-qtAc', s], {
     encoding: 'utf8',
   }).trim();
 
@@ -376,10 +377,28 @@ async function main() {
   }
 }
 
-function cleanup() {
+async function cleanup() {
+  // Storage objects go through the Storage API: storage-api installs a
+  // protect_delete() trigger that refuses a direct DELETE on storage.objects.
+  // Each step gets its own try, because failing to remove a file must not take
+  // the throwaway auth user's deletion down with it and leak the user.
+  const admin = SECRET_KEY
+    ? createClient(API_URL, SECRET_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+    : null;
+
   for (const id of created) {
+    if (admin) {
+      try {
+        const { data } = await admin.storage.from('resumes').list(id);
+        const paths = (data ?? []).map((o) => `${id}/${o.name}`);
+        if (paths.length > 0) await admin.storage.from('resumes').remove(paths);
+      } catch {
+        /* best effort */
+      }
+    }
     try {
-      sql(`delete from storage.objects where bucket_id = 'resumes' and (storage.foldername(name))[1] = '${id}'`);
       sql(`delete from auth.users where id = '${id}'`);
     } catch {
       /* best effort */
@@ -388,9 +407,9 @@ function cleanup() {
 }
 
 main()
-  .then(cleanup, (error) => {
+  .then(cleanup, async (error) => {
     console.error('\nFATAL:', error.message);
-    cleanup();
+    await cleanup();
     process.exit(1);
   })
   .then(() => {

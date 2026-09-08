@@ -1,0 +1,34 @@
+# gitleaks configuration.
+#
+# The default rule set is kept in full — this file only narrows one rule, in
+# one file, for one shape of value. Nothing here disables a rule globally.
+
+[extend]
+useDefault = true
+
+# `supabase/migrations/checksums.json` is the migration content manifest: a
+# map of migration filename to the SHA-256 of its contents, maintained by
+# scripts/check-migrations-offline.mjs.
+#
+# gitleaks' `generic-api-key` rule is an entropy heuristic, and a SHA-256 digest
+# is by construction high-entropy hex — so every entry in that manifest looks
+# like a key to it. They are not secrets: each one is a hash of a migration file
+# that is itself committed in the clear, two directories away. Publishing the
+# digest of a public file discloses nothing.
+#
+# The exemption is deliberately the narrowest that clears it, and all three
+# conditions must hold together (condition = "AND"):
+#
+#   * only the `generic-api-key` rule            — every other rule still applies
+#   * only that one path                         — no directory, no glob
+#   * only values that are exactly 64 hex chars  — the shape of a SHA-256 digest
+#
+# A real key committed to that same file would not be 64 hex characters, and
+# would still be reported. A real key anywhere else is untouched by this.
+[[allowlists]]
+description = "SHA-256 migration content digests are not credentials"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^supabase/migrations/checksums\.json$''']
+regexTarget = "match"
+regexes = ['''\b[a-f0-9]{64}\b''']

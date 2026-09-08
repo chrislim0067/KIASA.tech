@@ -1,0 +1,182 @@
+# Continuous integration.
+#
+# Two jobs, split by what they need rather than by what they check.
+#
+#   `static`   — typecheck, lint, build, audit, secret scan, migration order.
+#                No services, no credentials, fast, and it is the job that gates
+#                most pull requests.
+#
+#   `database` — the suites that only mean something against a real Postgres
+#                with the real policies applied: RLS, privileges, cascades,
+#                constraint parity, security regressions. It resets a LOCAL
+#                Supabase stack from empty and applies every migration in order,
+#                which is also the only automatic proof that the migrations
+#                still work on a database that has never seen them.
+#
+# NO PRODUCTION CREDENTIALS ARE USED OR REQUIRED. Every value below comes from
+# `supabase start` on the runner. If a step here ever needs a repository secret,
+# that is a design error to fix rather than a secret to add: CI must not be able
+# to reach the production database.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+# A second push supersedes the first; there is no value in finishing a run for a
+# commit nobody will look at.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    name: Static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.3.0
+        with:
+          # The secret scan reads tracked files, not history; a shallow clone is
+          # enough and keeps the checkout fast.
+          fetch-depth: 1
+          # Do not leave the job's GITHUB_TOKEN in .git/config, where every later
+          # step -- including any dependency install script -- could reuse it.
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `ci`, not `install`: it installs exactly the lockfile and fails if
+      # package.json and the lockfile disagree, which is itself a check.
+      - name: Install dependencies
+        run: npm ci
+
+      # The scanner is tested BEFORE it is trusted. A pattern scanner that has
+      # quietly stopped matching reports "clean" exactly like a clean tree does,
+      # and the two are indistinguishable in a log. This plants a representative
+      # secret for every rule and fails if any goes unreported.
+      - name: Secret scanner self-test
+        run: npm run test:secrets
+
+      - name: Secret scan
+        run: node scripts/scan-secrets.mjs
+
+      - name: Migration order and content parity
+        run: node scripts/check-migrations-offline.mjs
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
+
+      # Advisory: a new advisory against a transitive dependency should not
+      # block an unrelated change at 3am. It is reported, and read.
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+  database:
+    name: Database suites (local Supabase)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.3.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # SHA-pinned: `@v1` was a mutable BRANCH, not a tag -- whoever controls it
+      # could change what it points at. The CLI version is pinned too, so CI
+      # runs the same CLI the migrations were proven against locally.
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.117.0
+
+      # `supabase start` applies every migration in supabase/migrations to a
+      # database created moments earlier — migrations-from-empty, proven on
+      # every run rather than asserted in a report.
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Confirm the stack is local before anything touches it
+        run: |
+          set -euo pipefail
+          supabase status -o env > /tmp/supabase.env
+          # shellcheck disable=SC1091
+          . /tmp/supabase.env
+          case "$API_URL" in
+            http://127.0.0.1:*|http://localhost:*) echo "Local stack confirmed: $API_URL" ;;
+            *) echo "REFUSING: API_URL is not local ($API_URL)"; exit 1 ;;
+          esac
+
+      - name: Reset the database from empty and re-apply all migrations
+        run: supabase db reset
+
+      - name: Database, RLS, privilege, cascade and security suites
+        run: npm run test:db
+
+      - name: Admin authorization suites
+        run: npm run test:admin
+
+      # Generated types must match the schema the migrations just produced.
+      # A drift here is what forces `as never` workarounds into the data layer.
+      - name: Generated types match the schema
+        run: node scripts/test-type-generation.mjs
+
+      # The HTTP suites start the real server and drive real @supabase/ssr
+      # sessions, so they need a production build first. They prove the route
+      # and API gates in front of RLS, which the database suites cannot see.
+      - name: Production build (for the HTTP suites)
+        run: npm run build
+
+      - name: Admin HTTP authorization
+        run: npm run test:admin:api
+
+      - name: Candidate profile route gate
+        run: npm run test:profile:http
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop
+
+  history:
+    name: Secret scan over git history
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # fetch-depth: 0 — the whole point of this job. A shallow clone cannot
+      # prove anything about history, and a secret removed in a later commit is
+      # still published in the commit that added it.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.3.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Run as a pinned container rather than a third-party action: no
+      # marketplace action in the trust path, no licence key, nothing that
+      # could be handed a token. Pinned BY DIGEST, so the bytes cannot change
+      # under a tag. `--redact` keeps any match out of this public log.
+      - name: gitleaks over full history (redacted)
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" \
+            ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            detect --source /repo --redact --no-banner
