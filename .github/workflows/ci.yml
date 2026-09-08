@@ -1,22 +1,33 @@
 # Continuous integration.
 #
-# Two jobs, split by what they need rather than by what they check.
+# THREE jobs, split by what they need rather than by what they check.
 #
-#   `static`   — typecheck, lint, build, audit, secret scan, migration order.
-#                No services, no credentials, fast, and it is the job that gates
-#                most pull requests.
+#   `static`   — CLI pinning, typecheck, lint, build, audit, secret scan and its
+#                self-test, migration manifest and its test suite. No services,
+#                no credentials, fast, and the job that gates most pull requests.
 #
 #   `database` — the suites that only mean something against a real Postgres
 #                with the real policies applied: RLS, privileges, cascades,
-#                constraint parity, security regressions. It resets a LOCAL
-#                Supabase stack from empty and applies every migration in order,
-#                which is also the only automatic proof that the migrations
-#                still work on a database that has never seen them.
+#                constraint parity, security regressions, the HTTP gates, and
+#                the end-to-end logout test with a real authenticated session.
+#                It resets a LOCAL Supabase stack from empty and applies every
+#                migration in order, which is also the only automatic proof that
+#                the migrations still work on a database that has never seen
+#                them.
+#
+#   `history`  — a history-aware secret scan. The working-tree scan cannot say
+#                anything about a secret that was committed and later removed,
+#                and this repository is public with many remote branches.
 #
 # NO PRODUCTION CREDENTIALS ARE USED OR REQUIRED. Every value below comes from
 # `supabase start` on the runner. If a step here ever needs a repository secret,
 # that is a design error to fix rather than a secret to add: CI must not be able
 # to reach the production database.
+#
+# The Supabase CLI is a pinned devDependency, so `npm ci` installs the exact
+# version this repository was tested against on every platform. There is
+# deliberately no setup-cli action: two sources for one version is how they
+# drift apart.
 name: CI
 
 on:
@@ -59,6 +70,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # One version source for local development and CI. Asserts the CLI that
+      # actually executes reports exactly the pinned version, not merely that
+      # package.json asks for it.
+      - name: Supabase CLI is pinned
+        run: npm run check:cli
+
       # The scanner is tested BEFORE it is trusted. A pattern scanner that has
       # quietly stopped matching reports "clean" exactly like a clean tree does,
       # and the two are indistinguishable in a log. This plants a representative
@@ -69,8 +86,14 @@ jobs:
       - name: Secret scan
         run: node scripts/scan-secrets.mjs
 
+      # Same reasoning as the scanner: the manifest checker is tested before it
+      # is trusted. It previously reported an unrecorded migration and exited 0,
+      # which no assertion anywhere would have caught.
+      - name: Migration manifest checker self-test
+        run: npm run test:migrations
+
       - name: Migration order and content parity
-        run: node scripts/check-migrations-offline.mjs
+        run: npm run db:check:order
 
       - name: TypeScript
         run: npm run typecheck
@@ -81,16 +104,21 @@ jobs:
       - name: Production build
         run: npm run build
 
-      # Advisory: a new advisory against a transitive dependency should not
-      # block an unrelated change at 3am. It is reported, and read.
-      - name: Dependency audit
+      # A GATE, not a report. `--audit-level=high` exits non-zero only for high
+      # and critical advisories; existing low advisories are still printed and
+      # still do not fail the build. This previously carried
+      # `continue-on-error: true`, which made it a step that could never fail --
+      # describing that as a security gate was the actual defect.
+      - name: Dependency audit (high and critical fail the build)
         run: npm audit --audit-level=high
-        continue-on-error: true
 
   database:
     name: Database suites (local Supabase)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Generous on purpose: the end-to-end test loads the homepage several times,
+    # and each load spends ~25-30s decoding the hero's seven textures through
+    # software GL on a runner with no GPU.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.3.0
         with:
@@ -104,23 +132,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # SHA-pinned: `@v1` was a mutable BRANCH, not a tag -- whoever controls it
-      # could change what it points at. The CLI version is pinned too, so CI
-      # runs the same CLI the migrations were proven against locally.
-      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
-        with:
-          version: 2.117.0
+      # No setup-cli action. `npm ci` already installed the pinned CLI from the
+      # lockfile, which records all eight platform binaries at 2.117.0. A second
+      # source for the same version is how the two drift apart, and the local
+      # scripts were previously using an entirely different (unpinned) CLI from
+      # the one this job installed.
+      - name: Supabase CLI is pinned
+        run: npm run check:cli
 
       # `supabase start` applies every migration in supabase/migrations to a
       # database created moments earlier — migrations-from-empty, proven on
       # every run rather than asserted in a report.
       - name: Start local Supabase
-        run: supabase start
+        run: npm run db:start
 
       - name: Confirm the stack is local before anything touches it
         run: |
           set -euo pipefail
-          supabase status -o env > /tmp/supabase.env
+          node scripts/supabase.mjs status -o env > /tmp/supabase.env
           # shellcheck disable=SC1091
           . /tmp/supabase.env
           case "$API_URL" in
@@ -129,7 +158,7 @@ jobs:
           esac
 
       - name: Reset the database from empty and re-apply all migrations
-        run: supabase db reset
+        run: npm run db:reset
 
       - name: Database, RLS, privilege, cascade and security suites
         run: npm run test:db
@@ -154,9 +183,32 @@ jobs:
       - name: Candidate profile route gate
         run: npm run test:profile:http
 
+      # The end-to-end logout regression. It creates a throwaway user in the
+      # local stack, signs in for real, drives a real Chrome, clicks the
+      # application's own sign-out button and proves the session is gone.
+      #
+      # Its predecessor never ran here at all: it looked for Chrome in two
+      # Windows paths only, so it could not run on Linux and was left out of
+      # CI entirely -- which is why nobody noticed it also signed out without
+      # ever signing in.
+      - name: Locate Chrome for the end-to-end test
+        run: |
+          set -euo pipefail
+          BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$BIN" ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq chromium-browser
+            BIN="$(command -v chromium-browser || command -v chromium)"
+          fi
+          echo "CHROME_BIN=$BIN" >> "$GITHUB_ENV"
+          "$BIN" --version
+
+      - name: Logout end-to-end (real authenticated session)
+        run: npm run test:auth
+
       - name: Stop local Supabase
         if: always()
-        run: supabase stop
+        run: npm run db:stop
 
   history:
     name: Secret scan over git history
@@ -166,6 +218,14 @@ jobs:
       # fetch-depth: 0 — the whole point of this job. A shallow clone cannot
       # prove anything about history, and a secret removed in a later commit is
       # still published in the commit that added it.
+      #
+      # This scans the history reachable from the ref being built. That is worth
+      # stating precisely, because an earlier report did not: this repository
+      # has MANY remote branches (35 refs at the time of writing), and commits
+      # can and do live outside `main` -- the Stage 0 commits themselves sat on
+      # `chore/stage-0-baseline` and were not reachable from `main` until PR #19
+      # merged them. A branch push is therefore scanned on its own ref, before
+      # anything is merged, which is when a leak is still cheap to fix.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.3.0
         with:
           fetch-depth: 0

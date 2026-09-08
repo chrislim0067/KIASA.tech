@@ -10,15 +10,14 @@
  * the Cookie header is byte-identical to a browser's.
  */
 import { execFileSync, spawn } from 'node:child_process';
+
+import { statusEnvRaw } from './lib/supabase-cli.mjs';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 
 function localEnv() {
-  const raw = execFileSync('npx', ['supabase', 'status', '-o', 'env'], {
-    encoding: 'utf8',
-    shell: process.platform === 'win32',
-  });
+  const raw = statusEnvRaw();
   const env = {};
   for (const line of raw.split('\n')) {
     const m = line.match(/^([A-Z0-9_]+)="?([^"\r]*)"?/);

@@ -21,16 +21,15 @@
  * non-zero exit on any failure.
  */
 import { execFileSync } from 'node:child_process';
+
+import { statusEnvRaw } from './lib/supabase-cli.mjs';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
 /* ------------------------------------------------------------ local config */
 
 function localEnv() {
-  const raw = execFileSync('npx', ['supabase', 'status', '-o', 'env'], {
-    encoding: 'utf8',
-    shell: process.platform === 'win32',
-  });
+  const raw = statusEnvRaw();
   const env = {};
   for (const line of raw.split('\n')) {
     const m = line.match(/^([A-Z0-9_]+)="?([^"\r]*)"?/);

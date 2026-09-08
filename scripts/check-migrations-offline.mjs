@@ -33,8 +33,14 @@
  *
  *    The manifest makes that visible. Any change to an already-recorded
  *    migration fails this check, and clearing the failure means running
- *    `--update` deliberately — a diff a reviewer can see and question. Adding a
- *    NEW migration is not a failure; it is recorded on the next update.
+ *    `--update` deliberately — a diff a reviewer can see and question.
+ *
+ *    CHECK MODE FAILS CLOSED. A migration that is not in the manifest is a
+ *    failure, not a note: an earlier version printed "not a failure" and
+ *    exited 0, which let a migration sit unrecorded indefinitely and removed
+ *    the guarantee the manifest exists for — that every migration has a
+ *    recorded digest, so a later edit is detectable. Recording is only ever
+ *    done by an explicit `--update`.
  *
  * WHAT IT CANNOT CHECK
  *
@@ -147,26 +153,72 @@ if (update) {
   process.exit(0);
 }
 
+const DIGEST_RE = /^[a-f0-9]{64}$/;
+
 if (!existsSync(MANIFEST)) {
   fail(`No checksum manifest. Create it deliberately: node ${process.argv[1]} --update`);
 } else {
-  const recorded = JSON.parse(readFileSync(MANIFEST, 'utf8'));
-
-  for (const [name, hash] of Object.entries(recorded)) {
-    if (!(name in current)) {
-      fail(`Recorded migration has been deleted or renamed: ${name}`);
-    } else if (current[name] !== hash) {
-      fail(
-        `Recorded migration was edited in place: ${name}. A database that already ` +
-          `applied it will not see the change. Write a new migration, or run --update ` +
-          `if this file has genuinely never been applied anywhere.`
-      );
-    }
+  // A manifest that is not readable JSON is a failure, not a crash. An
+  // uncaught SyntaxError exits non-zero too, but it prints a stack trace
+  // instead of saying which file is wrong and what to do about it.
+  let recorded = null;
+  try {
+    recorded = JSON.parse(readFileSync(MANIFEST, 'utf8'));
+  } catch (error) {
+    fail(`Manifest is not valid JSON (${MANIFEST}): ${error.message}`);
   }
 
-  const added = Object.keys(current).filter((name) => !(name in recorded));
-  if (added.length > 0) {
-    console.log(`New migration(s) not yet recorded (not a failure): ${added.join(', ')}`);
+  if (recorded !== null && (typeof recorded !== 'object' || Array.isArray(recorded))) {
+    fail('Manifest must be a JSON object mapping migration filename to SHA-256 digest.');
+    recorded = null;
+  }
+
+  if (recorded !== null) {
+    for (const [name, hash] of Object.entries(recorded)) {
+      // An entry that is not a migration filename cannot describe a migration.
+      // Left unchecked it is a silent typo: the real file then reads as
+      // unrecorded, and the stale key is never compared against anything.
+      if (!NAME_RE.test(name)) {
+        fail(`Manifest entry is not a valid migration filename: ${name}`);
+        continue;
+      }
+      if (typeof hash !== 'string' || !DIGEST_RE.test(hash)) {
+        fail(
+          `Manifest entry ${name} does not hold a SHA-256 digest ` +
+            `(expected 64 lowercase hex characters).`
+        );
+        continue;
+      }
+      if (!(name in current)) {
+        fail(`Recorded migration has been deleted or renamed: ${name}`);
+      } else if (current[name] !== hash) {
+        fail(
+          `Recorded migration was edited in place: ${name}. A database that already ` +
+            `applied it will not see the change. Write a new migration, or run --update ` +
+            `if this file has genuinely never been applied anywhere.`
+        );
+      }
+    }
+
+    /*
+     * A NEW MIGRATION IS A FAILURE IN CHECK MODE.
+     *
+     * This previously printed "not a failure" and exited 0, which made the
+     * manifest advisory: a migration could sit outside it indefinitely, and
+     * the one guarantee the manifest exists to provide -- that every migration
+     * has a recorded digest, so a later edit is detectable -- simply did not
+     * hold for the newest and most likely to be edited file.
+     *
+     * Recording it is a deliberate act (`--update`) that shows up as a diff a
+     * reviewer can question. Check mode never records anything.
+     */
+    const added = Object.keys(current).filter((name) => !(name in recorded));
+    if (added.length > 0) {
+      fail(
+        `Migration(s) not recorded in the manifest: ${added.join(', ')}. ` +
+          `Record them deliberately: node ${process.argv[1]} --update`
+      );
+    }
   }
 }
 

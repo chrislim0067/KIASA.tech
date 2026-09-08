@@ -18,6 +18,8 @@
  *     applied" — the exact inaccuracy the schema exists to prevent.
  */
 import { execFileSync } from 'node:child_process';
+
+import { statusEnvRaw } from './lib/supabase-cli.mjs';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -26,10 +28,7 @@ import { createClient } from '@supabase/supabase-js';
 const ROOT = path.resolve(import.meta.dirname, '..');
 
 function localEnv() {
-  const raw = execFileSync('npx', ['supabase', 'status', '-o', 'env'], {
-    encoding: 'utf8',
-    shell: process.platform === 'win32',
-  });
+  const raw = statusEnvRaw();
   const env = {};
   for (const line of raw.split('\n')) {
     const m = line.match(/^([A-Z0-9_]+)="?([^"\r]*)"?/);

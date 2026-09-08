@@ -18,6 +18,8 @@
  */
 import { execFileSync } from 'node:child_process';
 
+import { statusEnvRaw } from './lib/supabase-cli.mjs';
+
 const CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_kiasa';
 
 /**
@@ -28,10 +30,7 @@ const CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_kiasa';
  * API_URL; this one went straight to `docker exec psql` with no such check.
  */
 function assertLocalStack() {
-  const raw = execFileSync('npx', ['supabase', 'status', '-o', 'env'], {
-    encoding: 'utf8',
-    shell: process.platform === 'win32',
-  });
+  const raw = statusEnvRaw();
   const apiUrl = (raw.match(/^API_URL="?([^"\r\n]*)"?/m) ?? [])[1];
   if (!apiUrl) throw new Error('Local Supabase is not running (supabase start).');
   let host;
