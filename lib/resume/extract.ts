@@ -9,9 +9,10 @@ import {
 import {
   completeStructured,
   isOpenRouterConfigured,
-  resumeModel,
   type ProviderFailureCode,
-} from '@/lib/resume/openrouter';
+} from '@/lib/ai/openrouter';
+import { resolveResumeModel } from '@/lib/ai/config';
+import type { ProviderUsageRecord } from '@/lib/ai/usage';
 
 /**
  * Reading a résumé PDF into the candidate schema.
@@ -19,7 +20,7 @@ import {
  * Two steps, deliberately separate:
  *
  *   1. `lib/resume/pdf-text.ts` extracts the text layer ON THIS SERVER.
- *   2. `lib/resume/openrouter.ts` sends only that bounded text to OpenRouter.
+ *   2. `lib/ai/openrouter.ts` sends only that bounded text to OpenRouter.
  *
  * THE ORIGINAL PDF IS NEVER SENT ANYWHERE. The earlier implementation
  * base64-encoded the file into the request because that provider read PDFs
@@ -43,7 +44,13 @@ import {
 export type ExtractFailureClass = 'unreadable' | 'too_large' | 'model_error' | 'timeout';
 
 export type ExtractResult =
-  | { ok: true; data: ResumeExtraction; model: string }
+  | {
+      ok: true;
+      data: ResumeExtraction;
+      model: string;
+      /** Metadata about the provider call. Never any résumé content. */
+      usage?: ProviderUsageRecord;
+    }
   | {
       ok: false;
       failureClass: ExtractFailureClass;
@@ -53,6 +60,11 @@ export type ExtractResult =
       message: string;
       /** Whether trying the same file again could plausibly succeed. */
       retryable: boolean;
+      /**
+       * Metadata about the provider call, when one was attempted. Absent for a
+       * failure decided locally, because no provider call happened.
+       */
+      usage?: ProviderUsageRecord;
       /**
        * True when the file cannot be read automatically and the candidate
        * should type or paste the details instead. The route already offers a
@@ -71,8 +83,9 @@ export { MAX_RESUME_BYTES };
  * now configuration: `OPENROUTER_RESUME_MODEL` decides it, and a constant
  * captured at import time would be a lie the moment it changed.
  */
-export function resumeModelId(): string {
-  return resumeModel();
+export function resumeModelId(): string | null {
+  const model = resolveResumeModel();
+  return typeof model === 'string' ? model : null;
 }
 
 const SCHEMA_NAME = 'resume_extraction';
@@ -291,7 +304,11 @@ function fromProviderFailure(
  *
  * @param pdf the raw bytes, already known to be a PDF by the caller
  */
-export async function extractResume(pdf: Uint8Array): Promise<ExtractResult> {
+export async function extractResume(
+  pdf: Uint8Array,
+  /** Ties the provider call to the import row it belongs to. */
+  correlationId: string | null = null
+): Promise<ExtractResult> {
   if (!isResumeParsingConfigured()) {
     return fromProviderFailure('not_configured');
   }
@@ -302,11 +319,15 @@ export async function extractResume(pdf: Uint8Array): Promise<ExtractResult> {
   const result = await completeStructured({
     schema: ResumeExtraction,
     schemaName: SCHEMA_NAME,
+    operation: 'resume_extraction',
     system: SYSTEM_PROMPT,
     user: `${USER_PREFIX}${extracted.text}${USER_SUFFIX}`,
+    correlationId,
   });
 
-  if (!result.ok) return fromProviderFailure(result.code, result.status);
+  if (!result.ok) {
+    return { ...fromProviderFailure(result.code, result.status), usage: result.usage };
+  }
 
-  return { ok: true, data: result.data, model: result.model };
+  return { ok: true, data: result.data, model: result.model, usage: result.usage };
 }

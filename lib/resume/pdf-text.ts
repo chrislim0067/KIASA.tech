@@ -1,5 +1,11 @@
+import 'server-only';
+
 /**
  * Reading the text layer out of a résumé PDF, on our own server.
+ *
+ * `server-only` because this pulls in a PDF parser. Without it, a client
+ * component could import this module and ship a megabyte of pdf.js — and a
+ * candidate's résumé bytes — into the browser bundle.
  *
  * WHY THE PDF NO LONGER LEAVES THE SERVER
  *
@@ -74,16 +80,31 @@ export type PdfTextResult =
   | { ok: true; text: string; pages: number; chars: number }
   | { ok: false; code: PdfTextFailureCode; pages?: number; chars?: number };
 
-/** Every PDF begins with this signature. Cheap, and catches a renamed .docx. */
+/**
+ * Does this look like a PDF? Cheap, and catches a renamed .docx.
+ *
+ * The signature is searched for in the first kilobyte rather than required at
+ * byte zero. Real PDFs in the wild carry a byte-order mark, a stray newline or
+ * an HTTP preamble before `%PDF-`, and pdf.js accepts them; rejecting those as
+ * "not a PDF" would be this check overruling the parser about a file the
+ * parser can read perfectly well.
+ */
+const PDF_SIGNATURE_SEARCH_BYTES = 1024;
+
 function looksLikePdf(bytes: Uint8Array): boolean {
-  return (
-    bytes.length >= 5 &&
-    bytes[0] === 0x25 && // %
-    bytes[1] === 0x50 && // P
-    bytes[2] === 0x44 && // D
-    bytes[3] === 0x46 && // F
-    bytes[4] === 0x2d //  -
-  );
+  const limit = Math.min(bytes.length, PDF_SIGNATURE_SEARCH_BYTES);
+  for (let i = 0; i + 4 < limit; i++) {
+    if (
+      bytes[i] === 0x25 && // %
+      bytes[i + 1] === 0x50 && // P
+      bytes[i + 2] === 0x44 && // D
+      bytes[i + 3] === 0x46 && // F
+      bytes[i + 4] === 0x2d // -
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -119,9 +140,15 @@ export async function extractPdfText(bytes: Uint8Array): Promise<PdfTextResult> 
   // when a résumé is actually read.
   const { extractText, getDocumentProxy } = await import('unpdf');
 
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('pdf_parse_timeout')), PDF_PARSE_TIMEOUT_MS).unref?.()
-  );
+  // The handle is kept so the timer can be cleared once the parse settles.
+  // Left running, it would sit in the event loop for the full twenty seconds
+  // after a parse that finished in milliseconds — harmless on a long-lived
+  // server, wasteful in a function billed by duration.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('pdf_parse_timeout')), PDF_PARSE_TIMEOUT_MS);
+    timer.unref?.();
+  });
 
   interface ParseOutcome {
     pages: number;
@@ -149,6 +176,8 @@ export async function extractPdfText(bytes: Uint8Array): Promise<PdfTextResult> 
     // read. The reason is never surfaced verbatim: parser messages can quote
     // document content.
     return { ok: false, code: 'corrupt_pdf' };
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 
   const { pages } = outcome;

@@ -3,6 +3,12 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // `unpdf` wraps a serverless build of pdf.js. Bundling it can rewrite the
+  // dynamic imports it uses to find its own worker and character maps, which
+  // then fails at RUNTIME rather than at build time — the worst place to
+  // discover it. Left external, it is required from node_modules as published.
+  serverExternalPackages: ['unpdf'],
+
   // The floating dev badge overlaps the page bottom-left and shows up in
   // screenshot comparisons; the real site has nothing there.
   devIndicators: false,

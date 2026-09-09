@@ -217,8 +217,10 @@ section('1. PDF text is extracted locally');
 
 /* ------------------------------------------------- 2. the OpenRouter adapter */
 
-const { completeStructured, isOpenRouterConfigured, DEFAULT_RESUME_MODEL, resumeModel, baseUrl } =
-  await import('../lib/resume/openrouter.ts');
+const { completeStructured, isOpenRouterConfigured } = await import('../lib/ai/openrouter.ts');
+const { DEFAULT_RESUME_MODEL, resolveResumeModel, resolveBaseUrl } = await import('../lib/ai/config.ts');
+const resumeModel = () => resolveResumeModel();
+const baseUrl = () => resolveBaseUrl();
 const { ResumeExtraction } = await import('../lib/resume/schema.ts');
 
 section('2. The OpenRouter adapter');
@@ -247,6 +249,7 @@ await withKey(async () => {
     const r = await completeStructured({
       schema: ResumeExtraction,
       schemaName: 'resume_extraction',
+      operation: 'resume_extraction',
       system: 'sys',
       user: 'usr',
       fetchImpl: impl,
@@ -263,44 +266,44 @@ await withKey(async () => {
 
   {
     const { impl } = recordingFetch(() => ({ ok: true, status: 200, json: async () => { throw new Error('not json'); } }));
-    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', system: 's', user: 'u', fetchImpl: impl });
+    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl });
     check('a non-JSON 200 is malformed_json', !r.ok && r.code === 'malformed_json', r.code);
   }
 
   {
     const { impl } = recordingFetch(() => ({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '{ not json' } }] }) }));
-    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', system: 's', user: 'u', fetchImpl: impl });
+    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl });
     check('unparseable content is malformed_json', !r.ok && r.code === 'malformed_json', r.code);
   }
 
   {
     const { impl } = recordingFetch(() => ({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '{}' } }] }) }));
-    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', system: 's', user: 'u', fetchImpl: impl });
+    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl });
     check('JSON that is not the schema is invalid_structure', !r.ok && r.code === 'invalid_structure', r.code);
   }
 
   {
     const bad = { ...VALID_EXTRACTION, country_code: 'SINGAPORE', contact_email: 'not-an-email' };
     const { impl } = recordingFetch(() => providerReply(bad));
-    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', system: 's', user: 'u', fetchImpl: impl });
+    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl });
     check('values the database would reject are refused here', !r.ok && r.code === 'invalid_structure', r.code);
   }
 
   {
     const { impl } = recordingFetch(() => ({ ok: true, status: 200, json: async () => ({ choices: [] }) }));
-    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', system: 's', user: 'u', fetchImpl: impl });
+    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl });
     check('an empty completion is no_content', !r.ok && r.code === 'no_content', r.code);
   }
 
   {
     const { impl } = recordingFetch(() => ({ ok: false, status: 401, json: async () => ({}) }));
-    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', system: 's', user: 'u', fetchImpl: impl, sleepImpl: async () => {} });
+    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl, sleepImpl: async () => {} });
     check('401 is auth_failed and not retried', !r.ok && r.code === 'auth_failed' && r.attempts === 1, `${r.code}/${r.attempts}`);
   }
 
   {
     const { impl, calls } = recordingFetch(() => ({ ok: false, status: 429, json: async () => ({}) }));
-    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', system: 's', user: 'u', fetchImpl: impl, sleepImpl: async () => {} });
+    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl, sleepImpl: async () => {} });
     check('429 retries then exhausts', !r.ok && r.code === 'rate_limited', r.code);
     check('  retries are bounded', calls.length === 2, `${calls.length} attempt(s)`);
   }
@@ -309,7 +312,7 @@ await withKey(async () => {
     const { impl, calls } = recordingFetch((n) =>
       n === 1 ? { ok: false, status: 503, json: async () => ({}) } : providerReply(VALID_EXTRACTION)
     );
-    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', system: 's', user: 'u', fetchImpl: impl, sleepImpl: async () => {} });
+    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl, sleepImpl: async () => {} });
     check('a transient 5xx is retried and can succeed', r.ok && r.attempts === 2, r.ok ? `${r.attempts} attempts` : r.code);
     check('  exactly two requests were made', calls.length === 2);
   }
@@ -320,7 +323,7 @@ await withKey(async () => {
       e.name = 'AbortError';
       throw e;
     };
-    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', system: 's', user: 'u', fetchImpl: impl, sleepImpl: async () => {}, timeoutMs: 5 });
+    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl, sleepImpl: async () => {}, timeoutMs: 5 });
     check('an aborted request is a timeout', !r.ok && r.code === 'timeout', r.code);
     check('  and is retryable', !r.ok && r.retryable === true);
   }
@@ -329,7 +332,7 @@ await withKey(async () => {
     const impl = async () => {
       throw new TypeError('fetch failed');
     };
-    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', system: 's', user: 'u', fetchImpl: impl, sleepImpl: async () => {} });
+    const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl, sleepImpl: async () => {} });
     check('a network error is connection_failed', !r.ok && r.code === 'connection_failed', r.code);
   }
 });
@@ -399,6 +402,7 @@ await withKey(async () => {
   const r = await completeStructured({
     schema: ResumeExtraction,
     schemaName: 'resume_extraction',
+      operation: 'resume_extraction',
     system: 'sys',
     user: `----- BEGIN RESUME TEXT -----\n${text.ok ? text.text : ''}\n----- END RESUME TEXT -----`,
     fetchImpl: impl,
@@ -436,7 +440,7 @@ await withKey(async () => {
   // schema is the boundary, not the model's cooperation.
   const invented = { ...VALID_EXTRACTION, country_code: 'UNITED STATES' };
   const { impl } = recordingFetch(() => providerReply(invented));
-  const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', system: 's', user: 'u', fetchImpl: impl });
+  const r = await completeStructured({ schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl });
   check('an obeyed injection still fails validation', !r.ok && r.code === 'invalid_structure', r.code);
 });
 
@@ -490,7 +494,7 @@ section('6. No executable Anthropic path remains');
 section('7. Nothing sensitive is logged');
 
 {
-  const adapter = readFileSync(path.join(ROOT, 'lib', 'resume', 'openrouter.ts'), 'utf8');
+  const adapter = readFileSync(path.join(ROOT, 'lib', 'ai', 'openrouter.ts'), 'utf8');
   const logging = adapter.match(/console\.\w+\(/g) ?? [];
   check('the adapter logs nothing at all', logging.length === 0, logging.join(', '));
   check('it is server-only', /^import 'server-only';/m.test(adapter));
@@ -498,6 +502,283 @@ section('7. Nothing sensitive is logged');
   const pdfText = readFileSync(path.join(ROOT, 'lib', 'resume', 'pdf-text.ts'), 'utf8');
   const pdfLogging = pdfText.match(/console\.\w+\(/g) ?? [];
   check('the extractor logs nothing either', pdfLogging.length === 0, pdfLogging.join(', '));
+}
+
+/* ------------------------------- 7b. awkward but legitimate résumés */
+
+section('7b. Awkward layouts still extract');
+
+{
+  // Two columns, as a text layer renders them: the reading order interleaves
+  // the skills sidebar into the experience section. It must still extract —
+  // making sense of it is the model's job, and `unreadable_sections` is where
+  // it says it could not.
+  const twoColumn = [
+    'JANE DOE                                    SKILLS',
+    'Senior Software Engineer                    TypeScript',
+    'jane.doe@example.com                        PostgreSQL',
+    '                                            Kubernetes',
+    'EXPERIENCE                                  Terraform',
+    'ACME Pte Ltd, Singapore                     Go',
+    'Senior Software Engineer                    ',
+    'January 2020 to March 2024                  LANGUAGES',
+    'Led the billing platform migration.         English',
+    'Mentored four engineers.                    Mandarin',
+  ];
+  const r = await extractPdfText(textPdf([twoColumn]));
+  check('two-column text extracts', r.ok, r.ok ? `${r.chars} chars` : r.code);
+  check('  both columns are present', r.ok && r.text.includes('ACME') && r.text.includes('Kubernetes'));
+  check('  nothing is silently dropped', r.ok && r.text.includes('Mandarin'));
+}
+
+{
+  /*
+   * Headings a template generator might produce: decorative marks, pipes,
+   * bracketed sections, all-caps.
+   *
+   * A LIMIT OF THESE FIXTURES, stated rather than hidden: they are hand-written
+   * PDFs using the standard Helvetica font, so only WinAnsi characters can be
+   * encoded. `»«` round-trip; an em-dash, a star, an accented capital and CJK
+   * do not — measured, and a property of the fixture, not of the extractor. A
+   * résumé exported from a word processor embeds a font with a proper encoding
+   * and does not have this problem. What this case therefore proves is that
+   * unusual heading STRUCTURE does not defeat extraction; full Unicode
+   * fidelity needs a real-world document and is listed as a known gap.
+   */
+  const odd = [
+    '>>> PROFESSIONAL SUMMARY <<<',
+    '»» WORK HISTORY ««',
+    'ACME Pte Ltd  |  Senior Software Engineer  |  2020 - 2024',
+    'Led the billing platform migration to a queue-based architecture.',
+    '[ SKILLS ] TypeScript, PostgreSQL, Kubernetes, Terraform, Go',
+    'E D U C A T I O N',
+    'BSc Computer Science, National University of Singapore',
+  ];
+  const r = await extractPdfText(textPdf([odd]));
+  check('unusual headings extract', r.ok, r.ok ? `${r.chars} chars` : r.code);
+  check('  decorative punctuation survives', r.ok && r.text.includes('»»'));
+  check('  bracketed and spaced headings survive',
+    r.ok && r.text.includes('[ SKILLS ]') && r.text.includes('E D U C A T I O N'));
+  check('  the résumé body survives', r.ok && r.text.includes('ACME Pte Ltd'));
+}
+
+{
+  // A long but legitimate CV: many roles, comfortably inside every limit.
+  const longCv = [];
+  for (let i = 0; i < 18; i++) {
+    longCv.push(
+      `Role ${i}: Senior Software Engineer, Company ${i} Pte Ltd, Singapore`,
+      `January ${2000 + i} to December ${2001 + i}`,
+      'Delivered platform work and mentored engineers through promotion.'
+    );
+  }
+  const r = await extractPdfText(textPdf([longCv.slice(0, 27), longCv.slice(27)]));
+  check('a long multi-role CV extracts', r.ok, r.ok ? `${r.chars} chars, ${r.pages} pages` : r.code);
+  check('  it is under the character ceiling', r.ok && r.chars < MAX_EXTRACTED_CHARS);
+  check('  the last role survived', r.ok && r.text.includes('Role 17'));
+}
+
+/* ------------------------ 8. the schema actually sent to the provider */
+
+section('8. The request schema is strict-mode acceptable');
+
+{
+  const { z } = await import('zod');
+  const { toStrictJsonSchema, unsupportedKeywords } = await import('../lib/ai/json-schema.ts');
+
+  const raw = z.toJSONSchema(ResumeExtraction, { io: 'output' });
+  const rawUnsupported = unsupportedKeywords(raw);
+  check(
+    'Zod alone emits keywords strict mode rejects',
+    rawUnsupported.length > 0,
+    `${rawUnsupported.length} occurrence(s) — this is why sanitising exists`
+  );
+
+  const strict = toStrictJsonSchema(raw);
+  check('sanitising removes every one', unsupportedKeywords(strict).length === 0,
+    unsupportedKeywords(strict).slice(0, 3).join(', '));
+
+  // Structure must survive intact, or the model is told the wrong shape.
+  check('the object type survives', strict.type === 'object');
+  check('all 16 properties survive', Object.keys(strict.properties).length === 16);
+  check('required survives in full', strict.required.length === 16);
+  check('additionalProperties:false survives', strict.additionalProperties === false);
+  check('descriptions survive (they are the field instructions)',
+    JSON.stringify(strict).includes('description'));
+  check('nested arrays survive', Boolean(strict.properties.work_experiences));
+  check('enums survive', JSON.stringify(strict).includes('enum'));
+  check('no $schema key', !('$schema' in strict));
+
+  // A field legitimately named like a keyword must not be deleted.
+  const tricky = { type: 'object', additionalProperties: false,
+    properties: { pattern: { type: 'string' }, title: { type: 'string', maxLength: 5 } },
+    required: ['pattern', 'title'] };
+  const cleaned = toStrictJsonSchema(tricky);
+  check('a property named "pattern" is kept as a field', 'pattern' in cleaned.properties);
+  check('a property named "title" is kept as a field', 'title' in cleaned.properties);
+  check('  but its unsupported keyword is stripped', !('maxLength' in cleaned.properties.title));
+
+  // And the real guarantee is unchanged: Zod still enforces every bound.
+  const tooLong = { ...VALID_EXTRACTION, legal_first_name: 'x'.repeat(500) };
+  check('Zod still rejects what the stripped keywords described',
+    ResumeExtraction.safeParse(tooLong).success === false);
+}
+
+await withKey(async () => {
+  const { impl, calls } = recordingFetch(() => providerReply(VALID_EXTRACTION));
+  await completeStructured({
+    schema: ResumeExtraction, schemaName: 'resume_extraction',
+    operation: 'resume_extraction', system: 's', user: 'u', fetchImpl: impl,
+  });
+  const sent = JSON.parse(calls[0].init.body).response_format.json_schema.schema;
+  const { unsupportedKeywords } = await import('../lib/ai/json-schema.ts');
+  check('the schema on the wire is already sanitised', unsupportedKeywords(sent).length === 0);
+  check('  and strict is requested', JSON.parse(calls[0].init.body).response_format.json_schema.strict === true);
+  check('  usage accounting is requested', JSON.parse(calls[0].init.body).usage?.include === true);
+});
+
+/* ------------------------------- 9. configuration boundary */
+
+section('9. Provider configuration is validated and fails closed');
+
+{
+  const { providerConfig, resolveResumeModel, resolveBaseUrl, DEFAULT_RESUME_MODEL } =
+    await import('../lib/ai/config.ts');
+  const env = { ...process.env };
+  const set = (k, v) => { if (v === undefined) delete process.env[k]; else process.env[k] = v; };
+
+  set('OPENROUTER_API_KEY', undefined);
+  check('no key -> missing_api_key', providerConfig().code === 'missing_api_key');
+
+  set('OPENROUTER_API_KEY', '   ');
+  check('a whitespace-only key is still missing', providerConfig().code === 'missing_api_key');
+
+  set('OPENROUTER_API_KEY', 'k');
+  set('OPENROUTER_BASE_URL', 'not a url');
+  check('an invalid base URL is rejected', providerConfig().code === 'invalid_base_url');
+
+  set('OPENROUTER_BASE_URL', 'http://evil.example.com/v1');
+  check('plain http to a remote host is rejected', providerConfig().code === 'insecure_base_url');
+
+  set('OPENROUTER_BASE_URL', 'http://127.0.0.1:8080/v1');
+  check('plain http to loopback is allowed (local mocks)', providerConfig().ok === true);
+
+  set('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1/');
+  check('a trailing slash is trimmed', resolveBaseUrl() === 'https://openrouter.ai/api/v1');
+
+  for (const bad of ['gemini-2.5-flash', 'vendor/', '/model', 'vendor model', 'vendor/model/extra', '"quoted/model"']) {
+    set('OPENROUTER_RESUME_MODEL', bad);
+    check(`an invalid model is rejected: ${bad}`, providerConfig().code === 'invalid_model');
+  }
+  for (const good of ['google/gemini-2.5-flash', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.1-70b-instruct:free']) {
+    set('OPENROUTER_RESUME_MODEL', good);
+    check(`a valid model is accepted: ${good}`, resolveResumeModel() === good);
+  }
+
+  set('OPENROUTER_RESUME_MODEL', undefined);
+  check('the default model applies when unset', resolveResumeModel() === DEFAULT_RESUME_MODEL);
+
+  for (const k of Object.keys(process.env)) if (!(k in env)) delete process.env[k];
+  Object.assign(process.env, env);
+}
+
+/* ------------------------------- 10. usage metadata carries no content */
+
+section('10. Usage metadata is metadata only');
+
+{
+  const { ProviderUsageRecord, FORBIDDEN_USAGE_FIELDS, parseUsageRecord } =
+    await import('../lib/ai/usage.ts');
+
+  const valid = {
+    provider: 'openrouter', model: 'google/gemini-2.5-flash', operation: 'resume_extraction',
+    status: 'succeeded', failure_class: null, failure_code: null, latency_ms: 1234, attempts: 1,
+    prompt_tokens: 900, completion_tokens: 300, total_tokens: 1200, cost_usd: 0.0004,
+    provider_request_id: 'gen-abc', correlation_id: '11111111-2222-4333-8444-555555555555',
+  };
+  check('a well-formed record validates', ProviderUsageRecord.safeParse(valid).success);
+
+  for (const field of FORBIDDEN_USAGE_FIELDS) {
+    const withContent = { ...valid, [field]: 'a candidate résumé paragraph' };
+    check(`a "${field}" field is rejected`, ProviderUsageRecord.safeParse(withContent).success === false);
+  }
+
+  check('negative latency is rejected', !ProviderUsageRecord.safeParse({ ...valid, latency_ms: -1 }).success);
+  check('fractional tokens are rejected', !ProviderUsageRecord.safeParse({ ...valid, total_tokens: 1.5 }).success);
+  check('an unknown provider is rejected', !ProviderUsageRecord.safeParse({ ...valid, provider: 'anthropic' }).success);
+  check('an unknown operation is rejected', !ProviderUsageRecord.safeParse({ ...valid, operation: 'job_scoring' }).success);
+  check('a bad correlation id is rejected', !ProviderUsageRecord.safeParse({ ...valid, correlation_id: 'nope' }).success);
+  check('parseUsageRecord returns null rather than throwing', parseUsageRecord({ nonsense: true }) === null);
+}
+
+await withKey(async () => {
+  const { impl } = recordingFetch(() => ({
+    ok: true, status: 200,
+    json: async () => ({
+      id: 'gen-12345',
+      choices: [{ message: { content: JSON.stringify(VALID_EXTRACTION) } }],
+      usage: { prompt_tokens: 1200, completion_tokens: 400, total_tokens: 1600, cost: 0.00031 },
+    }),
+  }));
+  const r = await completeStructured({
+    schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction',
+    system: 's', user: 'u', fetchImpl: impl, nowImpl: (() => { let t = 1000; return () => (t += 250); })(),
+  });
+  check('a successful call returns usage metadata', r.ok && Boolean(r.usage));
+  const { ProviderUsageRecord } = await import('../lib/ai/usage.ts');
+  check('  and it validates', ProviderUsageRecord.safeParse(r.usage).success);
+  check('  tokens are captured', r.usage.total_tokens === 1600 && r.usage.prompt_tokens === 1200);
+  check('  the provider cost is captured verbatim', r.usage.cost_usd === 0.00031);
+  check('  the provider request id is captured', r.usage.provider_request_id === 'gen-12345');
+  check('  latency is measured', r.usage.latency_ms > 0);
+  check('  status is succeeded', r.usage.status === 'succeeded');
+  check('  no résumé content anywhere in it', !JSON.stringify(r.usage).includes('ACME'));
+
+  // A provider that omits usage must not produce invented numbers.
+  const { impl: bare } = recordingFetch(() => providerReply(VALID_EXTRACTION));
+  const r2 = await completeStructured({
+    schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction',
+    system: 's', user: 'u', fetchImpl: bare,
+  });
+  check('missing usage stays null, never estimated',
+    r2.ok && r2.usage.total_tokens === null && r2.usage.cost_usd === null);
+
+  // Failures carry usage too, with the failure classified.
+  const { impl: dead } = recordingFetch(() => ({ ok: false, status: 500, json: async () => ({}) }));
+  const r3 = await completeStructured({
+    schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction',
+    system: 's', user: 'u', fetchImpl: dead, sleepImpl: async () => {},
+  });
+  check('a failed call still reports usage', !r3.ok && r3.usage.status === 'failed');
+  check('  with the failure classified', r3.usage.failure_code === 'server_error' && r3.usage.failure_class === 'model_error');
+  check('  and the retry count', r3.usage.attempts === 2);
+});
+
+{
+  const prev = process.env.OPENROUTER_API_KEY;
+  delete process.env.OPENROUTER_API_KEY;
+  const r = await completeStructured({
+    schema: ResumeExtraction, schemaName: 'x', operation: 'resume_extraction',
+    system: 's', user: 'u', fetchImpl: async () => { throw new Error('must not be called'); },
+  });
+  check('an unconfigured call is recorded as not_attempted', !r.ok && r.usage.status === 'not_attempted');
+  check('  with zero attempts', r.usage.attempts === 0);
+  if (prev !== undefined) process.env.OPENROUTER_API_KEY = prev;
+}
+
+/* ------------------------------- 11. PDF header tolerance */
+
+section('11. PDF signature detection');
+
+{
+  const good = textPdf([RESUME_LINES]);
+  const withBom = new Uint8Array(Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf, 0x0a]), Buffer.from(good)]));
+  const r = await extractPdfText(withBom);
+  check('a PDF preceded by a BOM is still read', r.ok, r.ok ? `${r.chars} chars` : r.code);
+
+  const notPdf = new Uint8Array(Buffer.from('x'.repeat(4000), 'latin1'));
+  const r2 = await extractPdfText(notPdf);
+  check('a large non-PDF is still rejected', !r2.ok && r2.code === 'not_a_pdf', r2.code);
 }
 
 /* ---------------------------------------------------------------- report */
