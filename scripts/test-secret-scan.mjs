@@ -242,7 +242,11 @@ section('5. Blanket exemptions are limited to documented binary types');
 
   // `.env.example` is a fixture-shaped name. It must still be scanned: the
   // whole-file exemption list is empty, and this is what proves it.
-  const ex = scan({ '.env.example': `ANTHROPIC_API_KEY=${v}\n` });
+  // The variable name is incidental; what is proven is that a real key SHAPE
+  // in a fixture-named file is still reported. The `anthropic-key` RULE stays
+  // even though this application no longer calls Anthropic — someone pasting
+  // an `sk-ant-` key anywhere in this repository is still a leak.
+  const ex = scan({ '.env.example': `OPENROUTER_API_KEY=${v}\n` });
   check('.env.example is still scanned', reported(ex.out, '.env.example', 'anthropic-key'));
 
   const lock = scan({ 'package-lock.json': `{ "token": "${v}" }\n` });

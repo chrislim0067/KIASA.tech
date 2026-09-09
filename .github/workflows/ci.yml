@@ -103,6 +103,17 @@ jobs:
       - name: Exposure diagnostic logic (offline)
         run: npm run test:exposure
 
+      # The résumé provider path, entirely offline: hand-built PDF fixtures and
+      # a mocked fetch. It never calls OpenRouter and needs no key — the base
+      # URL is pointed at a closed loopback port, so an accidental real request
+      # fails locally instead of reaching a provider and spending money.
+      #
+      # It also asserts the two things that would regress silently: that the
+      # original PDF bytes never appear in the request body, and that no
+      # executable Anthropic path has come back.
+      - name: Résumé provider (offline, mocked)
+        run: npm run test:resume:provider
+
       # Same reasoning as the scanner: the manifest checker is tested before it
       # is trusted. It previously reported an unrecorded migration and exited 0,
       # which no assertion anywhere would have caught.
