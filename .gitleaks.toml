@@ -32,3 +32,30 @@ condition = "AND"
 paths = ['''^supabase/migrations/checksums\.json$''']
 regexTarget = "match"
 regexes = ['''\b[a-f0-9]{64}\b''']
+
+# `scripts/test-agent-control-plane.mjs` holds a synthetic idempotency-key
+# fixture: `const key = 'idem_0123456789abcdef'`. The `generic-api-key` rule is
+# an entropy heuristic, and a twenty-character token of digits and letters looks
+# like a credential to it. It is not one — it is a constant in a test that makes
+# no network call of any kind, and its value is the digits nought to nine.
+#
+# It cannot simply be renamed: gitleaks scans HISTORY, and the value is already
+# in an earlier commit on this branch. Rewriting that history would mean a
+# force-push, which this project does not do.
+#
+# As narrow as the digest exemption above, and for the same reasons — all three
+# conditions must hold together:
+#
+#   * only the `generic-api-key` rule  — every other rule still applies
+#   * only that one path               — no directory, no glob
+#   * only values beginning `idem_`    — the shape of this one fixture
+#
+# A real key committed to that same file would not begin `idem_`, and would
+# still be reported.
+[[allowlists]]
+description = "Synthetic idempotency-key fixture in the agent control-plane tests"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^scripts/test-agent-control-plane\.mjs$''']
+regexTarget = "match"
+regexes = ['''idem_[A-Za-z0-9]{8,64}''']
