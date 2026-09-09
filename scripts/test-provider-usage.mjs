@@ -315,13 +315,40 @@ async function main() {
 
   const before = sql(`select count(*) from public.provider_usage where user_id = '${bob.id}'`);
   const admin = svcClient();
-  await admin.auth.admin.deleteUser(bob.id);
+  const deleted = await admin.auth.admin.deleteUser(bob.id);
+  check('the account deletes at all', !deleted.error, deleted.error?.message ?? 'deleted');
   created.splice(created.indexOf(bob.id), 1);
+
+  const stillReferenced = sql(
+    `select count(*) from public.provider_usage where user_id = '${bob.id}'`
+  );
+  check('no row still references the deleted user', stillReferenced === '0', stillReferenced);
+
   const orphaned = sql(
     `select count(*) from public.provider_usage where user_id is null and provider_request_id is not null`
   );
-  check('the row survives the user', before === '1' && Number(orphaned) >= 1,
+  check('the accounting survives the account', before === '1' && Number(orphaned) >= 1,
     `before ${before}, orphaned ${orphaned}`);
+
+  // The anonymisation is the ONLY permitted update. Everything else, including
+  // a null alongside an edit, is still refused.
+  const anotherRow = insertUsage(alice.id);
+  let smuggled = false;
+  try {
+    sql(`update public.provider_usage set user_id = null, cost_usd = 0 where id = '${anotherRow}'`);
+  } catch {
+    smuggled = true;
+  }
+  check('nulling user_id cannot smuggle another edit through', smuggled);
+
+  let plainNull = false;
+  try {
+    sql(`update public.provider_usage set user_id = null where id = '${anotherRow}'`);
+    plainNull = true;
+  } catch {
+    plainNull = false;
+  }
+  check('a bare anonymisation is permitted (this is what the FK does)', plainNull);
 }
 
 async function cleanup() {

@@ -197,7 +197,29 @@ security invoker
 set search_path = ''
 as $$
 begin
-  raise exception 'public.provider_usage rows are append-only and cannot be % ',
+  /*
+   * ONE permitted update: the foreign key anonymising a row.
+   *
+   * `user_id` is ON DELETE SET NULL, and that referential action is performed
+   * as an UPDATE. A blanket refusal therefore does not merely block editing —
+   * it blocks DELETING A USER ACCOUNT, because the FK's update is rejected and
+   * the whole delete fails. CI caught exactly that.
+   *
+   * So the anonymisation is allowed, and nothing else is: `user_id` must be
+   * going from set to null, and every other column must be byte-for-byte
+   * unchanged. Comparing the rows minus `user_id` is what makes that precise
+   * rather than a hopeful guess, and it means this exception cannot be used to
+   * smuggle an edit through alongside a null.
+   */
+  if tg_op = 'UPDATE'
+     and old.user_id is not null
+     and new.user_id is null
+     and (to_jsonb(new) - 'user_id') = (to_jsonb(old) - 'user_id')
+  then
+    return new;
+  end if;
+
+  raise exception 'public.provider_usage rows are append-only and cannot be %',
     lower(tg_op)
     using errcode = 'restrict_violation';
 end;
