@@ -158,7 +158,7 @@ async function main() {
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relname = 'provider_usage'`
   );
-  check('RLS is enabled and forced', rls === 't/t', rls);
+  check('RLS is enabled and forced', rls === 'true/true', rls);
 
   const anonGrants = sql(
     `select coalesce(string_agg(distinct grantee || ':' || privilege_type, ', '), 'none')
@@ -280,6 +280,8 @@ async function main() {
     base({ cols: ', cost_usd', vals: `'openrouter', 'm', 'resume_extraction', 'succeeded', 1, 1, -0.5` }));
   refuses('a failure without a class is refused',
     base({ cols: '', vals: `'openrouter', 'm', 'resume_extraction', 'failed', 1, 1` }));
+  refuses('a not_attempted row without a reason is refused',
+    base({ cols: '', vals: `'openrouter', 'm', 'resume_extraction', 'not_attempted', 0, 0` }));
   refuses('a success carrying a failure class is refused',
     base({ cols: ', failure_class', vals: `'openrouter', 'm', 'resume_extraction', 'succeeded', 1, 1, 'timeout'` }));
   refuses('an unattempted call that reports tokens is refused',

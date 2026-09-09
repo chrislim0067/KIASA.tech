@@ -99,9 +99,18 @@ create table public.provider_usage (
 
   created_at timestamptz not null default now(),
 
-  -- A failure has a reason; a success does not pretend to have one.
-  constraint provider_usage_failure_has_class
-    check ((status = 'failed') = (failure_class is not null)),
+  -- A call that did not succeed carries a reason; a success does not pretend
+  -- to have one.
+  --
+  -- Written against `succeeded` rather than `failed` deliberately. An earlier
+  -- version said `(status = 'failed') = (failure_class is not null)`, which
+  -- forbade a reason on a `not_attempted` row — and `not_attempted` is
+  -- precisely the case where the reason matters most: the call was refused
+  -- before it was made, because the provider was not configured. The adapter
+  -- emits exactly that row, so the constraint and the code disagreed and every
+  -- unconfigured call would have failed to record. CI caught it.
+  constraint provider_usage_outcome_has_reason
+    check ((status = 'succeeded') = (failure_class is null)),
   -- Nothing was attempted, so nothing can have been charged or counted.
   constraint provider_usage_not_attempted_is_empty
     check (
