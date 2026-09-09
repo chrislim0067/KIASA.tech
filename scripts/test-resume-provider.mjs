@@ -709,6 +709,25 @@ section('10. Usage metadata is metadata only');
   check('an unknown operation is rejected', !ProviderUsageRecord.safeParse({ ...valid, operation: 'job_scoring' }).success);
   check('a bad correlation id is rejected', !ProviderUsageRecord.safeParse({ ...valid, correlation_id: 'nope' }).success);
   check('parseUsageRecord returns null rather than throwing', parseUsageRecord({ nonsense: true }) === null);
+
+  /*
+   * The invariant CI caught the database and the contract disagreeing on.
+   * A `not_attempted` call — refused because the provider was not configured —
+   * HAS a reason, and an earlier CHECK constraint forbade one.
+   */
+  const notAttempted = {
+    ...valid, status: 'not_attempted', failure_class: 'model_error',
+    failure_code: 'not_configured', attempts: 0,
+    prompt_tokens: null, completion_tokens: null, total_tokens: null,
+    cost_usd: null, provider_request_id: null,
+  };
+  check('a not_attempted call may carry a reason', ProviderUsageRecord.safeParse(notAttempted).success);
+  check('a not_attempted call without a reason is rejected',
+    !ProviderUsageRecord.safeParse({ ...notAttempted, failure_class: null }).success);
+  check('a failed call without a reason is rejected',
+    !ProviderUsageRecord.safeParse({ ...valid, status: 'failed', failure_class: null }).success);
+  check('a succeeded call carrying a reason is rejected',
+    !ProviderUsageRecord.safeParse({ ...valid, failure_class: 'timeout' }).success);
 }
 
 await withKey(async () => {

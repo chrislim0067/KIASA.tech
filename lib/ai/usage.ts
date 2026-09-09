@@ -72,7 +72,21 @@ export const ProviderUsageRecord = z
     /** Ours: ties this call to the import it belonged to. */
     correlation_id: z.uuid().nullable(),
   })
-  .strict();
+  .strict()
+  /*
+   * The same invariant the database enforces, in the same words.
+   *
+   * Written against `succeeded` rather than `failed`. A `not_attempted` call —
+   * refused before any request because the provider was not configured — has a
+   * reason, and an earlier version of the CHECK constraint forbade one. The
+   * contract and the table disagreed, so every unconfigured call would have
+   * failed to record; CI caught it. They are kept identical here so the next
+   * change to either is caught by the other.
+   */
+  .refine(
+    (r) => (r.status === 'succeeded') === (r.failure_class === null),
+    { message: 'a succeeded call carries no failure_class; any other outcome must' }
+  );
 
 export type ProviderUsageRecord = z.infer<typeof ProviderUsageRecord>;
 
