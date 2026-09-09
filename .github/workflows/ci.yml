@@ -114,6 +114,16 @@ jobs:
       - name: Résumé provider (offline, mocked)
         run: npm run test:resume:provider
 
+      # The agent control plane: contracts, state machine, safety policy and
+      # candidate-URL validation. Pure — no network, no database, no browser,
+      # no worker, no provider.
+      #
+      # It runs here because these are the rules that will later decide whether
+      # a machine presses submit on a real application. Fixing them before
+      # anything can act on them is the point of the milestone.
+      - name: Agent control plane (offline)
+        run: npm run test:agent
+
       # Same reasoning as the scanner: the manifest checker is tested before it
       # is trusted. It previously reported an unrecorded migration and exited 0,
       # which no assertion anywhere would have caught.
