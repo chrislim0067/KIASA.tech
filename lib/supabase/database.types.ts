@@ -951,6 +951,74 @@ export type Database = {
           },
         ]
       }
+      provider_usage: {
+        Row: {
+          attempts: number
+          completion_tokens: number | null
+          correlation_id: string | null
+          cost_usd: number | null
+          created_at: string
+          failure_class: string | null
+          failure_code: string | null
+          id: string
+          latency_ms: number
+          model: string
+          operation: string
+          prompt_tokens: number | null
+          provider: string
+          provider_request_id: string | null
+          status: string
+          total_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          attempts: number
+          completion_tokens?: number | null
+          correlation_id?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          failure_class?: string | null
+          failure_code?: string | null
+          id?: string
+          latency_ms: number
+          model: string
+          operation: string
+          prompt_tokens?: number | null
+          provider: string
+          provider_request_id?: string | null
+          status: string
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          completion_tokens?: number | null
+          correlation_id?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          failure_class?: string | null
+          failure_code?: string | null
+          id?: string
+          latency_ms?: number
+          model?: string
+          operation?: string
+          prompt_tokens?: number | null
+          provider?: string
+          provider_request_id?: string | null
+          status?: string
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       resume_imports: {
         Row: {
           confirmed_at: string | null
