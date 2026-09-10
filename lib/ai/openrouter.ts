@@ -41,15 +41,27 @@ export const REQUEST_TIMEOUT_MS = 90_000;
 /** One retry. More multiplies the wait a candidate is staring at. */
 export const MAX_ATTEMPTS = 2;
 
-export type ProviderFailureCode =
-  | 'not_configured'
-  | 'timeout'
-  | 'rate_limited'
-  | 'auth_failed'
-  | 'bad_request'
-  | 'server_error'
-  | 'connection_failed'
-  | 'no_content'
+/**
+ * Every way a provider call can fail, as a VALUE rather than only a type.
+ *
+ * It is a value because the database now holds this same vocabulary in a CHECK
+ * constraint on `resume_imports.provider_failure_code`, and two copies of a
+ * list drift. A parity test walks this array against that constraint, so a
+ * member added here without the matching migration fails a test rather than
+ * failing silently in production on the one row that needed it.
+ *
+ * The ordering is deliberate: everything that went wrong before the model was
+ * reached, then what the model did.
+ */
+export const PROVIDER_FAILURE_CODES = [
+  'not_configured',
+  'timeout',
+  'rate_limited',
+  'auth_failed',
+  'bad_request',
+  'server_error',
+  'connection_failed',
+  'no_content',
   /**
    * The model hit the output ceiling before finishing. `finish_reason:
    * "length"`.
@@ -60,18 +72,21 @@ export type ProviderFailureCode =
    * Collapsing them is why Milestone 2C.2 could only offer a hypothesis — the
    * one field that would have settled it was being discarded.
    */
-  | 'output_truncated'
+  'output_truncated',
   /**
    * The model produced reasoning and no answer.
    *
    * Reported so the diagnosis is visible, NEVER so the reasoning can be used.
    * Reasoning text is not a structured answer and is never parsed as one.
    */
-  | 'reasoning_only'
+  'reasoning_only',
   /** The model explicitly declined. `refusal`, or `finish_reason` says so. */
-  | 'refused'
-  | 'malformed_json'
-  | 'invalid_structure';
+  'refused',
+  'malformed_json',
+  'invalid_structure',
+] as const;
+
+export type ProviderFailureCode = (typeof PROVIDER_FAILURE_CODES)[number];
 
 /** Metadata about the call, always returned, success or failure. */
 export interface CallTelemetry {

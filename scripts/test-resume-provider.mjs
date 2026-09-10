@@ -807,6 +807,154 @@ section('11. PDF signature detection');
   check('a large non-PDF is still rejected', !r2.ok && r2.code === 'not_a_pdf', r2.code);
 }
 
+/* ------------------ 10. the exact provider outcome survives to storage */
+
+section('10. The exact provider failure code is preserved, not collapsed');
+
+/*
+ * WHY THIS SECTION EXISTS
+ *
+ * A production import failed with "That document could not be read as a
+ * résumé", and there was no way to learn why. Five genuinely different provider
+ * outcomes share that sentence — the model thought and never answered, the
+ * model declined, the reply was empty, the content was not JSON, or it was JSON
+ * and not a résumé — and all five were being stored as the single value
+ * `no_structured_output`. The specific code was computed and then dropped.
+ *
+ * These checks prove it is now carried all the way to the column, that the
+ * candidate still sees one bounded sentence, and that nothing the provider
+ * wrote comes with it.
+ *
+ * No live request is made anywhere here: every reply is a literal built below.
+ */
+
+const { PROVIDER_FAILURE_CODES } = await import('../lib/ai/openrouter.ts');
+
+/** A provider reply with an arbitrary body, for the outcomes that need one. */
+const rawReply = (body, status = 200) => ({
+  ok: status >= 200 && status < 300,
+  status,
+  json: async () => body,
+});
+
+/*
+ * The five outcomes that collapse, each expressed as the reply that produces
+ * it. Deliberately built from the provider's own response shape rather than by
+ * calling internals, so a change in how they are detected is caught here.
+ */
+const COLLAPSING = [
+  ['reasoning_only',
+    { choices: [{ message: { content: '', reasoning: 'Let me think about this résumé…' } }] }],
+  ['refused',
+    { choices: [{ message: { content: '', refusal: 'I will not process this document.' } }] }],
+  ['no_content',
+    { choices: [{ message: { content: '' } }] }],
+  ['malformed_json',
+    { choices: [{ message: { content: 'Here is the JSON you asked for: {broken' } }] }],
+  ['invalid_structure',
+    { choices: [{ message: { content: JSON.stringify({ legal_first_name: 12345 }) } }] }],
+];
+
+await withKey(async () => {
+  const seen = new Map();
+
+  for (const [expected, body] of COLLAPSING) {
+    const { impl } = recordingFetch(() => rawReply(body));
+    const r = await extract.extractResume(textPdf([RESUME_LINES]), null, impl);
+
+    check(`${expected}: extraction fails`, r.ok === false);
+    check(`  ${expected}: the candidate is told one bounded thing`,
+      !r.ok && r.failureCode === 'no_structured_output',
+      r.ok ? 'unexpectedly ok' : r.failureCode);
+    check(`  ${expected}: the EXACT outcome survives`,
+      !r.ok && r.providerCode === expected,
+      r.ok ? 'unexpectedly ok' : String(r.providerCode));
+
+    if (!r.ok && r.providerCode) seen.set(r.providerCode, r.failureCode);
+
+    /*
+     * NOTHING THE PROVIDER WROTE TRAVELS WITH IT. The bodies above deliberately
+     * contain a sentence a model might have written; none of it may appear in
+     * anything the candidate or the database receives.
+     */
+    const rendered = JSON.stringify(r);
+    for (const leak of ['think about this', 'will not process', 'broken', '12345']) {
+      check(`  ${expected}: "${leak}" does not travel with the failure`,
+        !rendered.includes(leak));
+    }
+  }
+
+  check('all five are stored DISTINCTLY, not collapsed',
+    seen.size === 5, [...seen.keys()].sort().join(', '));
+  check('  while every one of them shows the same sentence to the candidate',
+    new Set(seen.values()).size === 1, [...new Set(seen.values())].join(', '));
+
+  check('every code produced is one the database vocabulary accepts',
+    [...seen.keys()].every((c) => PROVIDER_FAILURE_CODES.includes(c)),
+    [...seen.keys()].join(', '));
+
+  /* A SUCCESS CARRIES NO FAILURE CODE AT ALL. */
+  const { impl: okImpl } = recordingFetch(() => providerReply(VALID_EXTRACTION));
+  const good = await extract.extractResume(textPdf([RESUME_LINES]), null, okImpl);
+  check('a successful import has no provider failure code',
+    good.ok === true && good.providerCode === undefined,
+    good.ok ? 'ok' : `failed: ${good.failureCode}`);
+
+  /*
+   * A FAILURE DECIDED LOCALLY REPORTS NO PROVIDER OUTCOME.
+   *
+   * No call was made, so claiming one failed would misreport where the problem
+   * was — and would put a provider code on a row whose PDF never left us.
+   */
+  for (const [label, pdf] of [['an empty file', emptyPdf()], ['a scan', imageOnlyPdf()]]) {
+    const r = await extract.extractResume(pdf);
+    check(`${label} fails before any provider call`, r.ok === false);
+    check(`  and reports no provider outcome`,
+      !r.ok && r.providerCode === undefined,
+      r.ok ? 'unexpectedly ok' : String(r.providerCode));
+    check(`  and no usage row would be written for it`,
+      !r.ok && r.usage === undefined);
+  }
+});
+
+/* ------------------ 11. the database vocabulary matches the code */
+
+section('11. The stored vocabulary matches the migration, exactly');
+
+{
+  /*
+   * TWO COPIES OF A LIST DRIFT. The TypeScript union and the SQL CHECK
+   * constraint must name the same thirteen codes, so this compares them as
+   * sorted sets rather than checking that a few members are present: a
+   * fourteenth code in either place fails, and so does a missing one.
+   */
+  const migration = readFileSync(
+    path.join(ROOT, 'supabase', 'migrations',
+      '20260910000030_resume_provider_failure_code.sql'), 'utf8');
+
+  const opens = migration.indexOf('resume_imports_provider_failure_code_allowed');
+  const clause = migration.slice(opens, migration.indexOf(');', opens));
+  const inSql = [...clause.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
+  const inTs = [...PROVIDER_FAILURE_CODES].sort();
+
+  check('the migration names every code the adapter can produce',
+    inSql.join(',') === inTs.join(','),
+    `sql: ${inSql.join(',')} | ts: ${inTs.join(',')}`);
+  check('  and there are thirteen of them', inTs.length === 13, String(inTs.length));
+
+  check('the column may only be set on a failed row',
+    /provider_failure_code is null or status = 'failed'/.test(migration),
+    'a parsed import carrying a provider failure would be two columns disagreeing');
+
+  /*
+   * AND IT IS NOT A FREE-TEXT COLUMN. The whole point is that a provider
+   * message, a prompt or a line of someone's résumé cannot be written here.
+   */
+  check('the column is bounded by a vocabulary, not by a length',
+    !/provider_failure_code.*length\(/.test(migration),
+    'a length check would admit any text that fits');
+}
+
 /* ---------------------------------------------------------------- report */
 
 console.log('\n========================================================');
