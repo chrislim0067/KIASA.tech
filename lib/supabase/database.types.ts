@@ -1524,6 +1524,76 @@ export type Database = {
           },
         ]
       }
+      worker_credentials: {
+        Row: {
+          audience: string
+          created_at: string
+          expires_at: string
+          id: string
+          issued_at: string
+          last_used_at: string | null
+          revoked_at: string | null
+          revoked_reason: string | null
+          scope: string
+          slot_id: string | null
+          supervisor_id: string
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          audience?: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          issued_at?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          scope?: string
+          slot_id?: string | null
+          supervisor_id: string
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          audience?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          issued_at?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          scope?: string
+          slot_id?: string | null
+          supervisor_id?: string
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_credentials_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "worker_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_credentials_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "worker_supervisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_credentials_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       worker_events: {
         Row: {
           created_at: string
@@ -1582,6 +1652,57 @@ export type Database = {
           },
           {
             foreignKeyName: "worker_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      worker_pairings: {
+        Row: {
+          attempts: number
+          created_at: string
+          expires_at: string
+          id: string
+          redeemed_at: string | null
+          redeemed_supervisor_id: string | null
+          revoked_at: string | null
+          secret_hash: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          expires_at: string
+          id?: string
+          redeemed_at?: string | null
+          redeemed_supervisor_id?: string | null
+          revoked_at?: string | null
+          secret_hash: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          redeemed_at?: string | null
+          redeemed_supervisor_id?: string | null
+          revoked_at?: string | null
+          secret_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_pairings_redeemed_supervisor_id_fkey"
+            columns: ["redeemed_supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "worker_supervisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_pairings_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "admin_user_directory"
