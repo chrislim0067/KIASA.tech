@@ -92,7 +92,27 @@ const REMOVED_FUNCTIONS = ['text_array_no_blanks', 'set_updated_at'];
  * in the way that matters: a THIRD definer function, or a third EXECUTE grant,
  * still fails here. Sorted by name, because string_agg is.
  */
-const WORKER_BOUNDARY_FUNCTIONS = ['worker_record_heartbeat', 'worker_redeem_pairing'];
+/*
+ * Two lists, not one, because the resolver is deliberately in only one of
+ * them. `worker_resolve_credential` is SECURITY DEFINER and granted to
+ * NOBODY: inside another definer function the current user is the owner, which
+ * holds EXECUTE implicitly, so the five operations can call it while PostgREST
+ * cannot reach it at all. Collapsing these into one list would either hide a
+ * definer function or grant it.
+ *
+ * Sorted by name, because string_agg is.
+ */
+const WORKER_DEFINER_FUNCTIONS = [
+  'worker_claim_task',
+  'worker_record_heartbeat',
+  'worker_redeem_pairing',
+  'worker_renew_lease',
+  'worker_report_task',
+  'worker_resolve_credential',
+];
+const WORKER_CALLABLE_FUNCTIONS = WORKER_DEFINER_FUNCTIONS.filter(
+  (fn) => fn !== 'worker_resolve_credential'
+);
 const API_ROLES = ['anon', 'authenticated', 'service_role'];
 
 let failed = 0;
@@ -172,7 +192,7 @@ for (const role of ['anon', 'service_role']) {
                           from pg_proc p join pg_namespace n on n.oid=p.pronamespace
                           where n.nspname='public'
                             and has_function_privilege('${role}',p.oid,'EXECUTE')`);
-  const allowed = role === 'service_role' ? WORKER_BOUNDARY_FUNCTIONS.join(',') : 'none';
+  const allowed = role === 'service_role' ? WORKER_CALLABLE_FUNCTIONS.join(',') : 'none';
   check(
     role === 'service_role'
       ? 'service_role executes the worker boundary and nothing else'
@@ -220,7 +240,14 @@ for (const role of ['anon', 'service_role']) {
                         from pg_proc p join pg_namespace n on n.oid=p.pronamespace
                         where n.nspname='public' and p.prosecdef`);
   check('SECURITY DEFINER is confined to the worker boundary',
-    definers === WORKER_BOUNDARY_FUNCTIONS.join(','), definers);
+    definers === WORKER_DEFINER_FUNCTIONS.join(','), definers);
+  check('  and the credential resolver is executable by nobody at all',
+    !sql(`select coalesce(string_agg(p.proname, ','), 'none')
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname='public'
+             and has_function_privilege('service_role', p.oid, 'EXECUTE')`)
+      .includes('worker_resolve_credential'),
+    'it runs only inside another definer function');
 }
 
 console.log(`\n${'='.repeat(56)}`);
