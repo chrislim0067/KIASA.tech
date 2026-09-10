@@ -110,11 +110,12 @@ const WORKER_DEFINER_FUNCTIONS = [
   'worker_report_task',
   'worker_resolve_credential',
   'worker_revoke_supervisor',
+  'worker_submit_profile_draft',
 ];
 /**
- * Three sets, because the seven functions divide three ways.
+ * Three sets, because the eight functions divide three ways.
  *
- *   service_role  the five worker protocol operations.
+ *   service_role  the six worker protocol operations.
  *   authenticated `worker_revoke_supervisor` and nothing else — the one
  *                 definer function a browser may execute, and the only one
  *                 that takes NO arguments, so there is nothing to forge.

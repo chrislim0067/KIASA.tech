@@ -1057,19 +1057,19 @@ try {
     const definers = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.prosecdef`);
-    check('  the definer allow-list is exactly seven',
+    check('  the definer allow-list is exactly eight',
       definers === 'worker_claim_task,worker_record_heartbeat,worker_redeem_pairing,' +
         'worker_renew_lease,worker_report_task,worker_resolve_credential,' +
-        'worker_revoke_supervisor',
+        'worker_revoke_supervisor,worker_submit_profile_draft',
       definers);
 
     const callable = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
         and has_function_privilege('service_role', p.oid, 'EXECUTE')`);
-    check('  and service_role may execute exactly five of them',
+    check('  and service_role may execute exactly six of them',
       callable === 'worker_claim_task,worker_record_heartbeat,worker_redeem_pairing,' +
-        'worker_renew_lease,worker_report_task',
+        'worker_renew_lease,worker_report_task,worker_submit_profile_draft',
       callable);
     check('  the credential resolver is reachable by nobody',
       !callable.includes('worker_resolve_credential'),
@@ -1545,14 +1545,20 @@ try {
     const definers = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.prosecdef`);
+    /*
+     * EIGHT, EXACTLY. `guard_automation_task_kind` is SECURITY INVOKER and so
+     * is not among them — the first version of this check allowed for it with
+     * an OR, which would have passed whether or not the trigger function had
+     * quietly become a definer.
+     */
     check('  the definer allow-list is exactly eight',
-      definers === 'guard_automation_task_kind,worker_claim_task,worker_record_heartbeat,' +
-        'worker_redeem_pairing,worker_renew_lease,worker_report_task,' +
-        'worker_resolve_credential,worker_revoke_supervisor,worker_submit_profile_draft' ||
       definers === 'worker_claim_task,worker_record_heartbeat,worker_redeem_pairing,' +
         'worker_renew_lease,worker_report_task,worker_resolve_credential,' +
         'worker_revoke_supervisor,worker_submit_profile_draft',
       definers);
+    check('  and the task-kind guard is NOT one of them',
+      !definers.includes('guard_automation_task_kind'),
+      'it runs as its caller, which is all a trigger needs');
 
     const rls = sql(`select relrowsecurity and relforcerowsecurity
       from pg_class c join pg_namespace n on n.oid = c.relnamespace
