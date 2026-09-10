@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AdminClient } from '@/lib/supabase/admin';
 import type { Database } from '@/lib/supabase/database.types';
 import type { ExtractFailureClass } from '@/lib/resume/extract';
+import type { ProviderFailureCode } from '@/lib/ai/openrouter';
 import { parseExtraction, type ResumeExtraction } from '@/lib/resume/schema';
 
 /**
@@ -250,18 +251,34 @@ export async function markParsed(
  * provider message, and never anything derived from the document. A stored
  * failure reason must not become the route by which someone's employment
  * history reaches a log.
+ *
+ * `providerFailureCode` is the EXACT provider outcome, from the closed list in
+ * `lib/ai/openrouter.ts`. It is stored in its own column because the two answer
+ * different questions: `failure_code` says what to tell the candidate, and this
+ * says what actually happened. Omitted — and therefore left null — whenever no
+ * provider call was made, which is every locally decided failure.
+ *
+ * Neither value is ever passed through from a provider or a document. Both are
+ * literals this repository wrote, and the database rejects anything else.
  */
 export async function markFailed(
   admin: AdminClient,
   importId: string,
   failureClass: ExtractFailureClass,
-  failureCode: string
+  failureCode: string,
+  providerFailureCode?: ProviderFailureCode
 ): Promise<boolean> {
   const { error } = await table(admin)
     .update({
       status: 'failed',
       failure_class: failureClass,
       failure_code: failureCode.slice(0, 100),
+      /*
+       * Written explicitly as null rather than omitted, so a retry of an import
+       * that previously failed at the provider and now fails locally does not
+       * keep a stale provider code describing a different attempt.
+       */
+      provider_failure_code: providerFailureCode ?? null,
     })
     .eq('id', importId);
 

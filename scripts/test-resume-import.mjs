@@ -125,6 +125,12 @@ const DECLARED_COLUMNS = [
   'status',
   'failure_class',
   'failure_code',
+  /**
+   * The exact provider outcome, added by migration 30. Distinct from
+   * `failure_code`, which carries the candidate-facing taxonomy in which five
+   * different provider outcomes all share `no_structured_output`.
+   */
+  'provider_failure_code',
   'extracted',
   'model',
   'parsed_at',
@@ -150,6 +156,115 @@ async function main() {
 
   check('every declared column exists', missing.length === 0, missing.join(', '));
   check('no column exists that the code does not know about', extra.length === 0, extra.join(', '));
+
+  /* ------------------------------------------- the provider failure column */
+  section('The exact provider outcome is storable, and free text is not');
+
+  /*
+   * WHY THIS IS PROVED HERE RATHER THAN IN THE MIGRATION
+   *
+   * `resume_imports.user_id` is NOT NULL and references auth.users, so an
+   * insert inside migration 30's own DO block would die on the foreign key —
+   * and an exception handler broad enough to survive that would swallow a CHECK
+   * violation too, leaving a loop that proved nothing. The migration therefore
+   * compares the constraint's vocabulary as a set, and the behaviour is proved
+   * here, where a real user exists.
+   */
+  {
+    const owner = await makeUser();
+
+    /* Every member of the vocabulary is genuinely storable. */
+    const VOCABULARY = [
+      'not_configured', 'timeout', 'rate_limited', 'auth_failed', 'bad_request',
+      'server_error', 'connection_failed', 'no_content', 'output_truncated',
+      'reasoning_only', 'refused', 'malformed_json', 'invalid_structure',
+    ];
+
+    const stored = [];
+    for (const code of VOCABULARY) {
+      const id = sql(
+        `insert into public.resume_imports
+           (user_id, source_kind, status, failure_class, failure_code, provider_failure_code)
+         values
+           ('${owner.id}', 'pasted', 'failed', 'unreadable', 'no_structured_output', '${code}')
+         returning provider_failure_code`
+      );
+      stored.push(id);
+    }
+    check('every provider code the adapter can produce is storable',
+      stored.join(',') === VOCABULARY.join(','),
+      stored.join(','));
+
+    /*
+     * THE FIVE THAT USED TO COLLAPSE ARE NOW DISTINGUISHABLE.
+     *
+     * This is the whole point of the milestone: five rows that a candidate was
+     * shown the same sentence for can now be told apart by an operator.
+     */
+    const distinct = sql(
+      `select count(distinct provider_failure_code)
+       from public.resume_imports
+       where user_id = '${owner.id}'
+         and failure_code = 'no_structured_output'
+         and provider_failure_code in
+             ('reasoning_only', 'refused', 'no_content', 'malformed_json', 'invalid_structure')`
+    );
+    check('the five collapsing outcomes are stored distinctly', distinct === '5', distinct);
+
+    /* FREE TEXT IS REFUSED BY THE DATABASE, not filtered by application code. */
+    for (const rejected of [
+      'the candidate lives at 12 Example Street',
+      'ERROR:  duplicate key value violates unique constraint',
+      'sk-or-v1-not-a-real-key',
+      '',
+    ]) {
+      const escaped = rejected.replace(/'/g, "''");
+      let accepted = true;
+      try {
+        sql(
+          `insert into public.resume_imports
+             (user_id, source_kind, status, failure_class, provider_failure_code)
+           values ('${owner.id}', 'pasted', 'failed', 'unreadable', '${escaped}')`
+        );
+      } catch {
+        accepted = false;
+      }
+      check(`  refuses free text (${rejected.slice(0, 28) || 'empty string'}…)`, accepted === false);
+    }
+
+    /* A ROW THAT DID NOT FAIL MAY NOT CARRY A PROVIDER FAILURE. */
+    let parsedAccepted = true;
+    try {
+      sql(
+        `insert into public.resume_imports
+           (user_id, source_kind, status, extracted, model, parsed_at, provider_failure_code)
+         values ('${owner.id}', 'pasted', 'parsed', '{}'::jsonb, 'm', now(), 'reasoning_only')`
+      );
+    } catch {
+      parsedAccepted = false;
+    }
+    check('a parsed import cannot carry a provider failure code', parsedAccepted === false,
+      'the two columns would be disagreeing about whether anything went wrong');
+
+    /*
+     * A FAILURE DECIDED LOCALLY STORES NULL, NOT A MADE-UP CODE.
+     *
+     * An empty file or a scan with no text layer never reaches the provider, so
+     * there is no provider outcome to report. Writing one anyway would put a
+     * provider code on a row whose PDF never left this server, and would send
+     * whoever reads it looking in the wrong place.
+     */
+    const localOnly = sql(
+      `insert into public.resume_imports
+         (user_id, source_kind, status, failure_class, failure_code)
+       values ('${owner.id}', 'pasted', 'failed', 'unreadable', 'scanned_no_text')
+       returning coalesce(provider_failure_code, 'null')`
+    );
+    check('a failure decided locally stores null, not a made-up code',
+      localOnly === 'null', localOnly);
+
+    sql(`delete from public.resume_imports where user_id = '${owner.id}'`);
+  }
 
   /* ------------------------------------------------------- RLS and grants */
   section('Row Level Security');

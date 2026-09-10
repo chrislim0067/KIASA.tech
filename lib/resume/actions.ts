@@ -16,6 +16,7 @@ import {
   saveDraft,
 } from '@/lib/resume/imports';
 import { applyExtraction, describeOutcome } from '@/lib/resume/apply';
+import { recordProviderUsage } from '@/lib/ai/usage-writer';
 import { ResumeExtraction, parseExtraction } from '@/lib/resume/schema';
 import { RESUME_BUCKET, RESUME_ROUTE, storagePathFor } from '@/lib/resume/paths';
 import type { FormState } from '@/lib/candidate/form-state';
@@ -99,10 +100,38 @@ export async function startResumeImport(_prev: FormState, form: FormData): Promi
     return { ok: false, message: 'The import could not be started. Try again.' };
   }
 
-  const result = await extractResume(bytes);
+  const result = await extractResume(bytes, importId);
+
+  /*
+   * ONE USAGE ROW PER PROVIDER CALL, SUCCESS OR FAILURE.
+   *
+   * `result.usage` is present only when a call was actually attempted, so a
+   * locally decided failure — an empty file, a scan with no text layer —
+   * records nothing and correctly reports no provider activity.
+   *
+   * This is deliberately not a duplicate of the import row. The import says
+   * what the candidate saw; this says what the call cost, how long it took, how
+   * many attempts it needed and exactly how it ended. `recordProviderUsage`
+   * validates the record against a `.strict()` schema before it touches the
+   * database, and the record has no field that could carry résumé text, a
+   * prompt or a provider message.
+   *
+   * It fails soft, by design: a metrics insert must never be the reason a
+   * candidate's import fails. The result is deliberately not awaited into the
+   * control flow beyond this line.
+   */
+  if (result.usage) {
+    await recordProviderUsage(result.usage, user.id);
+  }
 
   if (!result.ok) {
-    await markFailed(admin, importId, result.failureClass, result.failureCode);
+    await markFailed(
+      admin,
+      importId,
+      result.failureClass,
+      result.failureCode,
+      result.providerCode
+    );
     revalidatePath(RESUME_ROUTE);
     return { ok: false, message: result.message };
   }

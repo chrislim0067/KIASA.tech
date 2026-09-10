@@ -56,6 +56,20 @@ export type ExtractResult =
       failureClass: ExtractFailureClass;
       /** Stable, machine-readable, safe to store and to log. */
       failureCode: string;
+      /**
+       * The EXACT provider outcome, uncollapsed.
+       *
+       * `failureCode` above is the candidate-facing taxonomy, in which five
+       * different provider outcomes share `no_structured_output` because to a
+       * person they all mean "try pasting it instead". This says which of the
+       * five actually happened, and it is the whole difference between
+       * diagnosing a production failure and guessing at it.
+       *
+       * Absent when no provider call was made. A PDF that never parsed has no
+       * provider outcome, and inventing one would misreport where the failure
+       * was.
+       */
+      providerCode?: ProviderFailureCode;
       /** Written for the candidate, not for a developer. */
       message: string;
       /** Whether trying the same file again could plausibly succeed. */
@@ -327,7 +341,13 @@ function fromProviderFailure(
 export async function extractResume(
   pdf: Uint8Array,
   /** Ties the provider call to the import row it belongs to. */
-  correlationId: string | null = null
+  correlationId: string | null = null,
+  /**
+   * The provider transport. Injected only by tests, which is what lets every
+   * provider outcome be exercised without a live request or a spent credit.
+   * Production passes nothing and gets the real one.
+   */
+  fetchImpl?: typeof fetch
 ): Promise<ExtractResult> {
   if (!isResumeParsingConfigured()) {
     return fromProviderFailure('not_configured');
@@ -343,10 +363,24 @@ export async function extractResume(
     system: SYSTEM_PROMPT,
     user: `${USER_PREFIX}${extracted.text}${USER_SUFFIX}`,
     correlationId,
+    ...(fetchImpl ? { fetchImpl } : {}),
   });
 
   if (!result.ok) {
-    return { ...fromProviderFailure(result.code, result.status), usage: result.usage };
+    /*
+     * THE EXACT CODE IS ATTACHED HERE, ONCE.
+     *
+     * `fromProviderFailure` deliberately collapses outcomes into the sentence a
+     * candidate should read. Attaching the uncollapsed code at this single call
+     * site rather than inside each of its branches means no branch can be added
+     * later that forgets to carry it — which is precisely how the information
+     * came to be lost the first time.
+     */
+    return {
+      ...fromProviderFailure(result.code, result.status),
+      providerCode: result.code,
+      usage: result.usage,
+    };
   }
 
   return { ok: true, data: result.data, model: result.model, usage: result.usage };
