@@ -88,6 +88,48 @@ export const PROVIDER_FAILURE_CODES = [
 
 export type ProviderFailureCode = (typeof PROVIDER_FAILURE_CODES)[number];
 
+/** At most this many paths, and at most this many characters, are reported. */
+export const MAX_FAILURE_DETAIL_PATHS = 8;
+export const MAX_FAILURE_DETAIL_CHARS = 300;
+
+/**
+ * Which fields failed validation — as PATHS, never as values.
+ *
+ * When a provider returns well-formed JSON that is not a résumé, the useful
+ * question is "which field?". Zod answers it precisely and the answer was being
+ * discarded, so a production failure could only be guessed at.
+ *
+ * WHAT THIS DELIBERATELY DOES NOT READ
+ *
+ * `issue.message`. Zod messages quote the offending VALUE — "Invalid input:
+ * expected string, received 214-555-0142" — and in a résumé the offending value
+ * is somebody's phone number, employer or address. Only `issue.path` is read,
+ * which holds keys and array indices and nothing else.
+ *
+ * The output is then filtered to a path-shaped character set as a second line
+ * of defence: no spaces, no quotes, no punctuation a sentence would need. Even
+ * if a future Zod put content in a path, it could not survive this.
+ */
+export function describeSchemaFailure(issues: readonly { path: PropertyKey[] }[]): string {
+  const seen = new Set<string>();
+
+  for (const issue of issues) {
+    const path = issue.path
+      .map((segment) => String(segment))
+      .join('.')
+      // Keys, indices and separators only. Anything else is dropped, not
+      // escaped: there is no legitimate path character outside this set.
+      .replace(/[^a-zA-Z0-9_.]/g, '');
+
+    if (path !== '') seen.add(path);
+    if (seen.size >= MAX_FAILURE_DETAIL_PATHS) break;
+  }
+
+  // An empty result is honest: it means Zod reported no usable path, which is
+  // itself worth seeing rather than papering over.
+  return [...seen].join(',').slice(0, MAX_FAILURE_DETAIL_CHARS);
+}
+
 /** Metadata about the call, always returned, success or failure. */
 export interface CallTelemetry {
   usage: ProviderUsageRecord;
@@ -102,6 +144,16 @@ export type ProviderResult<T> =
       status?: number;
       retryable: boolean;
       attempts: number;
+      /**
+       * Which fields failed schema validation, as a comma-separated list of
+       * PATHS — `work_experiences.3.end_date`. Present only for
+       * `invalid_structure`, because it is the only outcome where a field can
+       * be named.
+       *
+       * Never a value, never a message, never a fragment of the document. See
+       * `describeSchemaFailure`.
+       */
+      detail?: string;
     } & CallTelemetry);
 
 /** Present and non-empty. Checked at call time so a missing key fails cleanly. */
@@ -333,7 +385,9 @@ export async function completeStructured<T>(
     retryable: boolean,
     status?: number,
     extra: Partial<ProviderUsageRecord> = {}
-  ): ProviderResult<T> => ({
+    // The failure member specifically, so the invalid_structure branch can
+    // add a `detail` to it without TypeScript fearing the success shape.
+  ): Extract<ProviderResult<T>, { ok: false }> => ({
     ok: false,
     code,
     ...(status === undefined ? {} : { status }),
@@ -484,7 +538,23 @@ export async function completeStructured<T>(
     // This is the boundary that decides whether the reply is usable.
     const validated = schema.safeParse(parsedJson);
     if (!validated.success) {
-      return fail('invalid_structure', false, response.status, observed);
+      /*
+       * NAME THE FIELDS THAT FAILED, AND NOTHING ELSE.
+       *
+       * Zod has just computed exactly which paths are wrong, and this branch
+       * used to throw that away — the same defect as the collapsed provider
+       * code, one level deeper. A production import failed here and there was
+       * no way to learn whether it was a date, a URL or a phone number without
+       * spending another live request.
+       *
+       * `describeSchemaFailure` reads `issue.path` ONLY. It never touches
+       * `issue.message`, which quotes offending VALUES — and an offending value
+       * in a résumé is a person's phone number.
+       */
+      return {
+        ...fail('invalid_structure', false, response.status, observed),
+        detail: describeSchemaFailure(validated.error.issues),
+      };
     }
 
     return {

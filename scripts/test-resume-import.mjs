@@ -131,6 +131,8 @@ const DECLARED_COLUMNS = [
    * different provider outcomes all share `no_structured_output`.
    */
   'provider_failure_code',
+  /** Field paths that failed validation, added by migration 31. */
+  'provider_failure_detail',
   'extracted',
   'model',
   'parsed_at',

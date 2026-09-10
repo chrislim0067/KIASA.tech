@@ -130,7 +130,8 @@ export async function startResumeImport(_prev: FormState, form: FormData): Promi
       importId,
       result.failureClass,
       result.failureCode,
-      result.providerCode
+      result.providerCode,
+      result.providerDetail
     );
     revalidatePath(RESUME_ROUTE);
     return { ok: false, message: result.message };

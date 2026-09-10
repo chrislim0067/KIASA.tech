@@ -955,6 +955,182 @@ section('11. The stored vocabulary matches the migration, exactly');
     'a length check would admit any text that fits');
 }
 
+/* --------------- 12. invalid_structure now names the fields that failed */
+
+section('12. A schema failure names its FIELDS, and never their values');
+
+/*
+ * A production import failed with provider_failure_code = invalid_structure:
+ * the model returned parseable JSON that ResumeExtraction rejected. That says a
+ * field was wrong without saying which — a date, a URL and a phone number each
+ * point at a different fix — and Zod had computed the answer and had it thrown
+ * away at lib/ai/openrouter.ts.
+ *
+ * These checks prove the paths now survive, and that nothing else does. No live
+ * request is made: every reply below is a literal.
+ */
+
+const { describeSchemaFailure, MAX_FAILURE_DETAIL_PATHS, MAX_FAILURE_DETAIL_CHARS } =
+  await import('../lib/ai/openrouter.ts');
+
+{
+  check('a nested path is reported in full',
+    describeSchemaFailure([{ path: ['work_experiences', 3, 'end_date'] }])
+      === 'work_experiences.3.end_date');
+
+  check('several failures are joined',
+    describeSchemaFailure([
+      { path: ['phone_e164'] },
+      { path: ['work_experiences', 0, 'start_date'] },
+    ]) === 'phone_e164,work_experiences.0.start_date');
+
+  check('duplicates collapse',
+    describeSchemaFailure([{ path: ['city'] }, { path: ['city'] }]) === 'city');
+
+  check('an empty issue list is empty, not invented',
+    describeSchemaFailure([]) === '');
+
+  /*
+   * THE PART THAT MATTERS. Zod's `issue.message` quotes the offending VALUE, and
+   * in a résumé the offending value is a person's phone number or employer.
+   * This function is handed issues carrying exactly that and must ignore all of
+   * it — it reads `path` and nothing else.
+   */
+  const hostile = [
+    {
+      path: ['phone_e164'],
+      message: 'Invalid input: expected E.164, received "(214) 555-0142"',
+      input: '(214) 555-0142',
+    },
+    {
+      path: ['work_experiences', 0, 'company_name'],
+      message: 'String must contain at most 200 character(s), received "Northwind Instruments"',
+      input: 'Northwind Instruments',
+    },
+  ];
+  const rendered = describeSchemaFailure(hostile);
+  check('only the paths survive an issue list carrying values',
+    rendered === 'phone_e164,work_experiences.0.company_name', rendered);
+  for (const leak of ['214', '555', '0142', 'Northwind', 'Invalid input', 'received']) {
+    check(`  "${leak}" does not appear${''}`, !rendered.includes(leak));
+  }
+
+  /* A path that somehow held content cannot survive the character filter. */
+  const smuggled = describeSchemaFailure([
+    { path: ['ada@example.test'] },
+    { path: ['the candidate lives at 12 Example Street'] },
+    { path: ["'; drop table resume_imports; --"] },
+  ]);
+  check('a path carrying an email loses the @ and the punctuation',
+    !smuggled.includes('@'), smuggled);
+  check('  a path carrying a sentence loses its spaces',
+    !smuggled.includes(' '), smuggled);
+  check('  a path carrying SQL loses its quotes and semicolons',
+    !/['";]/.test(smuggled), smuggled);
+  check('  and what remains still matches the database shape constraint',
+    smuggled === '' || /^[A-Za-z0-9_.]+(,[A-Za-z0-9_.]+)*$/.test(smuggled), smuggled);
+
+  /* Bounded, so a pathological reply cannot fill the column. */
+  const many = Array.from({ length: 40 }, (_, i) => ({ path: ['work_experiences', i, 'end_date'] }));
+  const capped = describeSchemaFailure(many);
+  check('at most the path cap is reported',
+    capped.split(',').length <= MAX_FAILURE_DETAIL_PATHS, String(capped.split(',').length));
+  check('  and the whole string is length-bounded',
+    capped.length <= MAX_FAILURE_DETAIL_CHARS, String(capped.length));
+  check('  and it still matches the database shape constraint',
+    /^[A-Za-z0-9_.]+(,[A-Za-z0-9_.]+)*$/.test(capped));
+}
+
+/* Each invalid shape, end to end through extractResume, naming its own field. */
+await withKey(async () => {
+  const cases = [
+    ['a wrong type on a scalar', { ...VALID_EXTRACTION, city: 12345 }, 'city'],
+    ['an unsupported date', {
+      ...VALID_EXTRACTION,
+      work_experiences: [{ ...VALID_EXTRACTION.work_experiences[0], start_date: 'Jan 2019' }],
+    }, 'work_experiences.0.start_date'],
+    ['a URL with no scheme', { ...VALID_EXTRACTION, linkedin_url: 'linkedin.com/in/ada' },
+      'linkedin_url'],
+    ['a phone that is not E.164', { ...VALID_EXTRACTION, phone_e164: '(214) 555-0142' },
+      'phone_e164'],
+    ['a three-letter country', { ...VALID_EXTRACTION, country_code: 'USA' }, 'country_code'],
+  ];
+
+  for (const [label, payload, expectedPath] of cases) {
+    const { impl } = recordingFetch(() => providerReply(payload));
+    const r = await extract.extractResume(textPdf([RESUME_LINES]), null, impl);
+
+    check(`${label}: classified invalid_structure${''}`,
+      !r.ok && r.providerCode === 'invalid_structure',
+      r.ok ? 'unexpectedly ok' : String(r.providerCode));
+    check(`  ${label}: names ${expectedPath}${''}`,
+      !r.ok && typeof r.providerDetail === 'string' && r.providerDetail.includes(expectedPath),
+      r.ok ? '' : String(r.providerDetail));
+    check(`  ${label}: the candidate still sees one bounded sentence${''}`,
+      !r.ok && r.failureCode === 'no_structured_output');
+
+    const shown = r.ok ? '' : r.message;
+    check(`  ${label}: the field name is NOT in what the candidate reads${''}`,
+      !shown.includes(expectedPath.split('.')[0]) || expectedPath === 'city',
+      shown.slice(0, 60));
+  }
+
+  /* An EXTRA key is rejected too — the schema is strict and stays strict. */
+  const { impl: extraImpl } = recordingFetch(() =>
+    providerReply({ ...VALID_EXTRACTION, salary_expectation: '200000' }));
+  const extraResult = await extract.extractResume(textPdf([RESUME_LINES]), null, extraImpl);
+  /*
+   * AN INVENTED FIELD IS DISCARDED, NOT REJECTED.
+   *
+   * ResumeExtraction is a plain z.object(), so Zod STRIPS unknown keys rather
+   * than failing on them. The invented value therefore never reaches the
+   * parsed data and can never reach a profile — which is the property that
+   * matters — but it does not produce invalid_structure either, so an extra
+   * key is NOT a possible cause of the production failure being diagnosed.
+   *
+   * Whether it should be .strict() instead is a live design question with a
+   * production consequence, and deliberately not decided here.
+   */
+  check('an invented extra field never reaches the extraction',
+    extraResult.ok === true &&
+      !Object.prototype.hasOwnProperty.call(extraResult.data, 'salary_expectation'),
+    extraResult.ok ? 'stripped, as Zod objects do' : String(extraResult.providerCode));
+
+  /* A valid reply still succeeds, and carries no detail at all. */
+  const { impl: okImpl } = recordingFetch(() => providerReply(VALID_EXTRACTION));
+  const good = await extract.extractResume(textPdf([RESUME_LINES]), null, okImpl);
+  check('a valid extraction still succeeds', good.ok === true,
+    good.ok ? '' : `${good.providerCode}: ${good.providerDetail}${''}`);
+  check('  and a success carries no failure detail',
+    good.ok === true && good.providerDetail === undefined);
+
+  /* A failure decided locally never invents a detail. */
+  const local = await extract.extractResume(emptyPdf());
+  check('a local failure reports no provider detail',
+    !local.ok && local.providerDetail === undefined,
+    local.ok ? '' : String(local.providerDetail));
+});
+
+/* --------------- 13. no retry, stream, tool or fallback was introduced */
+
+section('13. The transport gained no new powers');
+
+{
+  const code = readFileSync(path.join(ROOT, 'lib', 'ai', 'openrouter.ts'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/^\s*\/\/[^\n]*$/gm, ' ');
+
+  check('no streaming', !/stream\s*:\s*true/.test(code));
+  check('no tool or function calling', !/"tools"|tool_choice|function_call/.test(code));
+  check('the attempt ceiling is still bounded', /attempts < maxAttempts/.test(code));
+  check('there is still exactly one provider host',
+    (code.match(/openrouter\.ai/g) ?? []).length <= 1);
+  check('no second provider, no Anthropic path',
+    !/api\.anthropic\.com|ANTHROPIC_API_KEY|@anthropic-ai/.test(code));
+  check('invalid_structure is still not retryable',
+    /fail\('invalid_structure', false/.test(code));
+}
+
 /* ---------------------------------------------------------------- report */
 
 console.log('\n========================================================');
