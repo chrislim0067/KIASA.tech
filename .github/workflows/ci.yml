@@ -179,6 +179,25 @@ jobs:
       - name: Profile draft contract (offline)
         run: npm run test:draft
 
+      # The candidate-facing half: file screening before anything is spent, the
+      # tick-box defaults, what the review screen sends, which worker states
+      # permit a request, and that a refusal renders one of our own sentences
+      # rather than anything a route, a database or a model wrote.
+      - name: Résumé and profile-draft screens (offline)
+        run: npm run test:draft:ui
+
+      # Pairing secrets, credential hashing, and the browser-facing status view.
+      #
+      # These two suites existed and were NOT run here, which is how a
+      # `.strict()` status schema and the code that fed it drifted apart
+      # without anything going red. A suite that does not run in CI is a suite
+      # that does not hold.
+      - name: Worker pairing and status view (offline)
+        run: npm run test:pairing
+
+      - name: Worker HTTP endpoints (offline)
+        run: npm run test:endpoints
+
       - name: Worker task lifecycle (offline)
         run: npm run test:tasks
 

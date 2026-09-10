@@ -4,7 +4,8 @@ import { useActionState, useRef, useState, useTransition } from 'react';
 
 import { createClient } from '@/lib/supabase/client';
 import { IDLE, type FormState } from '@/lib/candidate/form-state';
-import { RESUME_BUCKET, RESUME_MIME, RESUME_MAX_BYTES, storagePathFor } from '@/lib/resume/paths';
+import { RESUME_BUCKET, RESUME_MIME, storagePathFor } from '@/lib/resume/paths';
+import { screenResumeFile } from '@/lib/resume/upload';
 
 /**
  * Picking a résumé and getting it read.
@@ -57,17 +58,12 @@ export default function ResumeUpload({
     setLocalError(null);
 
     // Checked here so an obvious mistake costs nothing. The bucket enforces
-    // both rules again server-side, which is what actually holds.
-    if (file.type !== RESUME_MIME && !file.name.toLowerCase().endsWith('.pdf')) {
-      setLocalError('KIASA reads PDFs. Export your résumé as a PDF and try again.');
-      return;
-    }
-    if (file.size === 0) {
-      setLocalError('That file is empty.');
-      return;
-    }
-    if (file.size > RESUME_MAX_BYTES) {
-      setLocalError('That PDF is larger than 10 MB. Export a smaller copy and try again.');
+    // both rules again server-side, which is what actually holds. The rules
+    // themselves live in `lib/resume/upload.ts` so they can be tested without
+    // a browser.
+    const screened = screenResumeFile(file);
+    if (!screened.ok) {
+      setLocalError(screened.message);
       return;
     }
 

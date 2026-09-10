@@ -10,6 +10,7 @@ import { isResumeParsingConfigured } from '@/lib/resume/extract';
 import { isAdminConfigured } from '@/lib/supabase/admin';
 import { startResumeImport, discardResumeImport } from '@/lib/resume/actions';
 import { RESUME_ROUTE } from '@/lib/resume/paths';
+import { PROFILE_DRAFT_ROUTE } from '@/lib/profile/routes';
 
 export const dynamic = 'force-dynamic';
 
@@ -135,6 +136,22 @@ export default async function ResumeImportPage() {
             Importing again never removes anything. Roles, qualifications and skills you already
             have are left exactly as they are.
           </p>
+
+          {/*
+            The way on, offered where someone has just finished importing.
+            Drafting is a separate page on purpose: it runs on the candidate's
+            own computer and is reviewed field by field, so it is not something
+            to slip into the end of an upload.
+          */}
+          <div className="kprof__notice kprof__notice--warn">
+            <strong>Let your own computer fill in the rest?</strong> If you run the KIASA worker,
+            Claude can read these facts on your machine and propose values for your name, contact
+            details and links — which you then accept or reject one at a time on the{' '}
+            <Link href={PROFILE_DRAFT_ROUTE} className="kprof__back" style={{ margin: 0 }}>
+              drafting page
+            </Link>
+            . Nothing is saved until you say so.
+          </div>
         </section>
       ) : null}
     </ProfileShell>

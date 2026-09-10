@@ -21,6 +21,11 @@
  *   * status shown to a browser contains no material.
  */
 import { readFileSync } from 'node:fs';
+
+/* Named, because a literal escape in this file is a literal escape in the
+   source it reads, and the two are not the same thing. */
+const CR = String.fromCharCode(13);
+const LF = String.fromCharCode(10);
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -333,6 +338,7 @@ section('12. No credential material can reach a browser response');
 {
   const view = {
     status: 'online', supervisor_id: uuid(30), slot_index: 1,
+    slot_readiness: 'ready', pause_reason: null, stop_reason: null,
     last_heartbeat_at: iso(0), paired_at: iso(-1000), expires_at: iso(P.CREDENTIAL_TTL_MS),
   };
   check('a valid status view parses', P.WorkerStatusView.safeParse(view).success);
@@ -341,10 +347,63 @@ section('12. No credential material can reach a browser response');
     check(`  a "${planted}" field is rejected`,
       P.WorkerStatusView.safeParse({ ...view, [planted]: 'x' }).success === false);
   }
-  check('the view has exactly six fields', Object.keys(view).length === 6);
+  check('the view has exactly nine fields', Object.keys(view).length === 9);
   check('  none of them is credential-shaped',
     !Object.keys(view).some((k) => /token|secret|key|hash|auth|cookie/i.test(k)),
     Object.keys(view).join(', '));
+
+  /*
+   * THE SLOT FIELDS CARRY VOCABULARY MEMBERS, NOT PROSE.
+   *
+   * A pause reason is where a worker would be most tempted to explain itself,
+   * and where a sentence lifted off an employer's page would be most at home.
+   * The enum is what stops that, so it is asserted rather than assumed.
+   */
+  check('  a paused slot may name a reason from the list',
+    P.WorkerStatusView.safeParse(
+      { ...view, slot_readiness: 'paused', pause_reason: 'captcha_detected' }).success);
+  check('  but not a sentence',
+    P.WorkerStatusView.safeParse(
+      { ...view, slot_readiness: 'paused',
+        pause_reason: 'the site asked for a code sent to a phone' }).success === false,
+    'a pause reason is a member of a closed list, never something a worker wrote');
+  check('  a readiness outside the vocabulary is refused',
+    P.WorkerStatusView.safeParse({ ...view, slot_readiness: 'thinking' }).success === false);
+  check('  a stop reason outside the vocabulary is refused',
+    P.WorkerStatusView.safeParse(
+      { ...view, stop_reason: 'it seemed like a good idea' }).success === false);
+
+  /*
+   * AND THE READER BUILDS EXACTLY THESE KEYS.
+   *
+   * THIS IS THE CHECK THAT WAS MISSING. The old version of this section built
+   * its own six-key object and asserted that it parsed — which it did, while
+   * the status reader was putting nine keys into a `.strict()` schema and
+   * getting `invalid_view` back on every single call. A hand-made fixture
+   * cannot catch a producer that disagrees with its own schema; comparing the
+   * schema to the PRODUCER'S OWN object literal is what makes the two move
+   * together.
+   */
+  const routeSource = readFileSync(
+    path.join(ROOT, 'lib', 'worker', 'status.ts'), 'utf8')
+    .split(CR + LF).join(LF);
+  const opens = routeSource.indexOf('const view = {');
+  const closes = routeSource.indexOf(LF + '  };', opens);
+  check('the status reader builds a view literal this test can read',
+    opens > 0 && closes > opens);
+  if (opens > 0 && closes > opens) {
+    const routeKeys = routeSource
+      .slice(opens, closes)
+      .split(LF)
+      .map((line) => /^ {4}([a-z_]+):/.exec(line))
+      .filter((m) => m !== null)
+      .map((m) => m[1])
+      .sort();
+    const schemaKeys = Object.keys(P.WorkerStatusView.shape).sort();
+    check('  and every key it sends is one the schema names',
+      routeKeys.join(',') === schemaKeys.join(','),
+      `route sends [${routeKeys.join(', ')}]; schema names [${schemaKeys.join(', ')}]`);
+  }
 }
 
 section('13. The module holds no provider or vendor credential path');
