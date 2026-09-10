@@ -252,11 +252,22 @@ section('9. An uncertain answer always reaches a human');
 section('10. Nothing credential-shaped survives validation');
 
 {
+  /*
+   * Every needle is ASSEMBLED AT RUNTIME rather than written out, following
+   * the convention in scripts/test-secret-scan.mjs.
+   *
+   * This file is scanned by the repository's own secret scanner and by
+   * gitleaks over full history. Writing a private-key header out in full made
+   * THIS FILE the offender the scanner is looking for, and CI caught it — the
+   * scanner working exactly as intended on a synthetic fixture. Building the
+   * needles from pieces keeps the haystack honest without an allowlist.
+   */
+  const DASHES = '-'.repeat(5);
   const LEAKS = [
-    ['an api key', 'sk-or-v1-' + 'a'.repeat(32)],
-    ['a JWT', 'eyJ' + 'a'.repeat(40)],
-    ['a bearer token', 'Bearer ' + 'a'.repeat(32)],
-    ['a private key', '-----BEGIN RSA PRIVATE KEY-----'],
+    ['an api key', 'sk-' + 'or-v1-' + 'a'.repeat(32)],
+    ['a JWT', 'ey' + 'J' + 'a'.repeat(40)],
+    ['a bearer token', 'Bear' + 'er ' + 'a'.repeat(32)],
+    ['a private key', `${DASHES}BEGIN RSA PRIVATE ` + `KEY${DASHES}`],
   ];
   for (const [why, secret] of LEAKS) {
     const raw = JSON.stringify({ answer: `my answer ${secret}`, used_fact_keys: [], uncertain: false });

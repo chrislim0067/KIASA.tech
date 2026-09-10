@@ -340,7 +340,8 @@ declare
   target_table text;
   mutable_tables text[] := array['worker_supervisors', 'worker_slots', 'automation_tasks'];
   append_only_tables text[] := array['task_leases'];
-  audit_tables text[] := array['worker_events'];
+  -- worker_events is deliberately absent from every list below the first:
+  -- it takes SELECT and INSERT and nothing else. See the note at the end.
   all_tables text[] := array[
     'worker_supervisors', 'worker_slots', 'automation_tasks', 'task_leases', 'worker_events'
   ];
@@ -400,10 +401,13 @@ begin
     $p$, target_table || '_update_own', target_table);
   end loop;
 
-  -- Events: SELECT and INSERT only. No UPDATE, no DELETE.
-  foreach target_table in array audit_tables loop
-    null;
-  end loop;
+  -- worker_events gets SELECT and INSERT from the common loop above, and
+  -- nothing more.
+  --
+  -- There is deliberately no loop for it. An audit row that its own subject
+  -- can edit or delete is not an audit row, so the ABSENCE of an UPDATE and
+  -- DELETE grant is the control. The self-verification below asserts both stay
+  -- absent, and refuse_worker_event_update() refuses them as a second layer.
 end $$;
 
 -- ---------------------------------------------------------------------------
