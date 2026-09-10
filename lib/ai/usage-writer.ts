@@ -3,7 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { createAdminClient, isAdminConfigured } from '@/lib/supabase/admin';
-import { ProviderUsageRecord, isPersistableOperation } from '@/lib/ai/usage';
+import { ProviderUsageRecord } from '@/lib/ai/usage';
 
 /**
  * Persisting what a provider call cost and how it went.
@@ -43,7 +43,6 @@ export type UsageWriteResult =
       reason:
         | 'not_configured'
         | 'invalid_record'
-        | 'operation_not_persistable'
         | 'rejected_by_database'
         | 'unexpected';
       /** Short, safe, and free of candidate data. */
@@ -147,24 +146,20 @@ export async function recordProviderUsage(
   }
 
   /*
-   * Refuse operations the database's CHECK constraint does not yet list.
+   * There is no persistability guard here any more, and its absence is the
+   * point.
    *
-   * `PROVIDER_OPERATIONS` gained `job_scoring` in Milestone 2C, which was not
-   * permitted to change migrations, so the constraint still allows
-   * `resume_extraction` only. Without this guard the insert would fail at the
-   * database with a constraint violation — a runtime surprise that appears
-   * only once something real is being recorded.
+   * Milestone 2C added `job_scoring` to the vocabulary while forbidden from
+   * touching migrations, so the TypeScript enum and the database CHECK were
+   * deliberately out of step, and this function refused the difference up
+   * front. Migration 23 closed that gap: the CHECK now lists exactly
+   * `PROVIDER_OPERATIONS`, and a parity test asserts it in both directions.
    *
-   * Refusing here turns that into a named, testable outcome, and keeps the
-   * writer's promise that it never throws.
+   * So the Zod enum above is the only gate needed. An unknown operation is
+   * `invalid_record` before anything reaches the database, and a known one is
+   * accepted by the constraint by construction. A second list here would just
+   * be a third place for the vocabulary to drift.
    */
-  if (!isPersistableOperation(parsed.data.operation)) {
-    return {
-      ok: false,
-      reason: 'operation_not_persistable',
-      detail: parsed.data.operation,
-    };
-  }
 
   let db = client;
   if (!db) {

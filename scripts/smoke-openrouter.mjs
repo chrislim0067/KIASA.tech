@@ -183,5 +183,7 @@ const authority = SCORING.assertModelCannotAuthorise(r.data);
 console.log(`\nmayAutoSubmit:  ${authority.mayAutoSubmit}   (always false, whatever the model said)`);
 console.log(`requiresHuman:  ${authority.requiresHuman}`);
 console.log('\nNo employer site was contacted and no application was submitted.');
-console.log('Usage was NOT persisted: job_scoring is not in the provider_usage CHECK yet.');
+console.log('Usage was NOT persisted: this script writes no database row by design.');
+console.log('`job_scoring` IS an accepted provider_usage operation since migration 23,');
+console.log('but persisting it needs a Supabase connection this smoke test deliberately avoids.');
 process.exit(0);
