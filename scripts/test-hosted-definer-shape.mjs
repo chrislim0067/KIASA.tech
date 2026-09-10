@@ -120,6 +120,19 @@ section('1. An event-trigger function cannot be invoked, whatever its grants');
 psql(PLATFORM_HELPER);
 
 {
+  /*
+   * REPRODUCE THE HOSTED GRANT, DO NOT ASSUME IT.
+   *
+   * On the real project every role can EXECUTE `rls_auto_enable` — Postgres
+   * grants EXECUTE to PUBLIC on every new function and nothing revoked it
+   * there. Locally that grant is absent, because migration 8 alters default
+   * privileges so our own functions never receive it. Asserting the hosted
+   * state would therefore fail here for a reason that has nothing to do with
+   * what is under test, so the grant is applied explicitly to recreate the
+   * worst case.
+   */
+  psql(`grant execute on function public.kiasa_test_platform_rls_helper() to public;`);
+
   const grants = psql(`select
       has_function_privilege('public',        'public.kiasa_test_platform_rls_helper()', 'EXECUTE')::text
       || ',' ||
@@ -127,12 +140,7 @@ psql(PLATFORM_HELPER);
       || ',' ||
       has_function_privilege('authenticated', 'public.kiasa_test_platform_rls_helper()', 'EXECUTE')::text`);
 
-  /*
-   * Postgres grants EXECUTE to PUBLIC on every new function, so these are very
-   * likely true — exactly as they are for the real hosted helper. The point of
-   * this section is that it does not matter.
-   */
-  check('the default PUBLIC EXECUTE grant is present, as on the hosted helper',
+  check('every role holds EXECUTE, exactly as on the hosted helper',
     grants === 'true,true,true', grants);
 
   const error = refused(`select public.kiasa_test_platform_rls_helper();`);
@@ -144,20 +152,44 @@ psql(PLATFORM_HELPER);
 }
 
 /* ------------------------------------------------------------------------- */
-section('2. Each migration verifies cleanly with the platform helper present');
+section('2. The migration verifies cleanly with the platform helper present');
+
+/*
+ * ONLY THE LAST MIGRATION'S BLOCK CAN BE REPLAYED HERE, AND THAT IS CORRECT.
+ *
+ * Each block's allow-list is POINT-IN-TIME: migration 27 lists the six definers
+ * that exist when it runs, and legitimately does not know about
+ * `worker_revoke_supervisor` (28) or `worker_submit_profile_draft` (29). This
+ * database has all thirty migrations applied, so replaying 27's block here
+ * flags those two — correctly, because at 27's point in history they would
+ * genuinely be unexpected. That is the block working, not failing.
+ *
+ * So the end-to-end proof runs the LAST block, whose allow-list matches the
+ * database as it now stands. For 27 and 28 the corrected predicate is asserted
+ * textually below, and its semantics are proved by section 3, which shows all
+ * three still reject a rogue definer.
+ */
+{
+  const file = '20260910000029_profile_drafting_tasks.sql';
+  const block = verificationBlock(file);
+  check('the last migration’s verification block was found', block !== null);
+  if (block) {
+    const error = refused(block);
+    check('  it passes with an event-trigger definer in public', error === null,
+      error ? error.slice(0, 140) : 'no error');
+  }
+}
 
 for (const file of [
   '20260910000027_worker_task_lifecycle.sql',
   '20260910000028_worker_audit_events.sql',
   '20260910000029_profile_drafting_tasks.sql',
 ]) {
-  const block = verificationBlock(file);
-  check(`${file.slice(14, 34)}: its verification block was found`, block !== null);
-  if (!block) continue;
-
-  const error = refused(block);
-  check(`  it passes with an event-trigger definer in public`, error === null,
-    error ? error.slice(0, 140) : '');
+  const sql = readFileSync(path.join(MIGRATIONS, file), 'utf8');
+  check(`${file.slice(14, 34)}: carries the corrected predicate`,
+    /and pr\.prorettype <> 'pg_catalog\.event_trigger'::regtype/.test(sql));
+  check(`  and no longer scans every definer unconditionally`,
+    !/prosecdef and not \(pr\.proname = any\(all_definers\)\)/.test(sql));
 }
 
 /* ------------------------------------------------------------------------- */
@@ -166,6 +198,12 @@ section('3. A rogue CALLABLE definer is still rejected');
 psql(ROGUE_CALLABLE);
 
 {
+  /*
+   * Each block must NAME the rogue. For 27 and 28 the message also names the
+   * later worker functions, for the point-in-time reason explained above; what
+   * matters here is that the rogue is among them in all three, so the guard
+   * still bites after the change.
+   */
   let caught = 0;
   for (const file of [
     '20260910000027_worker_task_lifecycle.sql',
