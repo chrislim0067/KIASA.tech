@@ -186,9 +186,42 @@ owner, and a cost record that can be edited is not a cost record. `user_id` is
 | `bad_request` | `model_error` | no | 4xx |
 | `server_error` | `model_error` | yes | 5xx |
 | `connection_failed` | `model_error` | yes | Network failure |
-| `no_content` | `unreadable` | no | Empty completion |
+| `no_content` | `unreadable` | no | Empty completion, and `finish_reason` explains nothing |
+| `output_truncated` | `unreadable` | no | `finish_reason: "length"` — the ceiling was hit |
+| `reasoning_only` | `unreadable` | no | The model thought and never answered |
+| `refused` | `unreadable` | no | An explicit `refusal`, or `content_filter` |
 | `malformed_json` | `unreadable` | no | Reply was not JSON |
 | `invalid_structure` | `unreadable` | no | JSON, but not the schema |
+
+The last four used to be one code, and that cost a milestone. A live call
+returned HTTP 200 with 397 completion tokens against a 400 ceiling and no
+content; the gateway could only say `no_content`, because `finish_reason` was
+present in the response and read by nobody. Truncation, a refusal, a
+reasoning-only reply and a genuinely empty one need different answers from a
+person — raise the ceiling, look at the prompt, change the model, or
+investigate — so they are now told apart.
+
+**Reasoning is never parsed as the answer.** `reasoning_only` exists so the
+diagnosis is visible, not so the text can be used: a model thinking aloud is
+not the object the schema asked for.
+
+## 8b. Endpoint filtering
+
+Every request sends `provider: { require_parameters: true }`.
+
+OpenRouter fronts many providers for the same model and they do not all support
+structured outputs. Without this, `response_format` and `strict: true` are
+advisory — the request can be routed to an endpoint that ignores them and
+replies with whatever it likes, which is indistinguishable from a misbehaving
+model. Narrowing routing to endpoints that honour the parameters we send is the
+same preference for a clean failure over a silent downgrade that the rest of
+this layer takes.
+
+Note what this does NOT change: the schema sent on the wire is still a hint,
+and local Zod validation is still the guarantee. Bounds stripped from the
+request for strict-mode compatibility — `maxLength`, `pattern`, `minimum` and
+the rest — are still enforced in full on the way back, and a test proves a
+bound-violating reply is rejected.
 
 ## 9. Adding a model or an operation
 

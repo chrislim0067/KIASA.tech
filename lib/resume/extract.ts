@@ -280,6 +280,26 @@ function fromProviderFailure(
         message: 'The résumé reader rejected that request. Try again in a moment.',
         retryable: false,
       };
+    case 'output_truncated':
+      /*
+       * The model ran out of output budget before finishing.
+       *
+       * Kept apart from the shapes below because it is OUR problem, not the
+       * document's: telling a candidate their PDF is unreadable when the real
+       * cause is a ceiling we chose would send them away to fix the wrong
+       * thing. Retryable, because a rerun with more room can succeed.
+       */
+      return {
+        ok: false,
+        failureClass: 'unreadable',
+        failureCode: 'output_truncated',
+        message:
+          'The reader ran out of room before it finished. That is our side rather than ' +
+          'your document — please try again, and tell us if it keeps happening.',
+        retryable: true,
+      };
+    case 'reasoning_only':
+    case 'refused':
     case 'no_content':
     case 'malformed_json':
     case 'invalid_structure':
