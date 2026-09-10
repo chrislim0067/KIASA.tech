@@ -244,8 +244,31 @@ jobs:
       - name: Reset the database from empty and re-apply all migrations
         run: npm run db:reset
 
+      # `test:db` chains seventeen scripts with `&&`. When one fails, the only
+      # thing visible outside the log is "Database suites: failure" — which
+      # names neither the suite nor the assertion, and the job log needs admin
+      # rights to read. That is uninformative by construction.
+      #
+      # So the suites are run one at a time and the failing one is emitted as a
+      # `::error::` annotation, which IS readable from the public checks API.
+      # The list is derived from package.json rather than repeated here: two
+      # copies of a seventeen-item list is a drift waiting to happen.
+      #
+      # Only the script NAME is published, never its output — the suites print
+      # local credentials and throwaway user emails, and this repository is
+      # public.
       - name: Database, RLS, privilege, cascade and security suites
-        run: npm run test:db
+        run: |
+          set -uo pipefail
+          node -e "console.log(require('./package.json').scripts['test:db'].split(' && ').join('\n'))" > /tmp/db-suites
+          while read -r suite; do
+            [ -z "$suite" ] && continue
+            echo "--- $suite"
+            if ! eval "$suite"; then
+              echo "::error title=Database suite failed::$suite"
+              exit 1
+            fi
+          done < /tmp/db-suites
 
       - name: Admin authorization suites
         run: npm run test:admin

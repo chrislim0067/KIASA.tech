@@ -569,7 +569,26 @@ create trigger automation_tasks_status_transition
   before update on public.automation_tasks
   for each row execute function public.guard_automation_task_transition();
 
--- Events are append-only.
+-- Events are append-only — with ONE exception, and it is not optional.
+--
+-- THE BUG THIS AVOIDS, WHICH HAS BEEN SHIPPED HERE ONCE BEFORE
+--
+-- The three references above are ON DELETE SET NULL, so the audit trail
+-- outlives the rows it describes. A referential action is ordinary SQL and
+-- FIRES TRIGGERS: deleting a supervisor issues `update worker_events set
+-- supervisor_id = null`. A blanket refusal therefore does not merely protect
+-- the audit trail — it makes deleting a supervisor impossible, and because
+-- worker_supervisors cascades from auth.users, IT BREAKS ACCOUNT DELETION
+-- ENTIRELY. `provider_usage` shipped exactly this defect in an earlier
+-- milestone and CI caught it there too.
+--
+-- So the FK detach is permitted, and precisely nothing else: every other
+-- column must be byte-identical, and a reference may only go to null, never
+-- from one value to another.
+--
+-- DELETE is not refused here at all. worker_events holds no DELETE grant, so
+-- no client can issue one; the cascade from auth.users must still work, and a
+-- trigger that blocked it would leave rows no one could remove.
 create or replace function public.refuse_worker_event_update()
 returns trigger
 language plpgsql
@@ -577,13 +596,21 @@ security invoker
 set search_path = ''
 as $$
 begin
+  if (to_jsonb(new) - 'supervisor_id' - 'slot_id' - 'task_id')
+     = (to_jsonb(old) - 'supervisor_id' - 'slot_id' - 'task_id')
+     and (new.supervisor_id is null or new.supervisor_id = old.supervisor_id)
+     and (new.slot_id is null or new.slot_id = old.slot_id)
+     and (new.task_id is null or new.task_id = old.task_id)
+  then
+    return new;
+  end if;
   raise exception 'worker_events is append-only' using errcode = 'check_violation';
 end;
 $$;
 revoke all on function public.refuse_worker_event_update() from public, anon, authenticated, service_role;
 
 create trigger worker_events_append_only
-  before update or delete on public.worker_events
+  before update on public.worker_events
   for each row execute function public.refuse_worker_event_update();
 
 -- ---------------------------------------------------------------------------

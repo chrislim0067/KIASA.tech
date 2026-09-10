@@ -20,5 +20,5 @@
   "20260908000019_access_reason_is_visible.sql": "1b0bd0aae14ffa21840b47952616905aae0d843fdd7a43f8ee934ead218ac529",
   "20260908000020_resume_imports.sql": "27cdc5744516a849e9b8e5e96fce8439dd93a4b5906d8f39b23164703c2b6193",
   "20260908000021_provider_usage.sql": "5fb3a7deba302006b4bf85078eeceefb10176ac6b14c09c015d3896bc19dce52",
-  "20260909000022_worker_supervisors_and_leases.sql": "bb1491d08f04205a4b75196d3c72a2dd5d3fce9b1ef58e8614a02b8dfb222f92"
+  "20260909000022_worker_supervisors_and_leases.sql": "1e5e98ea3f751d7067c0febbd8b88a98346fc45142ea31db2d018db6d0b1d2a6"
 }

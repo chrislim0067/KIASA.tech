@@ -270,7 +270,17 @@ HAS(/an expired lease may not be renewed/, 'an expired lease is never revived');
 HAS(/a released lease may not be reopened/, 'a released lease stays released');
 HAS(/a revoked supervisor may not hold a lease/, 'registration revocation is enforced');
 HAS(/lease and slot belong to different candidates/, 'a lease cannot cross candidates');
-HAS(/worker_events is append-only/, 'the audit trail cannot be edited or deleted');
+HAS(/worker_events is append-only/, 'the audit trail cannot be edited');
+HAS(/IT BREAKS ACCOUNT DELETION/,
+  'the append-only guard permits the FK detach, and says why',
+  'a referential action is ordinary SQL and fires triggers');
+check('the append-only trigger does not refuse DELETE',
+  /create trigger worker_events_append_only\s*\n\s*before update on public\.worker_events/.test(sql),
+  'the cascade from auth.users must still work; the absent grant stops clients');
+check('  and it permits ONLY the three FK columns to be nulled',
+  /to_jsonb\(new\) - 'supervisor_id' - 'slot_id' - 'task_id'/.test(sql) &&
+    /new\.supervisor_id is null or new\.supervisor_id = old\.supervisor_id/.test(sql),
+  'every other column must be byte-identical');
 
 check('every table forces row level security',
   (sql.match(/force row level security/g) ?? []).length >= 1 &&
