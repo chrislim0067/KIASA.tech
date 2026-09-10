@@ -306,6 +306,75 @@ export type Database = {
           },
         ]
       }
+      automation_tasks: {
+        Row: {
+          attempt: number
+          candidate_assisted: boolean
+          correlation_id: string
+          created_at: string
+          fence_token: number
+          finished_at: string | null
+          id: string
+          idempotency_key: string
+          job_id: string
+          max_attempts: number
+          mode: string
+          outcome: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempt?: number
+          candidate_assisted?: boolean
+          correlation_id: string
+          created_at?: string
+          fence_token?: number
+          finished_at?: string | null
+          id?: string
+          idempotency_key: string
+          job_id: string
+          max_attempts?: number
+          mode: string
+          outcome?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempt?: number
+          candidate_assisted?: boolean
+          correlation_id?: string
+          created_at?: string
+          fence_token?: number
+          finished_at?: string | null
+          id?: string
+          idempotency_key?: string
+          job_id?: string
+          max_attempts?: number
+          mode?: string
+          outcome?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_tasks_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       certifications: {
         Row: {
           created_at: string
@@ -1128,6 +1197,67 @@ export type Database = {
           },
         ]
       }
+      task_leases: {
+        Row: {
+          acquired_at: string
+          created_at: string
+          expires_at: string
+          fence_token: number
+          id: string
+          release_reason: string | null
+          released_at: string | null
+          slot_id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          created_at?: string
+          expires_at: string
+          fence_token: number
+          id?: string
+          release_reason?: string | null
+          released_at?: string | null
+          slot_id: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string
+          created_at?: string
+          expires_at?: string
+          fence_token?: number
+          id?: string
+          release_reason?: string | null
+          released_at?: string | null
+          slot_id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_leases_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "worker_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_leases_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "automation_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_leases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       user_access: {
         Row: {
           created_at: string
@@ -1387,6 +1517,193 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "work_experiences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      worker_events: {
+        Row: {
+          created_at: string
+          detail: Json
+          id: string
+          kind: string
+          occurred_at: string
+          slot_id: string | null
+          supervisor_id: string | null
+          task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: Json
+          id?: string
+          kind: string
+          occurred_at?: string
+          slot_id?: string | null
+          supervisor_id?: string | null
+          task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detail?: Json
+          id?: string
+          kind?: string
+          occurred_at?: string
+          slot_id?: string | null
+          supervisor_id?: string | null
+          task_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_events_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "worker_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_events_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "worker_supervisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "automation_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      worker_slots: {
+        Row: {
+          browser_context_id: string
+          capabilities: string[]
+          claude_session: string
+          created_at: string
+          employer_session: string
+          heartbeat_sequence: number
+          id: string
+          last_heartbeat_at: string | null
+          pause_reason: string | null
+          readiness: string
+          slot_index: number
+          stop_reason: string | null
+          supervisor_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          browser_context_id: string
+          capabilities?: string[]
+          claude_session?: string
+          created_at?: string
+          employer_session?: string
+          heartbeat_sequence?: number
+          id?: string
+          last_heartbeat_at?: string | null
+          pause_reason?: string | null
+          readiness?: string
+          slot_index: number
+          stop_reason?: string | null
+          supervisor_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          browser_context_id?: string
+          capabilities?: string[]
+          claude_session?: string
+          created_at?: string
+          employer_session?: string
+          heartbeat_sequence?: number
+          id?: string
+          last_heartbeat_at?: string | null
+          pause_reason?: string | null
+          readiness?: string
+          slot_index?: number
+          stop_reason?: string | null
+          supervisor_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_slots_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "worker_supervisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_slots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      worker_supervisors: {
+        Row: {
+          agent_version: string
+          created_at: string
+          declared_slots: number
+          heartbeat_sequence: number
+          id: string
+          last_heartbeat_at: string | null
+          lifecycle: string
+          platform: string
+          revoked_at: string | null
+          revoked_reason: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_version: string
+          created_at?: string
+          declared_slots?: number
+          heartbeat_sequence?: number
+          id?: string
+          last_heartbeat_at?: string | null
+          lifecycle?: string
+          platform: string
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_version?: string
+          created_at?: string
+          declared_slots?: number
+          heartbeat_sequence?: number
+          id?: string
+          last_heartbeat_at?: string | null
+          lifecycle?: string
+          platform?: string
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_supervisors_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "admin_user_directory"
