@@ -1972,7 +1972,7 @@ export type Database = {
           p_credential_id: string
           p_lifecycle: string
           p_readiness: string
-          p_reason: string
+          p_reason?: string
           p_sequence: number
           p_token_hash: string
         }
@@ -2015,7 +2015,7 @@ export type Database = {
           p_credential_id: string
           p_disposition: string
           p_fence_token: number
-          p_reason: string
+          p_reason?: string
           p_token_hash: string
         }
         Returns: {
@@ -2031,6 +2031,14 @@ export type Database = {
           cred_user_id: string
           ok: boolean
           reason: string
+        }[]
+      }
+      worker_revoke_supervisor: {
+        Args: never
+        Returns: {
+          ok: boolean
+          reason: string
+          revoked_count: number
         }[]
       }
     }
