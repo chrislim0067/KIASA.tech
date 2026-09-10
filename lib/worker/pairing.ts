@@ -2,6 +2,12 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 import { z } from 'zod';
 
+import {
+  SLOT_READINESS_STATES,
+  WORKER_PAUSE_REASONS,
+  WORKER_STOP_REASONS,
+} from '@/lib/agent/contracts';
+
 /**
  * Pairing secrets and worker credentials: generation, hashing, verification.
  *
@@ -286,12 +292,29 @@ export function visibleStatus(
  * `.strict()`, and there is deliberately no field a hash or token could
  * occupy. A test asserts the key set, because "we would never add that" is not
  * a control.
+ *
+ * THE SLOT'S THREE FIELDS ARE VOCABULARIES, NOT TEXT.
+ *
+ * `slot_readiness`, `pause_reason` and `stop_reason` are each declared here
+ * as the same closed enum the database holds as a CHECK constraint, so the only
+ * thing that can reach a browser through them is a member of a list written in
+ * this repository. A worker cannot describe its situation in prose, and a row
+ * edited to hold prose fails this parse rather than rendering.
+ *
+ * They are named here because the route has always sent them and this schema
+ * has always been `.strict()`, which meant every call returned
+ * `invalid_view` — the disclosure guard was refusing the response it was
+ * meant to be checking. Widening the schema to name them is the fix; removing
+ * `.strict()` would have been the bug.
  */
 export const WorkerStatusView = z
   .object({
     status: z.enum(['not_paired', 'online', 'stale', 'revoked', 'expired']),
     supervisor_id: z.uuid().nullable(),
     slot_index: z.number().int().min(1).max(10).nullable(),
+    slot_readiness: z.enum(SLOT_READINESS_STATES).nullable(),
+    pause_reason: z.enum(WORKER_PAUSE_REASONS).nullable(),
+    stop_reason: z.enum(WORKER_STOP_REASONS).nullable(),
     last_heartbeat_at: z.iso.datetime().nullable(),
     paired_at: z.iso.datetime().nullable(),
     expires_at: z.iso.datetime().nullable(),

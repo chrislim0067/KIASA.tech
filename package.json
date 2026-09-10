@@ -40,6 +40,7 @@
     "test:slice": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-worker-slice.mjs",
     "test:pairing": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-worker-pairing.mjs",
     "test:draft": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-profile-draft.mjs",
+    "test:draft:ui": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-profile-draft-ui.mjs",
     "test:tasks": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-worker-tasks.mjs",
     "test:endpoints": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-worker-endpoints.mjs",
     "probe:worker": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/probe-worker-e2e.mjs",

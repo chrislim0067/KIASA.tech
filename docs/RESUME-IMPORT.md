@@ -100,6 +100,18 @@ and the profile can still be filled in by hand. Nothing else degrades.
 
 On Vercel, add it as a plain (non-public) environment variable and redeploy.
 
+**Both variables are required for the upload path, and neither has a default.**
+`OPENROUTER_BASE_URL` and `OPENROUTER_RESUME_MODEL` do have defaults and may be
+left unset. If `/profile/resume` says "not switched on yet" in an environment,
+that is configuration rather than a code fault: one or both of
+`OPENROUTER_API_KEY` and `SUPABASE_SECRET_KEY` is absent from it.
+
+Two neighbouring paths need less. The paste console on `/profile` needs only
+`SUPABASE_SECRET_KEY`, and `/profile/draft` — which runs on the candidate's own
+computer — needs neither OpenRouter variable. See
+`docs/PROFILE-DRAFTING-DESIGN.md` §5 for why those gates are deliberately
+different.
+
 ## Migration
 
 `supabase/migrations/20260908000020_resume_imports.sql` creates the
