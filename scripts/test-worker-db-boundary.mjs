@@ -896,8 +896,15 @@ try {
                       from public.worker_events e,
                            lateral jsonb_object_keys(e.detail) k
                       where e.user_id = '${hank.id}'`);
+    /*
+     * `kind` joined the list in migration 29: `task_started` records which
+     * kind of work began. It is the same two-value enum the column holds, not
+     * content — and section 36 asserts separately that nothing from a résumé
+     * ever reaches a payload.
+     */
     check('  and every payload key is one of the bounded scalars',
-      keys.split(',').sort().join(',') === 'agent_version,disposition,fence,platform,slot_index',
+      keys.split(',').sort().join(',') ===
+        'agent_version,disposition,fence,kind,platform,slot_index',
       keys);
 
     const leaked = sql(`select count(*) from public.worker_events
@@ -1376,9 +1383,25 @@ try {
       refused(`update public.automation_tasks set kind = 'job_application'
                where id = '${profileTask}' returning kind`),
       'a kind that could change is a rule that can be walked around');
-    check('  it may still reach manual_review',
+    /*
+     * IT REACHES manual_review THE WAY EVERY TASK DOES — through the machine.
+     * `queued → manual_review` is not a legal transition for any kind, and
+     * asserting it here was asserting a move migration 22 has always refused.
+     * Section 33 drives the real path with a real worker.
+     */
+    check('  it may still be leased, which is where work starts',
+      sql(`update public.automation_tasks set status = 'leased'
+           where id = '${profileTask}' returning status`) === 'leased');
+    check('  and then worked on',
+      sql(`update public.automation_tasks set status = 'processing'
+           where id = '${profileTask}' returning status`) === 'processing');
+    check('  and then reach manual_review',
       sql(`update public.automation_tasks set status = 'manual_review'
            where id = '${profileTask}' returning status`) === 'manual_review');
+    check('  but STILL not a submission state from there',
+      refused(`update public.automation_tasks set status = 'ready_to_submit'
+               where id = '${profileTask}' returning status`),
+      'manual_review is where a worker stops, whatever it has done');
   }
 
   section('33. The whole drafting flow, through the real store');
