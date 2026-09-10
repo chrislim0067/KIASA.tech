@@ -3,7 +3,6 @@ import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { PairingStore } from '@/lib/worker/endpoints';
 import type { CredentialRow, PairingRow } from '@/lib/worker/pairing';
-import type { WorkerRpcClient } from '@/lib/worker/rpc';
 
 /**
  * The Supabase-backed implementation of the worker protocol's data access.
@@ -48,12 +47,6 @@ const CREDENTIAL_COLUMNS =
 
 export function createPairingStore(): PairingStore {
   const db = createAdminClient();
-  /*
-   * The same connection, narrowed to the two functions migration 26 defines.
-   * See lib/worker/rpc.ts for why the declaration lives in application code
-   * and when it should be deleted.
-   */
-  const rpc = db as unknown as WorkerRpcClient;
 
   return {
     async createPairing(row) {
@@ -115,7 +108,7 @@ export function createPairingStore(): PairingStore {
        * NO ID IS SENT AS PROOF. The secret's hash is the proof; the candidate
        * comes out of the row it matches.
        */
-      const { data, error } = await rpc.rpc('worker_redeem_pairing', {
+      const { data, error } = await db.rpc('worker_redeem_pairing', {
         p_secret_hash: input.secretHash,
         p_platform: input.platform,
         p_agent_version: input.agentVersion,
@@ -205,7 +198,7 @@ export function createPairingStore(): PairingStore {
        * check, which is now a comparison inside one transaction rather than a
        * read and a write with a gap between them.
        */
-      const { data, error } = await rpc.rpc('worker_record_heartbeat', {
+      const { data, error } = await db.rpc('worker_record_heartbeat', {
         p_credential_id: input.credentialId,
         p_token_hash: input.tokenHash,
         p_sequence: input.sequence,
