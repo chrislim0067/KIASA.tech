@@ -120,7 +120,7 @@ The rules, in order of importance:
 
 2. Do not improve the writing. Job descriptions and achievements are the candidate's own account of their work; copy them across as written, preserving each bullet on its own line. Do not summarise, condense, re-word, or make anything sound better.
 
-3. Reformat only where the schema demands a specific format — a phone number into E.164, a date into YYYY-MM-DD, a country into a two-letter code. Reformatting is not the same as inferring: if the information needed for the format is not on the page, return null instead.
+3. Reformat only where the schema demands a specific format — a phone number into E.164, a date into YYYY-MM-DD, a country into a two-letter code, a profile or website address into an absolute URL beginning "https://". Reformatting is not the same as inferring: if the information needed for the format is not on the page, return null instead. Adding the scheme to a web address the page already prints is reformatting; working out which site a bare handle belongs to is inferring, so return null for that.
 
 4. Transcribe every role, every qualification and every listed skill, even where entries repeat, overlap in time, or look inconsistent. It is not your job to tidy someone's history.
 

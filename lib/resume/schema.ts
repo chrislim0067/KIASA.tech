@@ -63,6 +63,73 @@ const countryCode = z
       'city, an area code, or a currency.'
   );
 
+/**
+ * The two hosts a résumé reliably prints without a scheme, and only those.
+ *
+ * Anchored at the start, and required to end at a `/` or at the end of the
+ * string, so the host is the WHOLE authority rather than a prefix of something
+ * else. `linkedin.com.evil.test/x` and `linkedin.com@evil.test` both fail: the
+ * character after the host is `.` and `@`, and neither is accepted.
+ */
+const BARE_SOCIAL_HOST = /^(?:www\.)?(?:linkedin\.com|github\.com)(?:\/|$)/i;
+
+/**
+ * Repair the one URL shape a résumé reliably produces, and nothing else.
+ *
+ * WHY THIS EXISTS
+ *
+ * A production import failed with `provider_failure_detail =
+ * linkedin_url,github_url`. The system prompt's rule 3 permits reformatting
+ * "only" into E.164, YYYY-MM-DD and a two-letter country — an exhaustive list
+ * that does not mention URLs — while rule 2 says to copy text across as
+ * written. The field description below says the opposite, and
+ * `lib/ai/json-schema.ts` strips `pattern` before the schema is sent, so the
+ * provider is never told mechanically either. A model obeying the
+ * higher-priority rule returns `linkedin.com/in/…` exactly as the page prints
+ * it, and validation refuses it.
+ *
+ * The prompt is corrected too. This exists because a prompt is a hope and
+ * validation is a guarantee, and the same document will be uploaded again by
+ * someone whose model resolves that instruction differently.
+ *
+ * WHAT IT WILL NOT DO
+ *
+ * It never turns prose into a URL. A value is rewritten ONLY when it already
+ * begins with one of two known hosts; everything else is returned untouched so
+ * validation still refuses it. Arbitrary domains, `javascript:`, `data:`, email
+ * addresses, phone numbers, addresses, quotes and model commentary all pass
+ * through unchanged and are rejected exactly as they are today.
+ *
+ * An empty or whitespace-only string becomes null, because that is what it
+ * means — the résumé did not state one. That is recognising an absence, not
+ * inventing a value.
+ */
+export function canonicalSocialUrl(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+
+  /*
+   * Already absolute: returned as it is, and still validated.
+   *
+   * This is an early return for readability, NOT a control. Removing it changes
+   * no behaviour, because the host test below is anchored and an absolute URL
+   * starts with a scheme rather than a host — mutation testing confirms it.
+   * Do not rely on it as a guard.
+   */
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  /*
+   * Anything carrying whitespace or quoting is prose, a sentence, or an attempt
+   * at something. Returned unchanged so the regex refuses it — deliberately NOT
+   * stripped until it happens to pass.
+   */
+  if (/[\s"'<>\\]|[\u0000-\u001f\u007f-\u009f]/.test(trimmed)) return trimmed;
+
+  return BARE_SOCIAL_HOST.test(trimmed) ? `https://${trimmed}` : trimmed;
+}
+
 const url = (what: string) =>
   z
     .string()
@@ -74,6 +141,16 @@ const url = (what: string) =>
         ' Include the scheme: "https://…". If the resume prints a bare handle or a ' +
         'domain without one, add "https://" but change nothing else. null if absent.'
     );
+
+/**
+ * A social URL field: canonicalised first, then validated unchanged.
+ *
+ * `z.preprocess` runs before the checks, so a bare `github.com/…` becomes
+ * absolute and then faces exactly the same rules as everything else. Nothing
+ * about the accepted set changes — `^https?://`, 2048 characters, or null —
+ * only what is offered to it.
+ */
+const socialUrl = (what: string) => z.preprocess(canonicalSocialUrl, url(what));
 
 /**
  * Dates on a resume are rarely full dates.
@@ -237,8 +314,8 @@ export const ResumeExtraction = z.object({
   state_region: z.string().max(TEXT_LIMITS.profiles.state_region).nullable(),
   country_code: countryCode,
 
-  linkedin_url: url('The LinkedIn profile URL.'),
-  github_url: url('The GitHub profile URL.'),
+  linkedin_url: socialUrl('The LinkedIn profile URL.'),
+  github_url: socialUrl('The GitHub profile URL.'),
   portfolio_url: url('A personal site or portfolio URL — not LinkedIn or GitHub.'),
 
   work_experiences: z
