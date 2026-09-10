@@ -459,6 +459,69 @@ section('12. The module holds no key, shell or vendor path');
     'a plaintext query parameter can land in a slow-query log');
 }
 
+section('13. The worker runtime holds nothing it should not');
+
+{
+  const raw = readFileSync(path.join(ROOT, 'worker', 'kiasa-worker.mjs'), 'utf8');
+  // Comments explain what the worker AVOIDS, so scanning them would flag the
+  // explanations rather than the behaviour.
+  const src = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const ANTHROPIC_ENV = 'ANTHROPIC' + '_API_KEY';
+
+  for (const [re, what] of [
+    [new RegExp(ANTHROPIC_ENV), ANTHROPIC_ENV],
+    [/OPENROUTER_API_KEY/, 'the OpenRouter key'],
+    [/SUPABASE_SECRET_KEY|SUPABASE_.*KEY/, 'a Supabase key'],
+    [/document\.cookie|localStorage|sessionStorage/, 'browser storage'],
+    [/puppeteer|playwright|webdriver/, 'a browser driver'],
+    [/child_process|shell:\s*true|\bexec\(/, 'a shell'],
+    [/\.anthropic\.com/, 'a vendor endpoint'],
+    [/writeFileSync|appendFileSync|createWriteStream/, 'a write to disk'],
+  ]) {
+    check(`the worker contains no ${what}`, !re.test(src));
+  }
+
+  check('the pairing secret is read from STDIN, not argv',
+    /readSecretFromStdin/.test(src) && !/process\.argv[\s\S]{0,80}(secret|pairing)/i.test(src),
+    'an argv secret is visible in the process list and shell history');
+  check('  the credential lives in a variable, never a file',
+    /let credential = null/.test(src) && !/\.token.*writeFile/s.test(src));
+  check('  and is dropped on shutdown', /credential = null;/.test(src));
+  check('the worker sends no cookies', /credentials: 'omit'/.test(src));
+  check('  and refuses redirects', /redirect: 'error'/.test(src),
+    'a redirect could send the bearer token somewhere else');
+  check('every request is bounded by an AbortController', /AbortController/.test(src));
+  check('there is no default base URL pointing anywhere',
+    /const BASE_URL = process\.env\.KIASA_BASE_URL;/.test(src),
+    'a default is how a worker talks to production by accident');
+  check('local Claude consent is explicit per run',
+    /KIASA_LOCAL_CONSENT === 'yes'/.test(src),
+    'an unset variable means not consented, not probably fine');
+  check('it uses the EXISTING local-Claude adapter, not a second client',
+    /'local-claude',\s*'cli\.ts'/.test(src) && !/openrouter\.ai|api\.openai/.test(src),
+    'the adapter path is assembled with path.join, so there is no slash to match');
+  check('a rejected credential stops the worker rather than retrying',
+    /status === 401 \|\| status === 403/.test(src));
+
+  /*
+   * Nothing in the worker reaches an employer or submits anything.
+   *
+   * Asserted on BEHAVIOUR rather than on the word "employer", which appears
+   * legitimately in the fictional probe prompt. What matters is that the only
+   * URL it can build is the configured control plane, and that no action verb
+   * for submitting or navigating exists.
+   */
+  const urls = [...src.matchAll(/https?:\/\/[^\s'"`]+/g)].map((m) => m[0]);
+  check('  the worker builds no hard-coded URL', urls.length === 0, urls.join(', '));
+  check('  the only fetch target is the configured base URL',
+    /fetch\(`\$\{BASE_URL\}\$\{pathname\}`/.test(src), 'nothing else is reachable');
+  for (const forbidden of ['submit_application', 'captcha', 'solveChallenge', 'navigate']) {
+    check(`  no ${forbidden} path exists`, !new RegExp(forbidden, 'i').test(src));
+  }
+  check('the probe fixture names a fictional employer',
+    /Example Corp \(a fictional employer\)/.test(raw));
+}
+
 console.log('\n========================================================');
 if (failed === 0) {
   console.log(`ALL ${passed} WORKER-ENDPOINT CHECKS PASSED`);
