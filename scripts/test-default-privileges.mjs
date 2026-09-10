@@ -109,9 +109,21 @@ const WORKER_DEFINER_FUNCTIONS = [
   'worker_renew_lease',
   'worker_report_task',
   'worker_resolve_credential',
+  'worker_revoke_supervisor',
 ];
+/**
+ * Three sets, because the seven functions divide three ways.
+ *
+ *   service_role  the five worker protocol operations.
+ *   authenticated `worker_revoke_supervisor` and nothing else — the one
+ *                 definer function a browser may execute, and the only one
+ *                 that takes NO arguments, so there is nothing to forge.
+ *   nobody        `worker_resolve_credential`, reachable only from inside
+ *                 another definer function.
+ */
+const WORKER_BROWSER_FUNCTIONS = ['worker_revoke_supervisor'];
 const WORKER_CALLABLE_FUNCTIONS = WORKER_DEFINER_FUNCTIONS.filter(
-  (fn) => fn !== 'worker_resolve_credential'
+  (fn) => fn !== 'worker_resolve_credential' && !WORKER_BROWSER_FUNCTIONS.includes(fn)
 );
 const API_ROLES = ['anon', 'authenticated', 'service_role'];
 
@@ -241,6 +253,18 @@ for (const role of ['anon', 'service_role']) {
                         where n.nspname='public' and p.prosecdef`);
   check('SECURITY DEFINER is confined to the worker boundary',
     definers === WORKER_DEFINER_FUNCTIONS.join(','), definers);
+  const browserDefiners = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
+                                from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                                where n.nspname='public' and p.prosecdef
+                                  and has_function_privilege('authenticated', p.oid, 'EXECUTE')`);
+  check('a browser may execute exactly one definer function',
+    browserDefiners === WORKER_BROWSER_FUNCTIONS.join(','), browserDefiners);
+  check('  and it takes no arguments',
+    sql(`select coalesce(string_agg(p.pronargs::text, ','), 'none')
+         from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+         where n.nspname='public' and p.proname = 'worker_revoke_supervisor'`) === '0',
+    'an argument is something a caller chooses');
+
   check('  and the credential resolver is executable by nobody at all',
     !sql(`select coalesce(string_agg(p.proname, ','), 'none')
            from pg_proc p join pg_namespace n on n.oid = p.pronamespace

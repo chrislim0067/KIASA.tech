@@ -206,10 +206,16 @@ export function createPairingStore(): PairingStore {
         p_sequence: input.sequence,
         p_lifecycle: input.lifecycle,
         p_readiness: input.readiness,
-        // '' means "no reason". See migration 27: the generated Args type
-        // cannot express a nullable text parameter, and both spellings are
-        // refused identically by every branch that checks a vocabulary.
-        p_reason: input.reason ?? '',
+        /*
+         * AN ABSENT REASON IS AN ABSENT ARGUMENT.
+         *
+         * Migration 28 gives `p_reason` a DEFAULT, so omitting it is how this
+         * protocol says "no reason" — the database sees null. Migration 27
+         * sent '' instead, because the generated Args type could not express a
+         * nullable parameter; that sentinel is gone, and '' now means nothing
+         * more than a value that is in neither vocabulary.
+         */
+        ...(input.reason === null ? {} : { p_reason: input.reason }),
       });
 
       const row = Array.isArray(data) ? data[0] : null;
@@ -277,7 +283,7 @@ export function createPairingStore(): PairingStore {
         p_token_hash: input.tokenHash,
         p_fence_token: input.fenceToken,
         p_disposition: input.disposition,
-        p_reason: input.reason ?? '',
+        ...(input.reason === null ? {} : { p_reason: input.reason }),
       });
 
       const row = Array.isArray(data) ? data[0] : null;
