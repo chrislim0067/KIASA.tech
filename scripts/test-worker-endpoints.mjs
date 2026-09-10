@@ -522,6 +522,83 @@ section('13. The worker runtime holds nothing it should not');
     /Example Corp \(a fictional employer\)/.test(raw));
 }
 
+section('14. The attempt counter is atomic, and the read-then-write is gone');
+
+{
+  const store = readFileSync(path.join(ROOT, 'lib', 'worker', 'store.ts'), 'utf8');
+  const migration = readFileSync(
+    path.join(ROOT, 'supabase', 'migrations', '20260910000025_pairing_atomic_attempts.sql'),
+    'utf8'
+  );
+
+  /*
+   * The race being closed: the redeem endpoint is unauthenticated by design,
+   * so an attacker chooses the concurrency. A read-then-write counter can be
+   * pinned below its ceiling by enough parallel guesses, and a limit that can
+   * be held at four is not a limit.
+   *
+   * Postgres row locking is what actually proves the fix, and that is tested
+   * against a real database in scripts/test-worker-pairing-db.mjs. What is
+   * checkable here is that the client no longer does the arithmetic at all.
+   */
+  const fn = store.slice(store.indexOf('async recordFailedAttempt'));
+  const withComments = fn.slice(0, fn.indexOf('\n    },'));
+  // Comments here EXPLAIN the arithmetic the database does, so scanning them
+  // would flag the explanation rather than the code.
+  const body = withComments.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
+  check('recordFailedAttempt performs no SELECT', !/\.select\(/.test(body),
+    'there is no read, so there is no gap to lose an update in');
+  check('  and does no arithmetic', !/\+\s*1|Math\.min|Math\.max/.test(body), body.trim());
+  check('  it issues exactly one statement',
+    (body.match(/await db/g) ?? []).length === 1,
+    'two statements would be two chances to interleave');
+
+  check('the database computes the value from the PREVIOUS row',
+    /new\.attempts := least\(old\.attempts \+ 1, 10\)/.test(migration));
+  check('  and only when the update touches attempts',
+    /if new\.attempts is distinct from old\.attempts then/.test(migration));
+  /*
+   * The ceiling must CLAMP, not throw. An exception past the ceiling turns a
+   * refused guess into a 500 and tells an attacker the ceiling was reached.
+   * Checked against the attempts branch specifically — the self-verification
+   * block later in the file raises deliberately, and a whole-file scan would
+   * confuse the two.
+   */
+  const guard = migration.slice(
+    migration.indexOf('if new.attempts is distinct from old.attempts then'),
+    migration.indexOf('  return new;')
+  );
+  check('the ceiling clamps rather than raising',
+    /least\(old\.attempts \+ 1, 10\)/.test(guard) && !/raise exception/.test(guard),
+    guard.replace(/\s+/g, ' ').trim().slice(0, 80));
+
+  check('NO new grant was added', !/^grant /m.test(migration),
+    'service_role already held UPDATE; the trigger rides that');
+  check('  and the migration asserts none appeared',
+    /an API role can execute the pairing guard directly/.test(migration) &&
+      /authenticated can update a column other than revoked_at/.test(migration));
+  check('it is still a BEFORE UPDATE trigger, asserted by the migration',
+    /is not a BEFORE UPDATE trigger/.test(migration),
+    'an AFTER trigger cannot rewrite the value');
+
+  check('the client value cannot reset the counter',
+    /update\(\{ attempts: 0 \}\)/.test(body) &&
+      /new\.attempts := least/.test(migration),
+    'sending 0 is a signal; the trigger discards it');
+
+  /* Everything the fix must not have weakened. */
+  const pairing = readFileSync(path.join(ROOT, 'lib', 'worker', 'pairing.ts'), 'utf8');
+  check('constant-time comparison survives', /timingSafeEqual\(/.test(pairing));
+  check('the attempt ceiling is still checked BEFORE the secret',
+    pairing.indexOf("reason: 'too_many_attempts'") < pairing.indexOf('secretMatches(presentedSecret'),
+    'a right guess and a wrong one stay indistinguishable past the ceiling');
+  check('expiry and single-use are untouched',
+    /already_redeemed/.test(pairing) && /reason: 'expired'/.test(pairing));
+  check('ownership still comes from the invitation row',
+    /return \{ ok: true, userId: row\.user_id \};/.test(pairing));
+}
+
 console.log('\n========================================================');
 if (failed === 0) {
   console.log(`ALL ${passed} WORKER-ENDPOINT CHECKS PASSED`);

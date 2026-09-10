@@ -95,20 +95,25 @@ export function createPairingStore(): PairingStore {
     },
 
     async recordFailedAttempt(id) {
-      // Read-then-write rather than an atomic increment, because PostgREST has
-      // no `x = x + 1`. A lost update under concurrent guessing costs one
-      // attempt of accuracy against a ten-attempt ceiling, and the window is
-      // ten minutes — an acceptable trade for not adding a function.
-      const { data } = await db
-        .from('worker_pairings')
-        .select('attempts')
-        .eq('id', id)
-        .maybeSingle<{ attempts: number }>();
-      if (!data) return;
-      await db
-        .from('worker_pairings')
-        .update({ attempts: Math.min(data.attempts + 1, 10) })
-        .eq('id', id);
+      /*
+       * ONE STATEMENT, NO READ.
+       *
+       * This used to select `attempts`, add one, and write it back — a lost
+       * update waiting to happen, on the one endpoint an attacker can call
+       * without authenticating and therefore parallelise at will. Enough
+       * concurrent guesses could have pinned the counter well below its
+       * ceiling indefinitely.
+       *
+       * The arithmetic now lives in the BEFORE UPDATE trigger (migration 25).
+       * The value sent here is a SIGNAL, not data: the trigger discards it and
+       * computes `least(old.attempts + 1, 10)` from the locked previous row.
+       * Concurrent updates serialise on that row lock, so every attempt counts
+       * exactly once and none can be lost.
+       *
+       * Sending 0 is deliberate and safe — it cannot reset the counter, which
+       * is a property the old code did not have.
+       */
+      await db.from('worker_pairings').update({ attempts: 0 }).eq('id', id);
     },
 
     async createSupervisor(row) {
