@@ -408,11 +408,11 @@ begin
      * hole rather than a visible one.
      *
      * Checked through the ACL rather than has_function_privilege(), which
-     * takes a role name and PUBLIC is not one — passing 'public' raises
-     * "role does not exist", which is how this aborted on its first CI run.
-     * A null ACL means default privileges, which for a function means
-     * PUBLIC EXECUTE; an ACL item beginning with '=' is an explicit PUBLIC
-     * grant. Both are refused.
+     * would answer the narrower question. A NULL ACL means the function still
+     * carries DEFAULT privileges, and the default for a function is EXECUTE to
+     * PUBLIC — the dangerous case, and one a privilege lookup on a specific
+     * role reports the same way as a locked-down function. An ACL item
+     * beginning with '=' is an explicit PUBLIC grant. Both are refused.
      */
     if p.proacl is null then
       raise exception '% still holds default privileges, which grant EXECUTE to PUBLIC', target;
