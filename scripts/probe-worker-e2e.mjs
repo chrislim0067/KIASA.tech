@@ -417,6 +417,7 @@ const server = createServer(async (req, res) => {
       return send(res, 200, {
         ok: true, task_id: r.taskId, lease_id: r.leaseId,
         fence_token: r.fenceToken, lease_expires_at: r.leaseExpiresAt,
+        kind: r.kind,
       });
     }
     if (url.pathname === '/api/worker/task/renew') {
@@ -499,8 +500,9 @@ try {
 
   section('2b. The worker ran one control-plane task cycle');
 
-  check('it claimed the approved task', /claimed task/.test(log),
-    log.split('\n').find((l) => /claimed task|no task claimed/.test(l)) ?? '(no line)');
+  // The line names the KIND now, because the worker dispatches on it.
+  check('it claimed the approved task', /claimed a \w+ task/.test(log),
+    log.split('\n').find((l) => /claimed a \w+ task|no task claimed/.test(l)) ?? '(no line)');
   check('  exactly one claim request reached the server', seen.claim === 1, String(seen.claim));
   check('  it renewed the lease', seen.renew === 1, String(seen.renew));
   check('  and reported once', seen.report === 1, String(seen.report));

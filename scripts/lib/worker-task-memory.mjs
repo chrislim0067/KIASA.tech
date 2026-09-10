@@ -107,6 +107,8 @@ export function createTaskMemory({ credentials, uuid, now }) {
         id,
         user_id: userId,
         status: 'queued',
+        // Defaults to the job-application meaning, exactly as the column does.
+        kind: 'job_application',
         fence_token: 0,
         attempt: 0,
         max_attempts: 3,
@@ -126,6 +128,7 @@ export function createTaskMemory({ credentials, uuid, now }) {
         leaseId: null,
         fenceToken: null,
         leaseExpiresAt: null,
+        kind: null,
       });
 
       const r = resolve(credentialId, tokenHash);
@@ -180,6 +183,7 @@ export function createTaskMemory({ credentials, uuid, now }) {
         leaseId,
         fenceToken: task.fence_token,
         leaseExpiresAt: expiresAt,
+        kind: task.kind,
       };
     },
 

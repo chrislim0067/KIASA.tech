@@ -36,6 +36,7 @@
  */
 import { createInterface } from 'node:readline';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import process from 'node:process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -278,11 +279,24 @@ async function taskCycle() {
 
   const fence = claim.payload?.fence_token;
   const taskId = claim.payload?.task_id;
-  if (typeof fence !== 'number' || typeof taskId !== 'string') {
+  const kind = claim.payload?.kind;
+  if (typeof fence !== 'number' || typeof taskId !== 'string' || typeof kind !== 'string') {
     log('claim response was malformed; nothing was attempted.');
     return false;
   }
-  log(`claimed task ${taskId.slice(0, 8)}… at fence ${fence}.`);
+  log(`claimed a ${kind} task ${taskId.slice(0, 8)}… at fence ${fence}.`);
+
+  /*
+   * PROFILE DRAFTING RUNS HERE, ON THIS MACHINE.
+   *
+   * The only kind this worker can actually do anything with. Everything else
+   * is claimed and handed straight back, because there is no browser
+   * automation in this build and pretending otherwise would put a lie in an
+   * audit trail.
+   */
+  if (kind === 'candidate_profile_drafting') {
+    return draftProfileTask(taskId, fence, claim.payload?.input ?? null);
+  }
 
   const renew = await request('/api/worker/task/renew', {
     bearer: credential.token,
@@ -305,6 +319,100 @@ async function taskCycle() {
   }
   log('task released back to the queue. No application was attempted.');
   return true;
+}
+
+/**
+ * Draft a candidate profile with the candidate's own local Claude.
+ *
+ * CONSENT IS CHECKED IMMEDIATELY BEFORE THE PROCESS STARTS, by the adapter,
+ * from an environment variable this process does not set for itself. An unset
+ * variable means "not consented", not "probably fine".
+ *
+ * THERE IS NO FALLBACK. Every failure below reports the task failed with a
+ * bounded reason. None of them reaches for OpenRouter — this worker holds no
+ * OpenRouter key and could not, and a candidate who chose to draft on their own
+ * machine did not choose to have it done somewhere else instead.
+ */
+async function draftProfileTask(taskId, fence, input) {
+  if (input === null || typeof input !== 'object') {
+    log('the task carried no draft input; reporting it failed.');
+    await reportFailure(fence, 'unknown_page');
+    return false;
+  }
+
+  const { createCliTransport } = await import(
+    `file://${path.join(ROOT, 'lib', 'local-claude', 'cli.ts').replaceAll('\\', '/')}`
+  );
+  const { draftProfile, DraftTaskInput } = await import(
+    `file://${path.join(ROOT, 'lib', 'profile', 'drafting.ts').replaceAll('\\', '/')}`
+  );
+
+  const parsedInput = DraftTaskInput.safeParse(input);
+  if (!parsedInput.success) {
+    log('the draft input did not match its contract; nothing was sent to Claude.');
+    await reportFailure(fence, 'unknown_page');
+    return false;
+  }
+
+  const transport = createCliTransport({
+    model: process.env.KIASA_LOCAL_MODEL ?? 'sonnet',
+    consented: process.env.KIASA_LOCAL_CONSENT === 'yes',
+  });
+
+  const result = await draftProfile(transport, {
+    requestId: randomUUID(),
+    candidateId: credential.supervisorId,
+    taskId,
+    model: process.env.KIASA_LOCAL_MODEL ?? 'sonnet',
+    timeoutMs: 120_000,
+    input: parsedInput.data,
+  });
+
+  if (!result.ok) {
+    // A short code, never a message: a message can quote a résumé.
+    log(`drafting did not produce a usable result (${result.reason}).`);
+    await reportFailure(fence, LOCAL_FAILURE_REASON[result.reason] ?? 'unknown_page');
+    return false;
+  }
+
+  const submitted = await request('/api/worker/task/draft', {
+    bearer: credential.token,
+    body: { fence_token: fence, draft: result.draft },
+  });
+  if (submitted.status !== 200) {
+    log(`the draft was refused (${submitted.status}): ${submitted.payload?.reason ?? 'unknown'}`);
+    return false;
+  }
+
+  log('draft submitted for the candidate to review. Nothing was saved to the profile.');
+  return true;
+}
+
+/**
+ * How a drafting failure maps onto the control plane's bounded pause reasons.
+ *
+ * Total over what `draftProfile` can return, so a new failure mode cannot
+ * quietly become "unknown_page" without someone adding a line here.
+ */
+const LOCAL_FAILURE_REASON = {
+  consent_required: 'claude_authentication_required',
+  local_unavailable: 'claude_authentication_required',
+  timeout: 'unknown_page',
+  refused: 'sensitive_information_requested',
+  transport_error: 'unknown_page',
+  schema_invalid: 'unknown_page',
+  unsupported_claim: 'unknown_question',
+  value_too_long: 'unknown_question',
+  unknown_field: 'unknown_question',
+  confirmation_flag_wrong: 'unknown_question',
+};
+
+/** Hand the task back as failed, with a reason from the allowed list. */
+async function reportFailure(fence, reason) {
+  await request('/api/worker/task/report', {
+    bearer: credential.token,
+    body: { fence_token: fence, disposition: 'failed', reason },
+  }).catch(() => {});
 }
 
 /* ------------------------------------------------------------------ main */

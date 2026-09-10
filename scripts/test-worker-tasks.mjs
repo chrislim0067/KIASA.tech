@@ -180,9 +180,19 @@ section('2. Claim, renew, report — the whole cycle');
    * exists is a field that leaks.
    */
   const claimText = JSON.stringify(claim);
-  check('the claim response carries ids and times only',
-    Object.keys(claim).sort().join(',') === 'fenceToken,leaseExpiresAt,leaseId,ok,taskId',
+  /*
+   * IDS, TIMES, AND ONE BOUNDED ENUM.
+   *
+   * `kind` joined this list in migration 29: a worker that cannot tell which
+   * kind of task it claimed cannot act on it. It is a two-value enum, not
+   * content — the property this check exists for, that no job URL, employer
+   * or hash rides along, is unchanged and asserted on the next line.
+   */
+  check('the claim response carries ids, times and the task kind',
+    Object.keys(claim).sort().join(',') === 'fenceToken,kind,leaseExpiresAt,leaseId,ok,taskId',
     Object.keys(claim).sort().join(','));
+  check('  and the kind is one of the two the schema allows',
+    ['job_application', 'candidate_profile_drafting'].includes(claim.kind), claim.kind);
   check('  and no hash of anything', !/[0-9a-f]{64}/.test(claimText));
 
   /*

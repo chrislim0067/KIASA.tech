@@ -173,6 +173,12 @@ jobs:
       # pause semantics and the closed refusal vocabulary — plus structural
       # assertions on migration 27, including that no worker-callable function
       # can write a submission status.
+      # The candidate-profile draft contract: what a model may propose, what it
+      # cannot express, and the anti-invention check that compares every
+      # proposed value against the facts it cites.
+      - name: Profile draft contract (offline)
+        run: npm run test:draft
+
       - name: Worker task lifecycle (offline)
         run: npm run test:tasks
 

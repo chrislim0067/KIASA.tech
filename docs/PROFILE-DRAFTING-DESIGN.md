@@ -125,3 +125,167 @@ avoiding it by duplicating the lease and fence machinery — the single most
 security-sensitive part of the worker protocol.
 
 I have implemented nothing pending that answer.
+
+---
+
+# FINAL DESIGN — Option C, approved
+
+Approved with the invariants below. This section supersedes the comparison
+above; A and B are kept as the record of why C was chosen.
+
+## 1. Task-model extension (migration 29)
+
+`automation_tasks` gains a `kind`, and `job_id` becomes conditionally nullable.
+
+```sql
+kind text not null default 'job_application'
+  check (kind in ('job_application', 'candidate_profile_drafting'))
+
+-- A job application still cannot exist without a job, and a profile draft
+-- cannot carry one. The invariant is TIGHTER than before, not looser:
+-- previously nothing stopped a task pointing at a job it had no use for.
+constraint automation_tasks_job_iff_job_application
+  check ((kind = 'job_application') = (job_id is not null))
+```
+
+`default 'job_application'` means every existing row and every existing insert
+keeps its exact meaning. **No existing job-task behaviour changes.**
+
+### Profile tasks can never reach a submission state
+
+Two independent layers, because this is the invariant the last three
+milestones were for:
+
+1. **A CHECK**, so it holds for every writer including a superuser:
+   ```sql
+   constraint automation_tasks_profile_never_submits
+     check (kind <> 'candidate_profile_drafting'
+            or status not in ('ready_to_submit', 'submitted'))
+   ```
+2. **The transition guard**, extended to refuse the move explicitly, so the
+   error names the reason rather than surfacing as a constraint violation.
+
+A profile task's reachable states are therefore:
+
+```
+queued ──claim──▶ leased ──▶ processing ──▶ manual_review ──▶ (candidate)
+   ▲                                    └──▶ failed
+   └──────────── release ───────────────────┘
+```
+
+`ready_to_submit` and `submitted` are not merely unused — they are refused.
+
+## 2. `profile_drafts` (migration 29)
+
+| Column | Purpose |
+|---|---|
+| `id uuid pk` | |
+| `user_id uuid not null → auth.users on delete cascade` | candidate ownership, server-derived |
+| `task_id uuid not null → automation_tasks on delete cascade` | linkage to the lease/fence machinery |
+| `resume_import_id uuid → resume_imports on delete set null` | which facts it was drafted from |
+| `profile_version timestamptz not null` | `profiles.updated_at` at creation — the optimistic-concurrency guard |
+| `status text not null default 'pending'` | `pending → drafted → confirmed \| rejected \| expired` |
+| `input jsonb not null` | bounded facts + profile snapshot the worker receives |
+| `result jsonb` | the validated draft; null until drafted |
+| `created_at`, `updated_at`, `reviewed_at`, `expires_at` | lifecycle and cleanup |
+
+Bounds and guards:
+
+- `jsonb_typeof(input) = 'object'`, `length(input::text) <= 16000`
+- `jsonb_typeof(result) = 'object'`, `length(result::text) <= 16000`
+- `(status = 'drafted' or status = 'confirmed') = (result is not null)` — a
+  drafted row must have a draft, and a pending one must not
+- `(status in ('confirmed','rejected')) = (reviewed_at is not null)`
+- `expires_at` defaults to `created_at + 7 days`; one live draft per task via a
+  partial unique index on `task_id where status in ('pending','drafted')`
+- RLS **enabled and forced**
+
+**What it must never hold:** raw prompts, raw model responses, API keys,
+cookies, or unbounded résumé text. `input` carries validated facts already
+stored in `resume_imports.extracted` plus a snapshot of the profile fields the
+draft may touch — nothing else.
+
+## 3. Privilege matrix
+
+| Actor | `automation_tasks` | `profile_drafts` | Functions |
+|---|---|---|---|
+| `authenticated` (candidate) | existing SELECT/INSERT/UPDATE/DELETE under RLS | SELECT own; INSERT own; UPDATE **`status`, `reviewed_at` only** | `worker_revoke_supervisor()` |
+| `service_role` | **none** (unchanged) | **none** | the five worker operations |
+| `anon` / PUBLIC | none | none | none |
+| worker (via definer) | through boundary functions only | `result` written by one narrow function | — |
+
+**No new service-role table grant.** The worker reaches `profile_drafts`
+through `worker_submit_profile_draft` and nothing else.
+
+### One new definer function
+
+```
+worker_submit_profile_draft(p_credential_id uuid, p_token_hash text,
+                            p_fence_token bigint, p_draft jsonb)
+  → (ok boolean, reason text)
+```
+
+`security definer`, `search_path = ''`, no dynamic SQL, granted to
+`service_role` alone. In one transaction it: resolves the credential, takes the
+lease's row lock, checks the fence by equality, requires the task's `kind` to
+be `candidate_profile_drafting`, bounds the draft, writes `result`, sets the
+draft `drafted`, moves the task to `manual_review`, releases the lease, and
+records `task_completed` + `lease_released`. It cannot write `submitted`,
+cannot choose a candidate, and cannot set provenance.
+
+### One changed return, and why
+
+`worker_claim_task` gains **`claimed_kind text`** in its RETURN. Arguments are
+unchanged, so no caller signature moves. This is the "genuine type-safe
+requirement" the invariants allow: a worker that cannot tell which kind of task
+it claimed cannot act on it, and the alternative — a kind *argument* — would
+let the caller choose, which is exactly what this boundary refuses everywhere
+else.
+
+## 4. Data flow
+
+```
+candidate uploads résumé
+        │
+        ▼
+ lib/resume/extract.ts ──▶ OpenRouter (resume_extraction)   [EXISTING]
+        │                   strict structured output
+        ▼
+ resume_imports.extracted  status: parsed                    [EXISTING]
+        │
+        │  candidate selects claude_max_assisted + gives local consent
+        ▼
+ POST /api/profile/draft            (candidate session, RLS)
+        ├─ automation_tasks  kind=candidate_profile_drafting, job_id NULL,
+        │                    status=queued, idempotency_key=import+version
+        └─ profile_drafts    status=pending, input={facts, snapshot, version}
+        │
+        ▼
+ worker_claim_task  ──▶ claimed_kind='candidate_profile_drafting'
+        │                lease + fence, exactly as for a job task
+        ▼
+ worker/kiasa-worker.mjs
+        └─ lib/local-claude/cli.ts   consent checked immediately before spawn
+                argv/stdin only · no shell · no tools · no network
+                résumé text fenced as DATA, never as instructions
+        │
+        ▼
+ ProfileDraft schema validation  (strict, extra fields rejected)
+        │
+        ├─ invalid / timeout / no consent / no CLI
+        │       └─▶ worker_report_task(failed, bounded reason)   NO FALLBACK
+        ▼
+ worker_submit_profile_draft ──▶ profile_drafts.result, task → manual_review
+        │
+        ▼
+ candidate reviews field by field, edits, accepts or rejects
+        │
+        ▼
+ POST /api/profile/draft/confirm    (candidate session)
+        ├─ re-check ownership, re-check profile_version, re-validate every field
+        └─ applyExtraction()  ──▶ profile tables   [EXISTING: adds, never overwrites]
+                                   triggers assign provenance + timestamps
+```
+
+**No arrow from local Claude to OpenRouter exists.** A local failure is a
+failure.
