@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ProfileDraft } from '@/lib/profile/draft';
+
 import {
   LOCAL_CLAUDE_CAPABILITIES,
   type LocalClaudeAvailability,
@@ -109,21 +111,38 @@ export const TailoredResumeSection = z
   })
   .strict();
 
-export const ProfileSummary = z
-  .object({ summary: z.string().min(1).max(1200), uncertain })
-  .strict();
+/**
+ * A PROFILE DRAFT IS FIELD PROPOSALS, NOT PROSE.
+ *
+ * This was `{ summary, uncertain }` — a paragraph. Nothing consumed it, and
+ * nothing could have: `profiles` has no summary column, so there was nowhere
+ * to put the output of the one capability named after that table. A paragraph
+ * also cannot be reviewed field by field, which is the whole shape of the
+ * candidate-confirmation flow this feeds.
+ *
+ * It is now `lib/profile/draft.ts`'s `ProfileDraft`: a bounded set of
+ * proposals, each naming a real profile column, each citing the fact it came
+ * from by PATH rather than by quotation, and none of them able to express an
+ * employer, a degree, a salary, a work authorization, a verification flag or a
+ * timestamp — because the schema has no field for any of those.
+ *
+ * `uncertain` does not appear on it. Uncertainty here is per field and already
+ * expressed: a value the résumé does not support is `null`, and a value that
+ * needs the candidate's eyes carries `requires_confirmation`.
+ */
+export const ProfileDraftOutput = ProfileDraft;
 
 /** Which shape each capability must return. Total over the three. */
 export const OUTPUT_SCHEMA = {
   application_answer_generation: ApplicationAnswer,
   resume_tailoring: TailoredResumeSection,
-  candidate_profile_drafting: ProfileSummary,
+  candidate_profile_drafting: ProfileDraftOutput,
 } as const satisfies Record<LocalCapability, z.ZodType>;
 
 export type LocalClaudeOutput =
   | z.infer<typeof ApplicationAnswer>
   | z.infer<typeof TailoredResumeSection>
-  | z.infer<typeof ProfileSummary>;
+  | z.infer<typeof ProfileDraftOutput>;
 
 /* ------------------------------------------------------------- outcomes */
 
@@ -280,6 +299,17 @@ function extractJson(raw: string): string {
  */
 export function outcomeRequiresHuman(outcome: LocalClaudeOutcome): boolean {
   if (outcome.status !== 'ok') return true;
+  /*
+   * A PROFILE DRAFT ALWAYS REQUIRES A HUMAN, whatever it says.
+   *
+   * The other two shapes carry `uncertain`, a single flag for the whole
+   * answer. A draft has no such flag because uncertainty there is per field
+   * and already expressed — an unsupported value is `null`, and an identity
+   * field carries `requires_confirmation`. There is also no version of this
+   * flow where a draft is applied without the candidate seeing it, so the
+   * honest answer for that shape is an unconditional yes.
+   */
+  if (!('uncertain' in outcome.output)) return true;
   return outcome.output.uncertain === true;
 }
 

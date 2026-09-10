@@ -253,6 +253,7 @@ export function createPairingStore(): PairingStore {
           leaseId: null,
           fenceToken: null,
           leaseExpiresAt: null,
+          kind: null,
         };
       }
       return {
@@ -262,7 +263,30 @@ export function createPairingStore(): PairingStore {
         leaseId: row.claimed_lease_id,
         fenceToken: row.claimed_fence,
         leaseExpiresAt: row.claimed_lease_expires_at,
+        kind: row.claimed_kind,
       };
+    },
+
+    async submitProfileDraft(input) {
+      /*
+       * ONE CALL, AND IT CANNOT TOUCH A PROFILE.
+       *
+       * `worker_submit_profile_draft` writes `profile_drafts.result`, moves
+       * the task to `manual_review` and releases the lease — in one
+       * transaction, keyed by the credential and the fence. It has no path to
+       * any profile table, so nothing here can change what a candidate sees as
+       * their own data until they confirm it themselves.
+       */
+      const { data, error } = await db.rpc('worker_submit_profile_draft', {
+        p_credential_id: input.credentialId,
+        p_token_hash: input.tokenHash,
+        p_fence_token: input.fenceToken,
+        p_draft: input.draft as never,
+      });
+
+      const row = Array.isArray(data) ? data[0] : null;
+      if (error || !row) return { ok: false, reason: 'refused' };
+      return { ok: row.ok, reason: row.reason };
     },
 
     async renewLease(input) {

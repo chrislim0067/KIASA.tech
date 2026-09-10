@@ -896,8 +896,15 @@ try {
                       from public.worker_events e,
                            lateral jsonb_object_keys(e.detail) k
                       where e.user_id = '${hank.id}'`);
+    /*
+     * `kind` joined the list in migration 29: `task_started` records which
+     * kind of work began. It is the same two-value enum the column holds, not
+     * content — and section 36 asserts separately that nothing from a résumé
+     * ever reaches a payload.
+     */
     check('  and every payload key is one of the bounded scalars',
-      keys.split(',').sort().join(',') === 'agent_version,disposition,fence,platform,slot_index',
+      keys.split(',').sort().join(',') ===
+        'agent_version,disposition,fence,kind,platform,slot_index',
       keys);
 
     const leaked = sql(`select count(*) from public.worker_events
@@ -1057,19 +1064,19 @@ try {
     const definers = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.prosecdef`);
-    check('  the definer allow-list is exactly seven',
+    check('  the definer allow-list is exactly eight',
       definers === 'worker_claim_task,worker_record_heartbeat,worker_redeem_pairing,' +
         'worker_renew_lease,worker_report_task,worker_resolve_credential,' +
-        'worker_revoke_supervisor',
+        'worker_revoke_supervisor,worker_submit_profile_draft',
       definers);
 
     const callable = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
         and has_function_privilege('service_role', p.oid, 'EXECUTE')`);
-    check('  and service_role may execute exactly five of them',
+    check('  and service_role may execute exactly six of them',
       callable === 'worker_claim_task,worker_record_heartbeat,worker_redeem_pairing,' +
-        'worker_renew_lease,worker_report_task',
+        'worker_renew_lease,worker_report_task,worker_submit_profile_draft',
       callable);
     check('  the credential resolver is reachable by nobody',
       !callable.includes('worker_resolve_credential'),
@@ -1323,6 +1330,288 @@ try {
                                from public.worker_events`));
     check('  the widest payload is far inside the 2000-character bound', widest <= 200,
       `${widest} chars`);
+  }
+
+  /* ============================ 32. THE PROFILE-DRAFTING SLICE */
+
+  section('32. A job task still needs a job, and a draft still cannot carry one');
+
+  {
+    const kim2 = await makeCandidate('lena');
+    const jobId = sql(`insert into public.jobs (user_id, submitted_url, canonical_url, source)
+      values ('${kim2.id}', 'https://example.test/j/1', 'https://example.test/j/1', 'user_link')
+      returning id`);
+
+    check('an existing-shaped job task still inserts', sql(
+      `insert into public.automation_tasks
+        (user_id, job_id, mode, idempotency_key, correlation_id)
+       values ('${kim2.id}', '${jobId}', 'openrouter_only',
+               'synthetic-job-task-000000001', gen_random_uuid())
+       returning kind`) === 'job_application',
+      'kind defaults to the old meaning, so nothing existing changed');
+
+    check('A JOB TASK WITHOUT A JOB IS REFUSED',
+      refused(`insert into public.automation_tasks
+        (user_id, job_id, mode, idempotency_key, correlation_id)
+        values ('${kim2.id}', null, 'openrouter_only',
+                'synthetic-job-task-000000002', gen_random_uuid())
+        returning id`),
+      'the biconditional holds in this direction');
+
+    check('A PROFILE TASK WITH A JOB IS REFUSED',
+      refused(`insert into public.automation_tasks
+        (user_id, job_id, kind, mode, idempotency_key, correlation_id)
+        values ('${kim2.id}', '${jobId}', 'candidate_profile_drafting', 'claude_max_assisted',
+                'synthetic-profile-task-00000001', gen_random_uuid())
+        returning id`),
+      'and in the other');
+
+    const profileTask = sql(`insert into public.automation_tasks
+      (user_id, job_id, kind, status, mode, idempotency_key, correlation_id)
+      values ('${kim2.id}', null, 'candidate_profile_drafting', 'queued', 'claude_max_assisted',
+              'synthetic-profile-task-00000002', gen_random_uuid())
+      returning id`);
+    check('a profile task with no job inserts', profileTask.length === 36);
+
+    check('A PROFILE TASK CANNOT REACH ready_to_submit',
+      refused(`update public.automation_tasks set status = 'ready_to_submit'
+               where id = '${profileTask}' returning status`));
+    check('  nor submitted',
+      refused(`update public.automation_tasks set status = 'submitted'
+               where id = '${profileTask}' returning status`));
+    check('  and its kind cannot be changed to launder it',
+      refused(`update public.automation_tasks set kind = 'job_application'
+               where id = '${profileTask}' returning kind`),
+      'a kind that could change is a rule that can be walked around');
+    /*
+     * IT REACHES manual_review THE WAY EVERY TASK DOES — through the machine.
+     * `queued → manual_review` is not a legal transition for any kind, and
+     * asserting it here was asserting a move migration 22 has always refused.
+     * Section 33 drives the real path with a real worker.
+     */
+    check('  it may still be leased, which is where work starts',
+      sql(`update public.automation_tasks set status = 'leased'
+           where id = '${profileTask}' returning status`) === 'leased');
+    check('  and then worked on',
+      sql(`update public.automation_tasks set status = 'processing'
+           where id = '${profileTask}' returning status`) === 'processing');
+    check('  and then reach manual_review',
+      sql(`update public.automation_tasks set status = 'manual_review'
+           where id = '${profileTask}' returning status`) === 'manual_review');
+    check('  but STILL not a submission state from there',
+      refused(`update public.automation_tasks set status = 'ready_to_submit'
+               where id = '${profileTask}' returning status`),
+      'manual_review is where a worker stops, whatever it has done');
+  }
+
+  section('33. The whole drafting flow, through the real store');
+
+  const mara = await makeCandidate('mara');
+
+  {
+    const invite = await E.startPairing(store, mara.id, new Date());
+    const worker = await E.redeemPairing(store, redeemBody(invite.secret), new Date());
+    check('a worker is paired for drafting', worker.ok === true, worker.ok ? '' : worker.reason);
+    const auth = await E.authenticateWorker(store, `Bearer ${worker.token}`, new Date());
+    const id = { credentialId: auth.credentialId, tokenHash: auth.tokenHash };
+
+    /*
+     * A PROFILE ROW HAS TO EXIST TO VERSION AGAINST.
+     *
+     * Creating an auth user does not create one — onboarding does, and the
+     * route refuses with `profile_missing` when it has not. The fixture makes
+     * one so the rest of the flow has something to be optimistic about.
+     */
+    sql(`insert into public.profiles (user_id) values ('${mara.id}')
+         on conflict (user_id) do nothing`);
+    const version = sql(`select updated_at from public.profiles where user_id = '${mara.id}'`);
+    check('the candidate has a profile row to version against', version.length > 0, version);
+
+    const taskId = sql(`insert into public.automation_tasks
+      (user_id, job_id, kind, status, mode, idempotency_key, correlation_id)
+      values ('${mara.id}', null, 'candidate_profile_drafting', 'queued', 'claude_max_assisted',
+              'synthetic-draft-flow-000000001', gen_random_uuid())
+      returning id`);
+
+    const FACTS_JSON = JSON.stringify({
+      schema_version: 1,
+      facts: {
+        legal_first_name: 'Ada', legal_middle_name: null, legal_last_name: 'Verity',
+        preferred_name: null, contact_email: 'ada@example.test', phone_e164: '+6591234567',
+        city: 'Singapore', state_region: null, country_code: 'SG',
+        linkedin_url: null, github_url: null, portfolio_url: null,
+        work_experiences: [], education_entries: [], skills: [], unreadable_sections: [],
+      },
+      current: {
+        legal_first_name: null, legal_middle_name: null, legal_last_name: null,
+        preferred_name: null, contact_email: null, phone_e164: null,
+        city: null, state_region: null, country_code: null,
+        linkedin_url: null, github_url: null, portfolio_url: null,
+      },
+    }).replace(/'/g, "''");
+
+    const draftId = sql(`insert into public.profile_drafts
+      (user_id, task_id, profile_version, input)
+      values ('${mara.id}', '${taskId}', '${version}', '${FACTS_JSON}'::jsonb)
+      returning id`);
+    check('a pending draft is created alongside the task', draftId.length === 36);
+
+    const claim = await E.claimTask(store, id);
+    check('THE WORKER CLAIMS IT AND IS TOLD WHAT KIND IT IS',
+      claim.ok === true && claim.kind === 'candidate_profile_drafting',
+      claim.ok ? claim.kind : claim.reason);
+
+    const DRAFT = {
+      schema_version: 1,
+      warnings: [],
+      fields: [
+        {
+          field: 'city', value: 'Singapore', source_facts: ['city'],
+          requires_confirmation: false, warnings: [],
+        },
+      ],
+    };
+
+    const wrongFence = await store.submitProfileDraft({
+      ...id, fenceToken: claim.fenceToken + 5, draft: DRAFT,
+    });
+    check('a draft at the wrong fence is refused',
+      wrongFence.ok === false && wrongFence.reason === 'stale_fence', wrongFence.reason);
+
+    const submitted = await store.submitProfileDraft({
+      ...id, fenceToken: claim.fenceToken, draft: DRAFT,
+    });
+    check('THE DRAFT IS STORED', submitted.ok === true, submitted.ok ? '' : submitted.reason);
+    check('  the draft row holds it', sql(
+      `select status from public.profile_drafts where id = '${draftId}'`) === 'drafted');
+    check('  THE TASK STOPPED AT manual_review', sql(
+      `select status from public.automation_tasks where id = '${taskId}'`) === 'manual_review');
+    check('  the lease was released', sql(
+      `select release_reason from public.task_leases where task_id = '${taskId}'`) === 'completed');
+
+    /*
+     * AND NOT ONE PROFILE COLUMN MOVED. This is the property the whole
+     * milestone rests on: a draft exists, and the candidate's profile is
+     * exactly as they left it.
+     */
+    check('NO PROFILE FIELD WAS TOUCHED', sql(
+      `select coalesce(city, 'unset') from public.profiles where user_id = '${mara.id}'`)
+      === 'unset',
+      'the draft is a proposal until the candidate says otherwise');
+    check('  and the profile version did not move', sql(
+      `select updated_at from public.profiles where user_id = '${mara.id}'`) === version);
+
+    const replay = await store.submitProfileDraft({
+      ...id, fenceToken: claim.fenceToken, draft: DRAFT,
+    });
+    check('replaying the submission is refused',
+      replay.ok === false && replay.reason === 'no_active_lease', replay.reason);
+  }
+
+  section('34. A worker cannot reach another candidate’s draft');
+
+  {
+    const { data: seen } = await bob.session.from('profile_drafts').select('id');
+    check("Candidate B reads none of A's drafts", (seen ?? []).length === 0,
+      `${(seen ?? []).length} row(s)`);
+
+    const { error: written } = await bob.session.from('profile_drafts').insert({
+      user_id: mara.id,
+      task_id: '00000000-0000-4000-8000-000000000000',
+      profile_version: new Date().toISOString(),
+      input: {},
+    });
+    check("  and cannot create one in A's name", written !== null,
+      written ? 'refused' : 'INSERTED');
+
+    const { error: edited } = await bob.session
+      .from('profile_drafts')
+      .update({ status: 'confirmed', reviewed_at: new Date().toISOString() })
+      .eq('user_id', mara.id);
+    const stillDrafted = sql(`select count(*) from public.profile_drafts
+      where user_id = '${mara.id}' and status = 'drafted'`);
+    check("  and cannot confirm A's draft", stillDrafted === '1',
+      edited ? 'refused with an error' : 'refused by RLS, silently');
+
+    // Nor can a candidate rewrite the model's words in their own draft.
+    const { error: forged } = await mara.session
+      .from('profile_drafts')
+      .update({ result: { schema_version: 1, fields: [], warnings: [] } })
+      .eq('user_id', mara.id);
+    check('a candidate cannot edit the draft RESULT', forged !== null,
+      forged ? 'refused by the column grant' : 'UPDATED');
+  }
+
+  section('35. Privileges after the new table');
+
+  {
+    /*
+     * TABLE-LEVEL PRIVILEGES ONLY. A column-level UPDATE grant does not appear
+     * in `role_table_grants` — the two views answer different questions, and
+     * conflating them is what stopped migration 29 applying at all.
+     */
+    const grants = sql(`select coalesce(string_agg(privilege_type, ',' order by privilege_type), 'none')
+      from (select distinct privilege_type from information_schema.role_table_grants
+            where table_schema = 'public' and table_name = 'profile_drafts'
+              and grantee = 'authenticated') s`);
+    check('a browser holds SELECT and INSERT on drafts, and no table-wide UPDATE',
+      grants === 'INSERT,SELECT', grants);
+
+    const columns = sql(`select coalesce(string_agg(column_name, ',' order by column_name), 'none')
+      from information_schema.column_privileges
+      where table_schema = 'public' and table_name = 'profile_drafts'
+        and grantee = 'authenticated' and privilege_type = 'UPDATE'`);
+    check('  but may update only the two review columns',
+      columns === 'reviewed_at,status', columns);
+
+    const service = sql(`select coalesce(string_agg(distinct table_name, ','), 'none')
+      from information_schema.role_table_grants
+      where table_schema = 'public'
+        and table_name in ('worker_supervisors', 'worker_slots', 'automation_tasks',
+                           'task_leases', 'worker_events', 'profile_drafts')
+        and grantee = 'service_role'`);
+    check('SERVICE_ROLE STILL HOLDS NO TABLE GRANT, INCLUDING ON THE NEW TABLE',
+      service === 'none', service);
+
+    const definers = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.prosecdef`);
+    /*
+     * EIGHT, EXACTLY. `guard_automation_task_kind` is SECURITY INVOKER and so
+     * is not among them — the first version of this check allowed for it with
+     * an OR, which would have passed whether or not the trigger function had
+     * quietly become a definer.
+     */
+    check('  the definer allow-list is exactly eight',
+      definers === 'worker_claim_task,worker_record_heartbeat,worker_redeem_pairing,' +
+        'worker_renew_lease,worker_report_task,worker_resolve_credential,' +
+        'worker_revoke_supervisor,worker_submit_profile_draft',
+      definers);
+    check('  and the task-kind guard is NOT one of them',
+      !definers.includes('guard_automation_task_kind'),
+      'it runs as its caller, which is all a trigger needs');
+
+    const rls = sql(`select relrowsecurity and relforcerowsecurity
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relname = 'profile_drafts'`);
+    check('  and the new table has RLS enabled AND forced', rls === 't', rls);
+  }
+
+  section('36. Nothing about the résumé reaches an event');
+
+  {
+    const leaked = sql(`select count(*) from public.worker_events
+      where detail::text ~ 'Singapore|Verity|example\\.test|ada@'`);
+    check('NO EVENT CARRIES A NAME, A CITY OR AN ADDRESS FROM THE FACTS',
+      leaked === '0', `${leaked} row(s)`);
+
+    const keys = sql(`select coalesce(string_agg(distinct k, ',' order by k), 'none')
+      from public.worker_events e, lateral jsonb_object_keys(e.detail) k`);
+    check('  and every payload key is still allow-listed',
+      keys.split(',').filter(Boolean).every((k) =>
+        ['agent_version', 'disposition', 'fence', 'kind', 'platform', 'reason',
+          'slot_index'].includes(k)),
+      keys);
   }
 
 } catch (err) {

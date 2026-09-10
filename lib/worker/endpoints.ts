@@ -154,6 +154,26 @@ export const ReportRequest = z
   });
 export type ReportRequest = z.infer<typeof ReportRequest>;
 
+/**
+ * What a worker sends with a finished profile draft.
+ *
+ * The draft is checked here only for being a bounded object — its CONTENT was
+ * validated on the worker against the facts it was given, and re-validated
+ * against those facts again when the candidate confirms. This layer's job is
+ * to stop something enormous or malformed reaching the database.
+ */
+export const SubmitDraftRequest = z
+  .object({
+    fence_token: z.number().int().min(1),
+    draft: z.record(z.string(), z.unknown()),
+  })
+  .strict()
+  .refine((r) => JSON.stringify(r.draft).length <= 16_000, {
+    message: 'malformed_request',
+    path: ['draft'],
+  });
+export type SubmitDraftRequest = z.infer<typeof SubmitDraftRequest>;
+
 export type WorkerAuthFailure =
   | 'missing_credential'
   | 'malformed_credential'
@@ -239,7 +259,30 @@ export interface PairingStore {
     leaseId: string | null;
     fenceToken: number | null;
     leaseExpiresAt: string | null;
+    /**
+     * WHICH KIND OF WORK THIS IS.
+     *
+     * The worker cannot act on a task without knowing what it is. It is
+     * RETURNED rather than requested: a kind argument would let the caller
+     * choose which of a candidate's tasks to take, and every other identifier
+     * in this protocol is derived rather than supplied for exactly that
+     * reason.
+     */
+    kind: string | null;
   }>;
+  /**
+   * Store a validated profile draft and move the task to review.
+   *
+   * The draft has already been checked against the résumé facts by
+   * `parseProfileDraft`. This writes it, releases the lease, and stops at
+   * `manual_review` — the furthest a worker goes for any kind of task.
+   */
+  submitProfileDraft(input: {
+    credentialId: string;
+    tokenHash: string;
+    fenceToken: number;
+    draft: unknown;
+  }): Promise<{ ok: boolean; reason: string }>;
   /** Extend the lease this slot already holds. Fence checked by equality. */
   renewLease(input: {
     credentialId: string;
@@ -569,7 +612,14 @@ export async function claimTask(
   store: PairingStore,
   identity: { credentialId: string; tokenHash: string }
 ): Promise<
-  | { ok: true; taskId: string; leaseId: string; fenceToken: number; leaseExpiresAt: string }
+  | {
+      ok: true;
+      taskId: string;
+      leaseId: string;
+      fenceToken: number;
+      leaseExpiresAt: string;
+      kind: string;
+    }
   | { ok: false; reason: WorkerOperationFailure }
 > {
   const result = await store.claimTask(identity);
@@ -578,7 +628,8 @@ export async function claimTask(
     result.taskId === null ||
     result.leaseId === null ||
     result.fenceToken === null ||
-    result.leaseExpiresAt === null
+    result.leaseExpiresAt === null ||
+    result.kind === null
   ) {
     return { ok: false, reason: operationFailure(result.reason) };
   }
@@ -588,7 +639,37 @@ export async function claimTask(
     leaseId: result.leaseId,
     fenceToken: result.fenceToken,
     leaseExpiresAt: result.leaseExpiresAt,
+    kind: result.kind,
   };
+}
+
+/**
+ * Submit a validated profile draft.
+ *
+ * The body is the draft itself, and it is NOT re-parsed here: the worker has
+ * already validated it against the résumé facts it was given, and this side of
+ * the wire does not hold those facts. What protects the database is that the
+ * boundary function bounds the payload, requires the task to BE a profile
+ * draft, and writes it to `profile_drafts` rather than to any profile table.
+ * The candidate then confirms it field by field, where it IS re-validated.
+ */
+export async function submitProfileDraft(
+  store: PairingStore,
+  identity: { credentialId: string; tokenHash: string },
+  body: unknown
+): Promise<
+  { ok: true } | { ok: false; reason: WorkerOperationFailure }
+> {
+  const parsed = SubmitDraftRequest.safeParse(body);
+  if (!parsed.success) return { ok: false, reason: schemaFailure(parsed.error) };
+
+  const result = await store.submitProfileDraft({
+    ...identity,
+    fenceToken: parsed.data.fence_token,
+    draft: parsed.data.draft,
+  });
+  if (!result.ok) return { ok: false, reason: operationFailure(result.reason) };
+  return { ok: true };
 }
 
 /** Extend the lease this slot holds. */
