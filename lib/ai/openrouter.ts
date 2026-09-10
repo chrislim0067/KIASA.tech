@@ -132,6 +132,27 @@ export interface StructuredRequest<T> {
   operation: ProviderOperation;
   system: string;
   user: string;
+  /**
+   * The model to use, overriding the configured résumé model.
+   *
+   * Supplied by callers that resolve their own: `lib/ai/job-scoring.ts` reads
+   * `OPENROUTER_MODEL` and FAILS CLOSED when it is unset, rather than
+   * inheriting the résumé path's default. Omitting it keeps the previous
+   * behaviour byte for byte, so the résumé path is unchanged.
+   *
+   * A model SLUG — never a URL, never a credential. The caller validates it
+   * against the same pattern `lib/ai/config.ts` uses.
+   */
+  model?: string;
+  /**
+   * A ceiling on generated tokens.
+   *
+   * Omitted by the résumé path, which keeps its previous behaviour exactly.
+   * Supplied where the reply is a small fixed object: a schema that can only
+   * hold four short fields has no honest reason to generate a thousand tokens,
+   * and a cap is a cost control that does not depend on the model behaving.
+   */
+  maxOutputTokens?: number;
   /** Ties the call to the record it belongs to. */
   correlationId?: string | null;
   /** Injected in tests. Defaults to the global fetch. */
@@ -160,6 +181,8 @@ export async function completeStructured<T>(
     operation,
     system,
     user,
+    model: modelOverride,
+    maxOutputTokens,
     correlationId = null,
     fetchImpl = fetch,
     sleepImpl = sleep,
@@ -196,7 +219,10 @@ export async function completeStructured<T>(
     };
   }
 
-  const { apiKey, baseUrl, model } = config.config;
+  const { apiKey, baseUrl } = config.config;
+  // The caller's model wins when supplied; otherwise the configured default,
+  // exactly as before.
+  const model = modelOverride ?? config.config.model;
   const url = `${baseUrl}/chat/completions`;
 
   // Zod emits keywords strict structured output rejects outright — measured at
@@ -217,6 +243,7 @@ export async function completeStructured<T>(
     // Transcription, not composition: no room for invention.
     temperature: 0,
     usage: { include: true },
+    ...(maxOutputTokens ? { max_tokens: maxOutputTokens } : {}),
   });
 
   const finish = (

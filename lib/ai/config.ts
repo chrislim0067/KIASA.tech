@@ -51,7 +51,15 @@ export type ConfigProblemCode =
   | 'missing_api_key'
   | 'invalid_base_url'
   | 'insecure_base_url'
-  | 'invalid_model';
+  | 'invalid_model'
+  /**
+   * Nobody chose a model, and nothing chose one on their behalf.
+   *
+   * Deliberately distinct from `invalid_model`, which means a value WAS
+   * supplied and is malformed. Two different mistakes deserve two different
+   * messages: one is a typo, the other is an unmade decision.
+   */
+  | 'model_not_configured';
 
 export interface ProviderConfig {
   provider: typeof PROVIDER;
@@ -111,6 +119,83 @@ export function resolveResumeModel(raw = process.env.OPENROUTER_RESUME_MODEL): C
     };
   }
   return value;
+}
+
+/**
+ * The model for everything OTHER than résumé extraction. NO DEFAULT.
+ *
+ * WHY THIS ONE FAILS CLOSED WHERE `resolveResumeModel` DOES NOT
+ *
+ * The résumé path has shipped with a default since its own milestone, it is
+ * covered by its own tests, and changing it now would alter behaviour nobody
+ * asked to change. This path is new, and a default here would be worse than an
+ * error for three reasons:
+ *
+ *   1. It spends the candidate's money on a model nobody picked.
+ *   2. Model availability on OpenRouter changes faster than this repository
+ *      does, so a hardcoded slug is a 404 waiting for a deploy — and choosing
+ *      one from training data is guessing about a live catalogue.
+ *   3. Scoring quality and cost differ enormously between models. "Which model
+ *      scores my job matches" is a product decision, not a fallback.
+ *
+ * So an unset `OPENROUTER_MODEL` is `model_not_configured`, the caller stops,
+ * and nothing is billed.
+ */
+export function resolveGatewayModel(raw = process.env.OPENROUTER_MODEL): ConfigResult | string {
+  const value = raw?.trim();
+  if (!value) {
+    return {
+      ok: false,
+      code: 'model_not_configured',
+      message:
+        'OPENROUTER_MODEL is not set. Choose a model deliberately; this path has no default.',
+    };
+  }
+  if (!MODEL_PATTERN.test(value)) {
+    return {
+      ok: false,
+      code: 'invalid_model',
+      message: 'OPENROUTER_MODEL must look like "vendor/model" or "vendor/model:variant".',
+    };
+  }
+  return value;
+}
+
+/**
+ * The configuration for the general gateway: key, base URL, and a model that
+ * somebody actually chose.
+ *
+ * The same shape as `providerConfig()` so callers are interchangeable, but the
+ * model resolves through `resolveGatewayModel`, so a missing choice is an
+ * error rather than a silent default.
+ */
+export function gatewayConfig(): ConfigResult {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (!apiKey) {
+    return { ok: false, code: 'missing_api_key', message: 'OPENROUTER_API_KEY is not set.' };
+  }
+
+  const baseUrl = resolveBaseUrl();
+  if (typeof baseUrl !== 'string') return baseUrl;
+
+  const model = resolveGatewayModel();
+  if (typeof model !== 'string') return model;
+
+  return { ok: true, config: { provider: PROVIDER, apiKey, baseUrl, model } };
+}
+
+/**
+ * Is the general gateway usable at all? Booleans only.
+ *
+ * Returns yes/no and NOTHING else — not the key, not its length, not a prefix.
+ * A diagnostic that echoes the first few characters of the key has leaked it
+ * to whatever reads that line, and a length narrows a search space.
+ */
+export function gatewayReadiness(): { keyConfigured: boolean; modelConfigured: boolean } {
+  return {
+    keyConfigured: Boolean(process.env.OPENROUTER_API_KEY?.trim()),
+    modelConfigured: typeof resolveGatewayModel() === 'string',
+  };
 }
 
 /**

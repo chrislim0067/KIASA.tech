@@ -33,8 +33,32 @@ export const PROVIDER_USAGE_STATUSES = ['succeeded', 'failed', 'not_attempted'] 
 export type ProviderUsageStatus = (typeof PROVIDER_USAGE_STATUSES)[number];
 
 /** The operations that may call a provider. Extended deliberately, not casually. */
-export const PROVIDER_OPERATIONS = ['resume_extraction'] as const;
+export const PROVIDER_OPERATIONS = ['resume_extraction', 'job_scoring'] as const;
 export type ProviderOperation = (typeof PROVIDER_OPERATIONS)[number];
+
+/**
+ * The operations the DATABASE currently accepts — a SUBSET of the above.
+ *
+ * `provider_usage.operation` carries a CHECK constraint that today lists
+ * `resume_extraction` only (migration 21). Milestone 2C added `job_scoring` to
+ * the vocabulary above but is not permitted to touch migrations, so the two
+ * are deliberately out of step for now.
+ *
+ * That gap is made EXPLICIT here rather than left latent. Without this list,
+ * the first caller to persist a `job_scoring` row would get a constraint
+ * violation from PostgREST at runtime — the kind of defect that only appears
+ * once real traffic exists. `recordProviderUsage()` consults this list and
+ * refuses up front with a named reason instead.
+ *
+ * TO CLOSE THE GAP: a later migration must extend the CHECK to match
+ * `PROVIDER_OPERATIONS`, after which this list becomes the same set and can be
+ * deleted. Until then, job-scoring usage is reported in telemetry and not
+ * persisted.
+ */
+export const PERSISTABLE_OPERATIONS: readonly ProviderOperation[] = ['resume_extraction'];
+
+export const isPersistableOperation = (operation: ProviderOperation): boolean =>
+  PERSISTABLE_OPERATIONS.includes(operation);
 
 const nonNegativeInt = z.number().int().min(0);
 
