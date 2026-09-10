@@ -52,9 +52,18 @@ a human. Enforced: a `submitted` result **must** carry a
 | `AutomationMode` | Exactly `openrouter_only` or `claude_max_assisted` |
 | `AutomationTask` | A bounded plan of steps from a closed vocabulary |
 | `AutomationTaskResult` | Seven outcomes; failures state retryable vs permanent |
-| `WorkerLease` | One task, one expiry, one **fence token** |
-| `WorkerHeartbeat` | A working worker names its task; an idle one does not |
-| `WorkerRegistration` | Capabilities from a fixed list; slot 1–10 |
+| `SlotLease` | One **slot**, one task, one expiry, one **fence token** |
+| `LeaseRenewalRequest` | Extends a living lease; never revives an expired one |
+| `SupervisorRegistration` | One process per candidate; `declared_slots` 1–10 |
+| `SlotRegistration` | Capabilities per slot; `slot_index` 1–10 |
+| `SlotState` | Discriminated union — a `working` slot cannot lack a task |
+| `SlotHeartbeat` | Authoritative: state, lease and fence token, per slot |
+| `SupervisorHeartbeat` | Summary only — **no** `current_task_id`, lease or fence |
+| `SlotSummary` | One line per slot; readiness and task id, nothing authoritative |
+| `SlotAuthenticationState` | Employer and Claude sessions; Claude only in assisted mode |
+| `SlotCommand` | Steps from the closed vocabulary, carrying the fence token |
+| `TaskEvent` | Started, paused, completed or failed, with an idempotency key |
+| `AiModeConfig` | The candidate's mode. **No credential field, in either mode** |
 | `SafetyDecision` | Proceed or stop, with reasons |
 | `ApplicationAttempt` | An outcome exactly when it has finished |
 | `ProviderUsageRecord` | Metadata only (see `docs/PROVIDER-CONTRACTS.md`) |
@@ -91,7 +100,17 @@ Some invariants cannot be expressed field by field, so they are `.refine()`d:
   `failure_kind`;
 - a `submitted` result carries a confirmation reference;
 - a lease expires after it was acquired;
-- a `working` worker names its task;
+- a `working` slot holds a lease, and it is the lease **for the task it names**;
+  every other state holds none;
+- a supervisor's slot counts match the slots it actually lists, and no two
+  slots share an index or an id;
+- an offline supervisor lists no slots;
+- a `paused` slot names its pause reason — it is not optional;
+- a Claude session is `not_applicable` in `openrouter_only` and a real value in
+  `claude_max_assisted`;
+- `claude_max_assisted` enables the paste console and `openrouter_only` does
+  not;
+- a `task_paused` event names a reason; a finished one carries a result;
 - an `ApplicationAttempt` has an outcome exactly when it has finished;
 - `attempt` never exceeds `max_attempts`.
 

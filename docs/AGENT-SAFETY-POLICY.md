@@ -28,15 +28,33 @@ answer, and by the time it reaches here the invention is invisible.
 Both branches are tested for every hazard — `yes` stops, and `unknown` **also**
 stops.
 
-## The seventeen stops
+## The twenty-two stops
 
 **Page hazards** (stop on `yes` *and* `unknown`)
 `captcha` · `mfa_required` · `legal_attestation` ·
 `protected_demographic_question` · `application_fee` ·
-`external_contact_requested` · `anti_bot_warning`
+`external_contact_requested` · `anti_bot_warning` ·
+`sensitive_information_requested`
+
+`sensitive_information_requested` — a government id number, a bank account, a
+date of birth, immigration documents. There is no configuration that turns this
+into an answer a machine may type. The harm of being wrong is not a bad
+application; it is a person's identity documents in a form they never saw.
 
 **Capabilities** (must be positively confirmed)
-`unsupported_ats_control` · `ambiguous_submission_state`
+`unsupported_ats_control` · `ambiguous_submission_state` · `unknown_page` ·
+`unsupported_site`
+
+**Sessions** (must be positively confirmed)
+`employer_authentication_required` — **a login page is not a form.** It is the
+single most dangerous page to misread: it renders inputs, labels and a submit
+button, and a worker that types into it puts the candidate's details into a
+login attempt. `unknown` stops.
+
+`claude_authentication_required` — reachable **only** in `claude_max_assisted`
+mode. Raising it under `openrouter_only` would ask a candidate to fix something
+with no bearing on the work, so the rule is gated on the mode and the gate is
+tested in both directions. See `docs/AI-MODES.md` §4.
 
 **Candidate facts**
 `unknown_candidate_fact` — a question we cannot answer from a **verified** fact

@@ -159,37 +159,43 @@ export function isRetryAllowed(q: RetryQuery): RetryDecision {
 
 export type LeaseVerdict =
   | { valid: true }
-  | { valid: false; reason: 'expired' | 'stale_fence' | 'no_lease' | 'wrong_worker' };
+  | { valid: false; reason: 'expired' | 'stale_fence' | 'no_lease' | 'wrong_slot' };
 
 export interface LeaseCheck {
-  lease: (LeaseView & { worker_id: string }) | null;
+  lease: (LeaseView & { slot_id: string }) | null;
   /** The token the control plane currently considers authoritative. */
   current_fence_token: number;
-  /** Who is asking. */
-  worker_id: string;
+  /**
+   * Which SLOT is asking.
+   *
+   * Keyed to the slot rather than to the supervisor, because the supervisor is
+   * not the thing doing the work. One supervisor runs up to ten slots, and a
+   * supervisor-scoped lease would let slot 3 complete the task slot 7 holds.
+   */
+  slot_id: string;
   /** Injected so the tests are deterministic. */
   now: Date;
 }
 
 /**
- * May this worker still act on this task?
+ * May this slot still act on this task?
  *
- * THE FENCE TOKEN IS THE POINT. Expiry alone is not enough: a worker that
+ * THE FENCE TOKEN IS THE POINT. Expiry alone is not enough: a slot that
  * stalls — a long GC pause, a suspended laptop, a hung network call — cannot
  * notice its own lease expiring, because it is not running. It wakes up
  * believing it still holds the lease and tries to submit.
  *
- * So the control plane, not the worker, decides. Every lease of a task
- * increases the token, and a completion is accepted only from the current one.
- * A stale worker is holding an old number and is refused, whatever its own
- * clock says. This is checked BEFORE any submission, which is the single most
- * important ordering rule in the whole control plane.
+ * So the control plane, not the slot, decides. Every lease of a task increases
+ * the token, and a completion is accepted only from the current one. A stale
+ * slot is holding an old number and is refused, whatever its own clock says.
+ * This is checked BEFORE any submission, which is the single most important
+ * ordering rule in the whole control plane.
  */
 export function isLeaseValid(check: LeaseCheck): LeaseVerdict {
-  const { lease, current_fence_token, worker_id, now } = check;
+  const { lease, current_fence_token, slot_id, now } = check;
   if (!lease) return { valid: false, reason: 'no_lease' };
-  if (lease.worker_id !== worker_id) return { valid: false, reason: 'wrong_worker' };
-  // Checked before expiry: a worker with a stale token is stale even if its
+  if (lease.slot_id !== slot_id) return { valid: false, reason: 'wrong_slot' };
+  // Checked before expiry: a slot with a stale token is stale even if its
   // own lease row has not lapsed yet.
   if (lease.fence_token !== current_fence_token) return { valid: false, reason: 'stale_fence' };
   const expires = Date.parse(lease.expires_at);
@@ -200,10 +206,15 @@ export function isLeaseValid(check: LeaseCheck): LeaseVerdict {
 }
 
 /**
- * May this worker submit?
+ * May this slot submit, as far as the TASK is concerned?
  *
  * Submission is the irreversible act, so it takes both checks and takes them
  * in this order: a valid, current lease AND a state that is genuinely ready.
+ *
+ * This is only half the gate. The other half is whether the SLOT itself is in
+ * a state that may act — a paused, stopping, stopped or crashed slot must not
+ * submit even holding a perfect lease. That is `canSlotSubmit()` in
+ * `lib/agent/worker-state.ts`, which calls this and then adds the slot check.
  */
 export function canSubmit(check: LeaseCheck & { state: AgentState }): LeaseVerdict | { valid: false; reason: 'not_ready' } {
   const lease = isLeaseValid(check);

@@ -7,19 +7,34 @@ browser, no queue runner and no worker. This is the contract layer, built first
 on purpose: a boundary discovered after the fact is discovered by an
 application that has already been sent to a real employer on someone's behalf.
 
-Implemented in `lib/agent/` and `lib/ai/`, covered by 294 offline checks in
-`scripts/test-agent-control-plane.mjs`.
+Implemented in `lib/agent/` and `lib/ai/`, covered by 312 offline checks in
+`scripts/test-agent-control-plane.mjs` and 202 in
+`scripts/test-worker-protocol.mjs`.
 
 ---
 
 ## 1. Who does what
 
+```text
+KIASA web application
+        ↓
+Vercel control plane
+        ↓
+Supabase database and task queue
+        ↓
+Candidate's local supervisor          ← one process, on their own machine
+        ├── slot 1 … slot N           ← isolated browser contexts, up to 10
+        ↓
+Supported employer application website
+```
+
 | Component | Owns | Must never |
 |---|---|---|
 | **Vercel** (Next.js) | Candidate UI, auth, server actions, contract validation, OpenRouter calls, writing usage rows | Run a browser; hold a Claude credential; execute worker steps |
 | **Supabase** | Identity, candidate profile, jobs, tasks, leases, attempts, `provider_usage`, RLS | Be reachable by a worker except through the API with the candidate's own session |
-| **Local worker** (future) | Driving a browser on the candidate's machine, one task at a time under a lease | Decide eligibility, decide safety, or submit without a current lease |
-| **OpenRouter** | The only backend AI API: résumé extraction, later job scoring | Receive a résumé PDF, a credential, or anything not bounded text |
+| **Local supervisor** (future) | One process on the candidate's machine, managing slots and their lifecycles | Hold a service-role key; decide eligibility or safety; carry a task id of its own |
+| **Slot** (future) | One isolated browser context running one task under one lease | Submit without a current lease; act while paused, stopping or crashed |
+| **OpenRouter** | The only backend AI API: résumé extraction, analysis, scoring, tailoring, answer drafting | Receive a résumé PDF, a credential, or anything not bounded text |
 | **Claude Max** | The candidate's own capability, on their own machine, in their own session | Be reached by the backend in any way — see §2 |
 
 ## 2. The Claude Max boundary
@@ -32,11 +47,17 @@ works: a link they click and a box they paste into.
 The backend therefore never holds a Claude credential, never drives a Claude
 session, and never sees one. Specifically forbidden, and asserted by test:
 `@anthropic-ai/sdk`, `ANTHROPIC_API_KEY`, `api.anthropic.com`, cookies,
-`localStorage`, session-token extraction, private endpoints.
+browser storage, session-token extraction, private endpoints.
 
 This is a licensing and consent boundary as much as a technical one. A Claude
 Max subscription is a person's own account. Automating it from a server would
 be using their credential as though it were ours.
+
+Both modes, the full routing table, and the closed extension point for a
+possible future local capability are in `docs/AI-MODES.md`. Two facts from it
+belong here: **the OpenRouter key never leaves the server environment**, and
+**eligibility is decided by deterministic rules in both modes**, never by a
+model.
 
 ## 3. Candidate ownership
 
@@ -66,9 +87,13 @@ table is `docs/AGENT-STATE-MACHINE.md`.
 
 ## 5. Queue, leases and idempotency
 
-A lease grants the right to work on one task until one instant. It carries a
-**fence token** that increases every time the task is leased, and the control
-plane accepts a completion only from the current token.
+A lease grants **one slot** the right to work on one task until one instant. It
+carries a **fence token** that increases every time the task is leased, and the
+control plane accepts a completion only from the current token.
+
+The lease is keyed to the slot, not the supervisor: one supervisor runs up to
+ten slots, and a supervisor-scoped lease would let slot 3 complete the task
+slot 7 holds.
 
 This is the single most important rule in the system. A worker that stalls — a
 GC pause, a suspended laptop, a hung network call — **cannot notice its own
@@ -78,7 +103,11 @@ does, because the decision is made by the control plane rather than by the
 worker's opinion of its own state.
 
 `canSubmit()` therefore requires a valid, current lease **and** the
-`ready_to_submit` state, checked in that order, before the irreversible act.
+`ready_to_submit` state, checked in that order, before the irreversible act —
+and `canSlotSubmit()` adds the two checks that lease alone cannot make: the
+supervisor must be `running` and the slot must be `working`. A slot can hold a
+perfect lease while paused on a challenge, shutting down, or freshly restarted
+into a context that never saw the form.
 
 Every task carries an `idempotency_key`. A retry reuses it, so a redelivered
 queue message is a no-op rather than a second real application. Retries never
@@ -96,25 +125,47 @@ reasons stop automation before a call, not after the invoice.
 
 ## 7. Safety stops
 
-`lib/agent/safety.ts` is pure and exhaustively tested. Seventeen stop reasons,
+`lib/agent/safety.ts` is pure and exhaustively tested. Twenty-two stop reasons,
 and **no rule may fail open**: every hazard stops on `yes` *and* on `unknown`,
 every capability must be positively confirmed. Missing information stops.
+
+Five were added in Milestone 2A so the control plane can name what a worker
+will actually meet: `employer_authentication_required`,
+`claude_authentication_required` (assisted mode only),
+`sensitive_information_requested`, `unknown_page`, `unsupported_site`.
+
+A login wall, an unrecognised page and an unsupported site are the three things
+most easily mistaken for an ordinary application form — the page renders, there
+are inputs, there is a submit button. Each has its own name so the reason a
+candidate sees is the true one and the fix is actionable.
+
+The worker reports observations (`WORKER_PAUSE_REASONS`); the control plane
+decides (`SAFETY_STOP_REASONS`). `PAUSE_REASON_TO_SAFETY` is the total map
+between them. **No pause reason means "work around it"**: no challenge solving,
+no MFA interception, no anti-bot evasion, no automation fingerprint masking.
 
 This is why the contracts use tri-states rather than booleans. A boolean forces
 the page parser to invent an answer, and by the time it reaches the evaluator
 the invention is invisible. See `docs/AGENT-SAFETY-POLICY.md`.
 
-## 8. A known limit: DNS rebinding
+## 8. A known limit of this layer: DNS rebinding
 
 `validateJobUrl()` rejects literal private addresses, but **a hostname is not
 an address**. `evil.example.com` may resolve to `127.0.0.1`, and validation
-here happens before DNS.
+here happens before DNS. It cannot be defended from this layer.
 
-The fetcher — when it is built — **must** resolve the hostname and validate the
-**resolved address** immediately before connecting, and must re-validate every
-redirect hop the same way. That is a requirement of the fetcher, recorded here
-because it cannot be enforced from this layer, and it is the reason the fetcher
-is a separately reviewed piece rather than part of this milestone.
+**It is defended at fetch time, and that code already exists.**
+`lib/jobs/fetcher.ts` resolves the hostname and refuses if **any** resolved
+address is non-public — every address, not just the first, because a host that
+resolves to both a public and a private address would otherwise pass — and
+re-checks per redirect hop with `redirect: 'manual'`.
+
+An earlier version of this document described the fetcher as unbuilt and
+recorded resolve-then-validate as a future requirement. That was wrong: the
+requirement was already met. Corrected in Milestone 2A.
+
+`lib/agent/job-url.ts` and `lib/jobs/url.ts` currently overlap and canonicalise
+differently — see §10.
 
 ## 9. Why high volume is not enabled
 
@@ -124,7 +175,33 @@ one application an hour a wrong answer is an embarrassment; at a thousand a day
 it is a thousand wrong answers sent in someone's name, to employers they may
 later want to work for.
 
-The order is: contracts, then safety, then a single supervised worker, then
-concurrency, then volume — and each step is reviewed before the next. Ten
-worker slots is the ceiling the design targets, and `WorkerRegistration.slot`
-already bounds it. See `docs/WORKER-PROTOCOL.md`.
+The order is: contracts, then safety, then a single supervised slot, then
+concurrency, then volume — and each step is reviewed before the next. Ten slots
+per supervisor is the ceiling the design targets, and `SlotRegistration`
+already bounds `slot_index` to 1–10. **None run.** See
+`docs/WORKER-PROTOCOL.md`.
+
+KIASA does not claim it can apply to every website, and the design assumes some
+applications will always stop for a person. No supported-site adapter exists
+yet, so no site is supported yet.
+
+## 10. Open: two job-URL layers that overlap
+
+`lib/jobs/` on `main` is an existing, tested job-intake layer — `submitJob`,
+`fetchJob`, `extractJob`, four tables, and the SSRF-safe fetcher in §8. Nothing
+currently calls it from a route.
+
+`lib/agent/job-url.ts` (Milestone 1) overlaps `lib/jobs/url.ts` and
+canonicalises **differently**: it lowercases the host, sorts query parameters
+and strips a trailing slash, where the existing one deliberately preserves the
+path exactly as given. The unique dedupe constraint is built from the existing
+one, so two canonicalisers feeding one key would store the same posting twice —
+which in this system means applying to the same job twice.
+
+Likewise `lib/agent/state-machine.ts` (15 states) overlaps `lib/jobs/state.ts`
+(8) and `lib/applications/state.ts` (10), both of which mirror database
+triggers that are the authority and are held to it by parity tests. The agent
+machine mirrors nothing and is enforced nowhere.
+
+**This must be reconciled before either branch merges.** It is recorded here
+rather than fixed in Milestone 2A, whose scope is the worker contracts.

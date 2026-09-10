@@ -37,6 +37,41 @@ export interface SafetyInput {
   application_fee_present: Tri;
   external_contact_requested: Tri;
   anti_bot_warning_present: Tri;
+  /**
+   * The form asks for something that is not application data: a government id
+   * number, a bank account, a date of birth, immigration documents.
+   *
+   * Stops unconditionally. There is no configuration that turns this into an
+   * answer a machine may type, because the harm of being wrong is not a bad
+   * application — it is a person's identity documents in a form they never
+   * saw.
+   */
+  sensitive_information_requested: Tri;
+  /** The page was recognised as an application form we know how to read. */
+  page_recognised: Tri;
+  /** The site has a supported adapter. */
+  site_supported: Tri;
+
+  /* ---- sessions the work depends on. */
+  /**
+   * The employer site considers this browser context signed in.
+   *
+   * A CAPABILITY, not a hazard: it must be positively confirmed. A login wall
+   * is the single most dangerous page to misread, because it looks exactly
+   * like a form — inputs, labels, a submit button — and a worker that types
+   * into it is putting the candidate's details into a login attempt.
+   */
+  employer_authenticated: Tri;
+  /** Which mode the candidate chose. Decides whether Claude matters at all. */
+  mode: 'openrouter_only' | 'claude_max_assisted';
+  /**
+   * Whether the candidate's own Claude session is available.
+   *
+   * Consulted ONLY in claude_max_assisted mode. In openrouter_only there is no
+   * Claude session in the design, so requiring one would stop every
+   * application for a reason the candidate could never satisfy.
+   */
+  claude_max_authenticated: Tri;
   /** Every control on the form is one the worker knows how to operate. */
   all_controls_supported: Tri;
   /** The page confirmed the outcome of a submission. */
@@ -111,10 +146,25 @@ export function evaluateSafety(input: SafetyInput): SafetyResult {
   if (hazard(input.application_fee_present)) reasons.push('application_fee');
   if (hazard(input.external_contact_requested)) reasons.push('external_contact_requested');
   if (hazard(input.anti_bot_warning_present)) reasons.push('anti_bot_warning');
+  if (hazard(input.sensitive_information_requested)) {
+    reasons.push('sensitive_information_requested');
+  }
 
   // Capabilities. Absent unless confirmed.
   if (!confirmed(input.all_controls_supported)) reasons.push('unsupported_ats_control');
   if (!confirmed(input.submission_state_confirmed)) reasons.push('ambiguous_submission_state');
+  if (!confirmed(input.page_recognised)) reasons.push('unknown_page');
+  if (!confirmed(input.site_supported)) reasons.push('unsupported_site');
+
+  // Sessions. Also capabilities: signed in unless positively established.
+  if (!confirmed(input.employer_authenticated)) {
+    reasons.push('employer_authentication_required');
+  }
+  // Mode-gated, and the gate is the point: raising this under openrouter_only
+  // would ask a candidate to fix something with no bearing on the work.
+  if (input.mode === 'claude_max_assisted' && !confirmed(input.claude_max_authenticated)) {
+    reasons.push('claude_authentication_required');
+  }
 
   // Candidate facts. A question we cannot answer from a VERIFIED fact is not
   // one to guess at — the answer would be asserted to an employer as the
@@ -156,6 +206,19 @@ export const SAFE_BASELINE: SafetyInput = {
   application_fee_present: 'no',
   external_contact_requested: 'no',
   anti_bot_warning_present: 'no',
+  sensitive_information_requested: 'no',
+  page_recognised: 'yes',
+  site_supported: 'yes',
+  employer_authenticated: 'yes',
+  /*
+   * The baseline is openrouter_only, and `claude_max_authenticated` is 'no'
+   * beneath it. That pairing is deliberate: it proves the mode gate carries
+   * the decision on its own. If the gate were ever removed, the baseline would
+   * stop rather than proceed, and the very first assertion in the safety
+   * section would fail.
+   */
+  mode: 'openrouter_only',
+  claude_max_authenticated: 'no',
   all_controls_supported: 'yes',
   submission_state_confirmed: 'yes',
   compensation_question_present: 'no',

@@ -105,16 +105,17 @@ const VALID = {
     task_id: uuid(5), finished_at: iso(), outcome: 'submitted', safety: null,
     failure_kind: null, failure_code: null, confirmation_reference: 'GH-12345', steps_completed: 6,
   },
-  WorkerLease: {
-    lease_id: uuid(6), task_id: uuid(5), worker_id: uuid(7), candidate_id: uuid(1),
-    acquired_at: iso(), expires_at: iso(60_000), fence_token: 1,
+  SlotLease: {
+    lease_id: uuid(6), task_id: uuid(5), slot_id: uuid(7), supervisor_id: uuid(10),
+    candidate_id: uuid(1), acquired_at: iso(), expires_at: iso(60_000), fence_token: 1,
   },
-  WorkerHeartbeat: {
-    worker_id: uuid(7), lease_id: uuid(6), sent_at: iso(), status: 'working', current_task_id: uuid(5),
+  SupervisorRegistration: {
+    supervisor_id: uuid(10), candidate_id: uuid(1), registered_at: iso(),
+    platform: 'windows', agent_version: '0.1.0', declared_slots: 3,
   },
-  WorkerRegistration: {
-    worker_id: uuid(7), candidate_id: uuid(1), capabilities: ['form_fill'],
-    registered_at: iso(), slot: 1,
+  SlotRegistration: {
+    slot_id: uuid(7), supervisor_id: uuid(10), candidate_id: uuid(1), slot_index: 1,
+    capabilities: ['form_fill'], browser_context_id: 'ctx-1', registered_at: iso(),
   },
   ApplicationAttempt: {
     attempt_id: uuid(8), job_id: uuid(2), candidate_id: uuid(1), task_id: uuid(5),
@@ -161,9 +162,10 @@ const MALFORMED = [
   ['AutomationTask', { ...VALID.AutomationTask, steps: [] }, 'a task with no steps'],
   ['AutomationTask', { ...VALID.AutomationTask, attempt: 9, max_attempts: 3 }, 'attempts beyond the maximum'],
   ['AutomationTask', { ...VALID.AutomationTask, mode: 'claude_max_backend' }, 'an unsupported mode'],
-  ['WorkerHeartbeat', { ...VALID.WorkerHeartbeat, status: 'idle' }, 'an idle worker still naming a task'],
-  ['WorkerRegistration', { ...VALID.WorkerRegistration, slot: 11 }, 'a worker slot beyond ten'],
-  ['WorkerRegistration', { ...VALID.WorkerRegistration, capabilities: ['run_shell'] }, 'an invented capability'],
+  ['SlotRegistration', { ...VALID.SlotRegistration, slot_index: 11 }, 'a slot index beyond ten'],
+  ['SlotRegistration', { ...VALID.SlotRegistration, capabilities: ['run_shell'] }, 'an invented capability'],
+  ['SupervisorRegistration', { ...VALID.SupervisorRegistration, declared_slots: 11 }, 'more than ten declared slots'],
+  ['SlotLease', { ...VALID.SlotLease, fence_token: 0 }, 'a fence token below one'],
   ['AutomationEvent', { ...VALID.AutomationEvent, detail: { body: { nested: 'object' } } }, 'a nested detail payload'],
   ['AutomationEvent', { ...VALID.AutomationEvent, kind: 'anything_goes' }, 'an unknown event kind'],
 ];
@@ -308,11 +310,11 @@ check('a retry reuses the idempotency key, so replay is a no-op',
   C.AutomationTask.safeParse({ ...VALID.AutomationTask, attempt: 1 }).success &&
   VALID.AutomationTask.idempotency_key === key);
 
-section('11. A stale worker cannot submit');
+section('11. A stale slot cannot submit');
 
 const now = new Date(1_800_000_060_000);
-const live = { worker_id: uuid(7), expires_at: new Date(now.getTime() + 30_000).toISOString(), fence_token: 5 };
-const base = { current_fence_token: 5, worker_id: uuid(7), now };
+const live = { slot_id: uuid(7), expires_at: new Date(now.getTime() + 30_000).toISOString(), fence_token: 5 };
+const base = { current_fence_token: 5, slot_id: uuid(7), now };
 
 check('a live, current lease is valid', SM.isLeaseValid({ ...base, lease: live }).valid);
 check('an expired lease is refused',
@@ -321,18 +323,19 @@ check('a lease expiring exactly now is refused',
   SM.isLeaseValid({ ...base, lease: { ...live, expires_at: now.toISOString() } }).reason === 'expired');
 check('a stale fence token is refused even while unexpired',
   SM.isLeaseValid({ ...base, lease: { ...live, fence_token: 4 } }).reason === 'stale_fence',
-  'the worker cannot notice its own expiry, so the control plane decides');
-check('another worker holding the lease is refused',
-  SM.isLeaseValid({ ...base, lease: { ...live, worker_id: uuid(99) } }).reason === 'wrong_worker');
+  'the slot cannot notice its own expiry, so the control plane decides');
+check('another slot holding the lease is refused',
+  SM.isLeaseValid({ ...base, lease: { ...live, slot_id: uuid(99) } }).reason === 'wrong_slot',
+  'a sibling slot under the same supervisor is still the wrong slot');
 check('no lease at all is refused', SM.isLeaseValid({ ...base, lease: null }).reason === 'no_lease');
 check('a malformed expiry is refused',
   SM.isLeaseValid({ ...base, lease: { ...live, expires_at: 'soon' } }).reason === 'expired');
 
 check('submitting needs a valid lease AND ready_to_submit',
   SM.canSubmit({ ...base, lease: live, state: 'ready_to_submit' }).valid);
-check('  a stale worker cannot submit',
+check('  a stale slot cannot submit',
   SM.canSubmit({ ...base, lease: { ...live, fence_token: 1 }, state: 'ready_to_submit' }).reason === 'stale_fence');
-check('  an expired worker cannot submit',
+check('  an expired slot cannot submit',
   SM.canSubmit({ ...base, lease: { ...live, expires_at: new Date(now.getTime() - 1000).toISOString() }, state: 'ready_to_submit' }).reason === 'expired');
 check('  a valid lease in the wrong state cannot submit',
   SM.canSubmit({ ...base, lease: live, state: 'processing' }).reason === 'not_ready');
@@ -409,6 +412,9 @@ check('every reason is reachable',
       captcha_present: 'yes', mfa_required: 'yes', legal_attestation_present: 'yes',
       demographic_question_present: 'yes', application_fee_present: 'yes',
       external_contact_requested: 'yes', anti_bot_warning_present: 'yes',
+      sensitive_information_requested: 'yes', page_recognised: 'no', site_supported: 'no',
+      employer_authenticated: 'no',
+      mode: 'claude_max_assisted', claude_max_authenticated: 'no',
       all_controls_supported: 'no', submission_state_confirmed: 'no',
       compensation_question_present: 'yes', compensation_configured: false,
       unverified_required_facts: ['x'], has_resume: false, profile_complete: false,
@@ -605,18 +611,26 @@ for (const [field] of [['prompt'], ['messages'], ['response'], ['resume_text'], 
 
 section('18. Cross-candidate boundaries are stated in the contracts');
 
-check('a lease names its candidate', 'candidate_id' in VALID.WorkerLease);
-check('a worker registers against one candidate', 'candidate_id' in VALID.WorkerRegistration);
+check('a lease names its candidate', 'candidate_id' in VALID.SlotLease);
+check('a supervisor registers against one candidate', 'candidate_id' in VALID.SupervisorRegistration);
+check('a slot registers against one candidate', 'candidate_id' in VALID.SlotRegistration);
 check('a task names its candidate', 'candidate_id' in VALID.AutomationTask);
 check('an event names its candidate', 'candidate_id' in VALID.AutomationEvent);
 check('a lease for another candidate is still schema-valid but is an authorization concern',
-  C.WorkerLease.safeParse({ ...VALID.WorkerLease, candidate_id: uuid(42) }).success,
+  C.SlotLease.safeParse({ ...VALID.SlotLease, candidate_id: uuid(42) }).success,
   'enforced by RLS at the database, documented in WORKER-PROTOCOL.md');
 
 section('19. No forbidden capability is referenced anywhere in lib/agent');
 
 {
-  const files = ['contracts.ts', 'state-machine.ts', 'safety.ts', 'job-url.ts'];
+  const files = [
+    'contracts.ts',
+    'state-machine.ts',
+    'safety.ts',
+    'job-url.ts',
+    'worker-state.ts',
+    'ai-mode.ts',
+  ];
   /*
    * The patterns are assembled from pieces rather than written out, following
    * the convention scripts/test-secret-scan.mjs already uses.
