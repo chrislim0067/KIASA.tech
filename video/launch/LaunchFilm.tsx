@@ -1,6 +1,5 @@
 import { AbsoluteFill, Sequence, useVideoConfig } from 'remotion';
 
-import { B3Reveal } from '../brand/scenes/B3Reveal';
 import { B7End } from '../brand/scenes/B7End';
 import { useBrandFonts } from '../fonts';
 import { brand } from '../tokens';
@@ -38,14 +37,13 @@ export function LaunchFilm() {
       <div style={{ position: 'absolute', left: 0, top: 0, width: 1920, height: 1080, transform: `scale(${k})`, transformOrigin: '0 0' }}>
         <Sequence {...seq('open')} name="1 · Open"><Open /></Sequence>
         <Sequence {...seq('problem')} name="2 · Problem"><Problem /></Sequence>
-        <Sequence {...seq('reveal')} name="3 · KIASA"><B3Reveal /></Sequence>
-        <Sequence {...seq('singapore', 0)} name="4 · Singapore (original)"><OriginalCut cut="singapore" fadeIn={4} fadeOut={4} /></Sequence>
-        <Sequence {...seq('year', 0)} name="5 · 2026 (original)"><OriginalCut cut="year" fadeIn={4} /></Sequence>
-        <Sequence {...seq('grow', 0)} name="6 · Grow · Your Business · With Us (original)"><OriginalCut cut="grow" fadeIn={6} fadeOut={12} /></Sequence>
-        <Sequence {...seq('value')} name="7 · Real-world value"><Value /></Sequence>
-        <Sequence {...seq('keynote')} name="8 · Keynote"><Keynote /></Sequence>
-        <Sequence {...seq('future')} name="9 · Future"><Future /></Sequence>
-        <Sequence {...seq('end')} name="10 · KIASA"><B7End /></Sequence>
+        <Sequence {...seq('singapore', 0)} name="3 · Singapore (original)"><OriginalCut cut="singapore" fadeIn={4} fadeOut={4} /></Sequence>
+        <Sequence {...seq('year', 0)} name="4 · 2026 (original)"><OriginalCut cut="year" fadeIn={4} /></Sequence>
+        <Sequence {...seq('grow', 0)} name="5 · Grow · Your Business · With Us (original)"><OriginalCut cut="grow" fadeIn={6} fadeOut={12} /></Sequence>
+        <Sequence {...seq('value')} name="6 · Real-world value"><Value /></Sequence>
+        <Sequence {...seq('keynote')} name="7 · Keynote"><Keynote /></Sequence>
+        <Sequence {...seq('future')} name="8 · Future"><Future /></Sequence>
+        <Sequence {...seq('end')} name="9 · KIASA"><B7End /></Sequence>
       </div>
     </AbsoluteFill>
   );

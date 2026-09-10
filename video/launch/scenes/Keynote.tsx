@@ -17,7 +17,7 @@ export function Keynote() {
   return (
     <AbsoluteFill style={{ background: brand.bg }}>
       <Sequence from={KEYNOTE_SHOTS.wide.from} durationInFrames={KEYNOTE_SHOTS.wide.dur} name="wide">
-        <Shot src={PLATES.founderWide} duration={KEYNOTE_SHOTS.wide.dur} fadeIn={24} audience push={0.08} width={860} />
+        <Shot src={PLATES.founderWide} duration={KEYNOTE_SHOTS.wide.dur} fadeIn={24} push={0.08} width={860} />
       </Sequence>
       <Sequence from={KEYNOTE_SHOTS.medium.from} durationInFrames={KEYNOTE_SHOTS.medium.dur} name="medium">
         <Shot src={PLATES.founderMedium} duration={KEYNOTE_SHOTS.medium.dur} push={0.05} width={900} shade={0.8} />

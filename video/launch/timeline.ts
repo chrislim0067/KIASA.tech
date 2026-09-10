@@ -23,19 +23,18 @@ export const OVERLAP = 20;
 
 export const SCENES = {
   /* 0:00 */ open:      { from: s(0),     dur: s(4) },      // the city, cold
-  /* 0:04 */ problem:   { from: s(4),     dur: s(7) },      // a person under the work; the work
-  /* 0:11 */ reveal:    { from: s(11),    dur: s(8) },      // the wordmark, the idea
-  /* 0:19 */ singapore: { from: s(19),    dur: s(0.567) },  // original: SINGAPORE BASED
-  /* 0:19 */ year:      { from: s(19.567), dur: s(1.933) }, // original: 2026 · effective · competitive · productive
-  /* 0:21 */ grow:      { from: s(21.5),  dur: s(3.0) },    // original: Grow · Your Business · With Us
-  /* 0:24 */ value:     { from: s(24.5),  dur: s(6) },      // real rooms, real people
-  /* 0:30 */ keynote:   { from: s(30.5),  dur: s(13) },     // the founder, on stage
-  /* 0:43 */ future:    { from: s(43.5),  dur: s(5) },      // alongside
-  /* 0:48 */ end:       { from: s(48.5),  dur: s(6.8) },    // KIASA
+  /* 0:04 */ problem:   { from: s(4),     dur: s(5) },      // a person under the work
+  /* 0:09 */ singapore: { from: s(9),     dur: s(0.567) },  // original: SINGAPORE BASED
+  /* 0:09 */ year:      { from: s(9.567), dur: s(1.933) },  // original: 2026 · effective · competitive · productive
+  /* 0:11 */ grow:      { from: s(11.5),  dur: s(3.0) },    // original: Grow · Your Business · With Us
+  /* 0:14 */ value:     { from: s(14.5),  dur: s(6) },      // real rooms, real people
+  /* 0:20 */ keynote:   { from: s(20.5),  dur: s(13) },     // the founder, on stage
+  /* 0:33 */ future:    { from: s(33.5),  dur: s(5) },      // alongside
+  /* 0:38 */ end:       { from: s(38.5),  dur: s(6.8) },    // KIASA
 } as const;
 
 export type SceneKey = keyof typeof SCENES;
-export const TOTAL_FRAMES = SCENES.end.from + SCENES.end.dur; // 3318 — 55.3s
+export const TOTAL_FRAMES = SCENES.end.from + SCENES.end.dur; // 2718 — 45.3s
 
 /** Keynote shots, local to the keynote scene. */
 export const KEYNOTE_SHOTS = {
@@ -85,5 +84,5 @@ export const PLATES = {
 
 /** Everything this film sets in type itself (the original's beats carry their own). */
 export const KEY_TEXT = {
-  problem: { line: 'The way we work is changing', at: s(1.2), until: s(6.4) },
+  problem: { line: 'The way we work is changing', at: s(1.2), until: s(4.7) },
 } as const;
