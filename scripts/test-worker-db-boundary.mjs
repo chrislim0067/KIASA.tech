@@ -866,9 +866,15 @@ try {
      * reported without a single readiness transition. That absence is the
      * transition-only rule working; section 21 exercises the other direction.
      */
+    /*
+     * SEVEN KINDS: the two registrations that pairing wrote, and the five the
+     * task cycle caused. There is no `slot_heartbeat` because this
+     * candidate's slot never changed readiness — the transition-only rule.
+     */
     check('the cycle recorded exactly the events it caused',
       kinds.split(',').sort().join(',') ===
-        'lease_acquired,lease_released,lease_renewed,task_completed,task_started',
+        'lease_acquired,lease_released,lease_renewed,slot_registered,' +
+        'supervisor_registered,task_completed,task_started',
       kinds);
 
     const bad = sql(`select coalesce(string_agg(distinct kind, ','), 'none')
@@ -890,8 +896,9 @@ try {
                       from public.worker_events e,
                            lateral jsonb_object_keys(e.detail) k
                       where e.user_id = '${hank.id}'`);
-    check('  and every payload key is one of three scalars',
-      keys.split(',').sort().join(',') === 'disposition,fence', keys);
+    check('  and every payload key is one of the bounded scalars',
+      keys.split(',').sort().join(',') === 'agent_version,disposition,fence,platform,slot_index',
+      keys);
 
     const leaked = sql(`select count(*) from public.worker_events
       where detail::text ~ '[0-9a-f]{64}'
@@ -981,8 +988,17 @@ try {
     check('  nor renew', renew.ok === false && renew.reason === 'revoked', renew.reason);
     const report = await E.reportTask(store, id, { fence_token: 1, disposition: 'released' });
     check('  nor report', report.ok === false && report.reason === 'revoked', report.reason);
-    check('  and it wrote no events at all', countOf('worker_events', ivy.id) === 0,
+    /*
+     * MEASURED AGAINST REGISTRATION, NOT AGAINST ZERO. Pairing writes two
+     * events before any of this, so "wrote nothing" means "added nothing" —
+     * and the two that exist are the two the pairing itself caused.
+     */
+    check('  and added no event of its own', countOf('worker_events', ivy.id) === 2,
       String(countOf('worker_events', ivy.id)));
+    check('  the two that exist are its registration',
+      sql(`select coalesce(string_agg(kind, ',' order by kind), 'none')
+           from public.worker_events where user_id = '${ivy.id}'`)
+        === 'slot_registered,supervisor_registered');
   }
 
   section('23. Cross-candidate isolation over tasks, leases and events');
@@ -1259,9 +1275,20 @@ try {
         and grantee = 'authenticated'`);
     check('  and holds SELECT and nothing else', grants === 'SELECT', grants);
 
-    const { data: theirs } = await bob.session.from('worker_events').select('id');
-    check("Candidate B sees none of A's events", (theirs ?? []).length === 0,
-      `${(theirs ?? []).length} row(s)`);
+    /*
+     * B HAS EVENTS OF ITS OWN NOW — its worker was paired earlier — so the
+     * property is OWNERSHIP, not emptiness. An assertion that the list is
+     * empty would have started failing the moment B did anything, and the
+     * honest question was never "does B see nothing" but "does B see any of
+     * A's".
+     */
+    const { data: theirs } = await bob.session.from('worker_events').select('id, user_id');
+    check("Candidate B sees not one of A's events",
+      (theirs ?? []).every((e) => e.user_id === bob.id),
+      `${(theirs ?? []).filter((e) => e.user_id !== bob.id).length} foreign row(s)`);
+    check('  and A cannot see B’s either',
+      ((await ivan.session.from('worker_events').select('id, user_id')).data ?? [])
+        .every((e) => e.user_id === ivan.id));
 
     const { error: rpcError } = await bob.session.rpc('worker_record_heartbeat', {
       p_credential_id: randomUUID(),
