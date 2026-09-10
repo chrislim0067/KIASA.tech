@@ -2,6 +2,8 @@ import { Composition } from 'remotion';
 
 import { BrandFilm } from './brand/BrandFilm';
 import { FPS as BRAND_FPS, TOTAL_FRAMES as BRAND_FRAMES } from './brand/timeline';
+import { LaunchFilm } from './launch/LaunchFilm';
+import { FPS as LAUNCH_FPS, TOTAL_FRAMES as LAUNCH_FRAMES } from './launch/timeline';
 import { Promo } from './Promo';
 import { FPS, TOTAL_FRAMES } from './timeline';
 
@@ -17,6 +19,14 @@ import { FPS, TOTAL_FRAMES } from './timeline';
 export function RemotionRoot() {
   return (
     <>
+      <Composition
+        id="KiasaLaunchFilm"
+        component={LaunchFilm}
+        durationInFrames={LAUNCH_FRAMES}
+        fps={LAUNCH_FPS}
+        width={1920}
+        height={1080}
+      />
       <Composition
         id="KiasaBrandFilm"
         component={BrandFilm}

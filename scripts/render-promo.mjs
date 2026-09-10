@@ -45,8 +45,13 @@ const all = args.has('--all');
  * decision, made after review, not a render flag.
  */
 const film = [...args].find((a) => a.startsWith('--film='))?.slice(7) ?? 'promo';
-const COMP = film === 'brand' ? 'KiasaBrandFilm' : 'KiasaPromo16x9';
-const NAME = film === 'brand' ? 'kiasa-brand-film' : 'kiasa-promo-16x9';
+const FILMS = {
+  promo:  { comp: 'KiasaPromo16x9', name: 'kiasa-promo-16x9' },
+  brand:  { comp: 'KiasaBrandFilm', name: 'kiasa-brand-film' },
+  launch: { comp: 'KiasaLaunchFilm', name: 'kiasa-launch-film' },
+};
+if (!(film in FILMS)) throw new Error(`--film must be one of ${Object.keys(FILMS).join(', ')}`);
+const { comp: COMP, name: NAME } = FILMS[film];
 
 fs.mkdirSync(path.join(ROOT, OUT), { recursive: true });
 
