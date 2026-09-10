@@ -22,3 +22,6 @@ verify-shots/
 # Archived copy of the pre-rebrand original. Kept locally as the extraction
 # source (npm run extract reads it); deliberately not published.
 /legacy/
+
+# Promo film renders (npm run video:render). Reproducible from video/, not source.
+video/out/
