@@ -576,6 +576,105 @@ section('9. Confirmation decides what is written, and refuses the rest');
 }
 
 
+section('10. Migration 29 keeps drafting inside the boundary');
+
+{
+  const M29 = readFileSync(
+    path.join(ROOT, 'supabase', 'migrations', '20260910000029_profile_drafting_tasks.sql'),
+    'utf8'
+  );
+  const CODE29 = M29.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*--.*$/gm, '');
+
+  const submit = CODE29.slice(
+    CODE29.indexOf('create or replace function public.worker_submit_profile_draft('),
+    CODE29.indexOf('$fn$;', CODE29.indexOf('create or replace function public.worker_submit_profile_draft('))
+  );
+  check('the submit function exists', submit.length > 0);
+  check('  it resolves the credential before anything else',
+    /worker_resolve_credential\(p_credential_id, p_token_hash\)/.test(submit),
+    'a revoked or expired credential dies here, before a lease is even read');
+  check('  it checks the fence by equality',
+    /v_lease\.fence_token <> p_fence_token/.test(submit));
+  check('  IT VALIDATES TASK OWNERSHIP AGAINST THE CREDENTIAL',
+    /where id = v_lease\.task_id and user_id = v_cred\.cred_user_id/.test(submit),
+    'the candidate comes from the credential, never from the caller');
+  check('  and requires the task to BE a profile draft',
+    /v_task\.kind <> 'candidate_profile_drafting'/.test(submit));
+  check('  it writes manual_review and nothing further',
+    /status = 'manual_review'/.test(submit) &&
+      !/ready_to_submit/.test(submit) && !/'submitted'/.test(submit),
+    'a worker stops where a person starts');
+  check('  and it bounds the payload before storing it',
+    /length\(p_draft::text\) > 16000/.test(submit));
+
+  check('THE PROFILE TASK CAN NEVER REACH A SUBMISSION STATE',
+    /automation_tasks_profile_never_submits/.test(CODE29) &&
+      /status not in \('ready_to_submit', 'submitted'\)/.test(CODE29),
+    'a CHECK, so it holds for every writer including a superuser');
+  check('  and a trigger names the reason as well',
+    /may not reach %; drafting stops at manual_review/.test(CODE29));
+  check('  the task kind is frozen after creation',
+    /a task kind is fixed at creation/.test(CODE29),
+    'a kind that could change could launder a draft into an application');
+  check('  a job application still requires a job',
+    /\(kind = 'job_application'\) = \(job_id is not null\)/.test(CODE29),
+    'the biconditional, tighter than the NOT NULL it replaced');
+
+  /*
+   * NO RÉSUMÉ CONTENT IN AN EVENT. The draft payload is a parameter to this
+   * function; the event inserts must not mention it.
+   */
+  const events = submit
+    .split('insert into public.worker_events')
+    .slice(1)
+    .join('\n');
+  check('NO EVENT INSERT MENTIONS THE DRAFT PAYLOAD',
+    !/p_draft/.test(events),
+    'events carry a fence and a disposition, never what the model wrote');
+  check('  nor the draft input', !/v_draft\.input|d\.input/.test(events));
+
+  check('the migration adds no table grant',
+    !/^grant (select|insert|update|delete)[\s\S]{0,80}service_role/m.test(CODE29));
+  check('  and asserts the zero-grant invariant itself',
+    /service_role gained a table grant/.test(M29));
+  check('  including on the new table',
+    /'profile_drafts'\)\s*\n\s*and grantee = 'service_role'/.test(M29) ||
+      /profile_drafts[\s\S]{0,200}grantee = 'service_role'/.test(M29));
+  check('  and that a browser may update only the review columns',
+    /authenticated can update a profile_drafts column beyond review/.test(M29));
+}
+
+section('11. The worker asks for consent rather than assuming it');
+
+{
+  const worker = readFileSync(path.join(ROOT, 'worker', 'kiasa-worker.mjs'), 'utf8');
+  const code = worker.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  check('CONSENT COMES FROM THE ENVIRONMENT, NOT FROM A LITERAL',
+    /consented:\s*process\.env\.KIASA_LOCAL_CONSENT === 'yes'/.test(code),
+    'an unset variable means not consented, not probably fine');
+  check('  and the worker never hard-codes it true',
+    !/consented:\s*true/.test(code));
+  check('  it spawns nothing without going through the adapter',
+    !/spawn\(|execFile\(|child_process/.test(code.replace(/import[^\n]*\n/g, '')) ||
+      !/shell:\s*true/.test(code),
+    'the adapter owns process creation, and it checks consent first');
+  check('the worker reaches no model provider directly',
+    !/openrouter\.ai|api\.anthropic\.com|@anthropic-ai\//.test(code));
+  check('  and holds no provider key',
+    !/OPENROUTER_API_KEY|ANTHROPIC_API_KEY/.test(code));
+  /*
+   * A HOST, NOT A WORD. The worker LOGS that it holds no OpenRouter key, so a
+   * check for the word fails on the sentence asserting the property — the same
+   * trap this repository has now walked into twice.
+   */
+  check('a drafting failure is reported as failed, never retried elsewhere',
+    /disposition: 'failed'/.test(code) &&
+      !/openrouter.ai|from '[^']*openrouter|gateway/i.test(code),
+    'there is no fallback to have a bug in');
+}
+
+
 console.log(`\n${'='.repeat(56)}`);
 if (failed === 0) {
   console.log(`ALL ${passed} PROFILE-DRAFT CHECKS PASSED`);
