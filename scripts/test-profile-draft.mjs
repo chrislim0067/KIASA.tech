@@ -641,7 +641,12 @@ section('10. Migration 29 keeps drafting inside the boundary');
     /'profile_drafts'\)\s*\n\s*and grantee = 'service_role'/.test(M29) ||
       /profile_drafts[\s\S]{0,200}grantee = 'service_role'/.test(M29));
   check('  and that a browser may update only the review columns',
-    /authenticated can update a profile_drafts column beyond review/.test(M29));
+    /the profile_drafts review columns are wrong/.test(M29),
+    'checked in column_privileges, where a column-level grant actually appears');
+  check('  and holds no table-wide UPDATE on drafts',
+    /profile_drafts table grants to authenticated are wrong/.test(M29) &&
+      /is distinct from 'INSERT, SELECT'/.test(M29),
+    'a browser may review a draft, never rewrite one');
 }
 
 section('11. The worker asks for consent rather than assuming it');

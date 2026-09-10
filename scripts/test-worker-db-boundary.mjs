@@ -1514,12 +1514,17 @@ try {
   section('35. Privileges after the new table');
 
   {
+    /*
+     * TABLE-LEVEL PRIVILEGES ONLY. A column-level UPDATE grant does not appear
+     * in `role_table_grants` — the two views answer different questions, and
+     * conflating them is what stopped migration 29 applying at all.
+     */
     const grants = sql(`select coalesce(string_agg(privilege_type, ',' order by privilege_type), 'none')
       from (select distinct privilege_type from information_schema.role_table_grants
             where table_schema = 'public' and table_name = 'profile_drafts'
               and grantee = 'authenticated') s`);
-    check('a browser holds SELECT, INSERT and UPDATE on drafts',
-      grants === 'INSERT,SELECT,UPDATE', grants);
+    check('a browser holds SELECT and INSERT on drafts, and no table-wide UPDATE',
+      grants === 'INSERT,SELECT', grants);
 
     const columns = sql(`select coalesce(string_agg(column_name, ',' order by column_name), 'none')
       from information_schema.column_privileges

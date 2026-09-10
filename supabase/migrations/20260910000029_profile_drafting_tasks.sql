@@ -549,7 +549,18 @@ begin
     raise exception 'service_role gained a table grant: %', offending;
   end if;
 
-  -- A browser may read its drafts, create one, and review one. Nothing else.
+  /*
+   * TWO VIEWS, BECAUSE THERE ARE TWO KINDS OF GRANT.
+   *
+   * `role_table_grants` lists TABLE-level privileges. A column-level
+   * `grant update (status, reviewed_at)` does not appear there at all — which
+   * is what the first version of this assertion got wrong, and why this
+   * migration refused to apply until someone read the error.
+   *
+   * At table level the browser holds SELECT and INSERT and no UPDATE: it may
+   * not rewrite a draft wholesale. The UPDATE it does hold is column-level and
+   * reaches exactly the two review columns.
+   */
   select string_agg(privilege_type, ', ') into offending
   from (
     select distinct privilege_type
@@ -558,18 +569,21 @@ begin
       and grantee = 'authenticated'
     order by privilege_type
   ) s;
-  if offending is distinct from 'INSERT, SELECT, UPDATE' then
-    raise exception 'profile_drafts grants to authenticated are wrong: %', offending;
+  if offending is distinct from 'INSERT, SELECT' then
+    raise exception 'profile_drafts table grants to authenticated are wrong: %', offending;
   end if;
 
-  -- And the UPDATE reaches only the two review columns.
-  if exists (
-    select 1 from information_schema.column_privileges
+  select string_agg(column_name, ', ') into offending
+  from (
+    select distinct column_name
+    from information_schema.column_privileges
     where table_schema = 'public' and table_name = 'profile_drafts'
       and grantee = 'authenticated' and privilege_type = 'UPDATE'
-      and column_name not in ('status', 'reviewed_at')
-  ) then
-    raise exception 'authenticated can update a profile_drafts column beyond review';
+    order by column_name
+  ) s;
+  if offending is distinct from 'reviewed_at, status' then
+    raise exception 'the profile_drafts review columns are wrong: %',
+      coalesce(offending, 'none');
   end if;
 
   foreach target in array worker_tables loop
