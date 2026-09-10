@@ -531,9 +531,63 @@ begin
     end if;
   end loop;
 
+  /*
+   * EVENT-TRIGGER FUNCTIONS ARE NOT PART OF THE SURFACE THIS POLICES.
+   *
+   * The predicate below used to read every SECURITY DEFINER function in
+   * `public`. That holds on a pristine local database and is wrong on a hosted
+   * project, which is the same lesson migration 7 already learned: a hosted
+   * Supabase project carries `public.rls_auto_enable()`, owned by `postgres`,
+   * belonging to no extension, and SECURITY DEFINER. This migration aborted on
+   * it — `unexpected SECURITY DEFINER function(s): rls_auto_enable` — and
+   * migrations 28 and 29 carried the identical predicate, so the same push
+   * would have failed three times.
+   *
+   * WHAT THAT FUNCTION ACTUALLY IS, read from its definition rather than
+   * assumed: an event trigger that runs
+   * `alter table ... enable row level security` on every table created in
+   * `public`. It is Supabase’s own auto-enable-RLS tooling, which is why
+   * `postgres` owns it and no extension claims it.
+   *
+   * It only ever ENABLES row level security — it never disables, grants,
+   * revokes or drops anything — so it is aligned with this schema’s posture
+   * rather than in tension with it. Its one `format()` takes
+   * `object_identity` from `pg_event_trigger_ddl_commands()`, a system
+   * function, so no caller-controlled input reaches it.
+   *
+   * WHY THE RETURN TYPE IS THE RIGHT DISCRIMINATOR
+   *
+   * Ownership cannot separate them: that function is owned by `postgres`, the
+   * same role that owns ours and the same role that runs `db push`. Extension
+   * membership cannot either: it belongs to no extension. A name allow-list
+   * would make this check vacuous, since a rogue definer is unexpected exactly
+   * by not being named. And keying on `search_path` would be an inversion —
+   * an unpinned search_path is the thing this check should FLAG, never a reason
+   * to skip something.
+   *
+   * The return type is structural and safe. PostgreSQL refuses to invoke an
+   * `event_trigger` function directly; it fires only through an event trigger,
+   * and creating one of those requires superuser. So such a function is not
+   * callable by `anon`, by `authenticated`, by `service_role`, or by anyone
+   * else — which is why the default PUBLIC EXECUTE grant Postgres puts on it is
+   * inert, and why it cannot be an RPC surface for this check to worry about.
+   *
+   * THE EXCLUSION IS PROVABLY EMPTY FOR OUR OWN CODE. No migration in this
+   * repository creates a SECURITY DEFINER function returning `event_trigger`,
+   * and scripts/test-worker-db-boundary.mjs asserts that it never will. So this
+   * cannot hide one of ours; every callable definer we create is still checked
+   * exactly as before, and a rogue one still aborts the migration.
+   *
+   * Nothing here grants, revokes, drops or alters that function. It is not ours
+   * to touch — it is only excluded from an assertion that was never able to say
+   * anything meaningful about it.
+   */
   select string_agg(pr.proname, ', ') into offending
   from pg_proc pr join pg_namespace n on n.oid = pr.pronamespace
-  where n.nspname = 'public' and pr.prosecdef and not (pr.proname = any(all_definers));
+  where n.nspname = 'public'
+    and pr.prosecdef
+    and pr.prorettype <> 'pg_catalog.event_trigger'::regtype
+    and not (pr.proname = any(all_definers));
   if offending is not null then
     raise exception 'unexpected SECURITY DEFINER function(s): %', offending;
   end if;
