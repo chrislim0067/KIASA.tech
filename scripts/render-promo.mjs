@@ -38,6 +38,16 @@ const preview = args.has('--preview');
 const install = args.has('--install');
 const all = args.has('--all');
 
+/**
+ * Which film. `--film=brand` renders the company film (KiasaBrandFilm, 16:9
+ * only); the default is the product promo. The brand film is never installed
+ * into public/Assets by this script — which film the site plays is a separate
+ * decision, made after review, not a render flag.
+ */
+const film = [...args].find((a) => a.startsWith('--film='))?.slice(7) ?? 'promo';
+const COMP = film === 'brand' ? 'KiasaBrandFilm' : 'KiasaPromo16x9';
+const NAME = film === 'brand' ? 'kiasa-brand-film' : 'kiasa-promo-16x9';
+
 fs.mkdirSync(path.join(ROOT, OUT), { recursive: true });
 
 const useShell = process.platform === 'win32';
@@ -69,11 +79,11 @@ function render(id, file, extra = []) {
   );
 }
 
-const master = `${OUT}/${preview ? 'kiasa-promo-preview.mp4' : 'kiasa-promo-16x9-60fps.mp4'}`;
-render('KiasaPromo16x9', master);
+const master = `${OUT}/${preview ? `${NAME}-preview.mp4` : `${NAME}-60fps.mp4`}`;
+render(COMP, master);
 
 if (!preview) {
-  const web = `${OUT}/kiasa-promo-16x9-30fps.mp4`;
+  const web = `${OUT}/${NAME}-30fps.mp4`;
   run(
     'ffmpeg',
     ['-y', '-v', 'error', '-i', master, '-r', '30', '-c:v', 'libx264', '-preset', 'slow', '-crf', '23',
@@ -83,13 +93,15 @@ if (!preview) {
   run('ffmpeg', ['-y', '-v', 'error', '-i', master, '-c', 'copy', '-movflags', '+faststart', `${master}.tmp.mp4`], 'ffmpeg faststart master');
   fs.renameSync(path.join(ROOT, `${master}.tmp.mp4`), path.join(ROOT, master));
 
-  if (install) {
+  if (install && film === 'promo') {
     fs.copyFileSync(path.join(ROOT, web), HERO);
     console.log(`\n✓ installed → ${path.relative(ROOT, HERO)}`);
+  } else if (install) {
+    console.log('\n– --install ignored for the brand film: which film the site plays is decided after review.');
   }
 }
 
-if (all && !preview) {
+if (all && !preview && film === 'promo') {
   render('KiasaPromo9x16', `${OUT}/kiasa-promo-9x16-60fps.mp4`);
   render('KiasaPromo1x1', `${OUT}/kiasa-promo-1x1-60fps.mp4`);
 }
