@@ -267,7 +267,7 @@ jobs:
         run: |
           set -uo pipefail
           if ! npm run db:start > /tmp/db-start.log 2>&1; then
-            echo "::error title=Local Supabase failed to start::$(grep -aiE 'error|exception|fatal' /tmp/db-start.log | grep -av eyJ | tail -6 | awk '{printf "%s ", $0}' | cut -c1-600)"
+            echo "::error title=Local Supabase failed to start::$({ grep -aE '^ERROR|^FATAL|ERROR:' /tmp/db-start.log || grep -aiE 'error|exception|fatal' /tmp/db-start.log; } | grep -av eyJ | head -6 | awk '{printf "%s ", $0}' | cut -c1-600)"
             exit 1
           fi
 
@@ -286,7 +286,7 @@ jobs:
         run: |
           set -uo pipefail
           if ! npm run db:reset > /tmp/db-reset.log 2>&1; then
-            echo "::error title=Migrations failed to re-apply from empty::$(grep -aiE 'error|exception|fatal' /tmp/db-reset.log | grep -av eyJ | tail -6 | awk '{printf "%s ", $0}' | cut -c1-600)"
+            echo "::error title=Migrations failed to re-apply from empty::$({ grep -aE '^ERROR|^FATAL|ERROR:' /tmp/db-reset.log || grep -aiE 'error|exception|fatal' /tmp/db-reset.log; } | grep -av eyJ | head -6 | awk '{printf "%s ", $0}' | cut -c1-600)"
             exit 1
           fi
 
