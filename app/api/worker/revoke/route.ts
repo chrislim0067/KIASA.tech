@@ -31,30 +31,34 @@ export async function POST() {
     return NextResponse.json({ ok: false, reason: 'unauthenticated' }, { status: 401, headers: noStore });
   }
 
-  const now = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from('worker_credentials')
-    .update({ revoked_at: now, revoked_reason: 'candidate_requested' })
-    .eq('user_id', user.id)
-    .is('revoked_at', null)
-    .select('id');
+  /*
+   * ONE CALL, AND NO ARGUMENTS.
+   *
+   * This used to be three table writes from here — credential, invitation,
+   * and nothing at all for the supervisor, which stayed marked running after
+   * its candidate had disowned it. `worker_revoke_supervisor` does all three
+   * in one transaction and records `supervisor_revoked` for each supervisor
+   * that ACTUALLY transitioned, so a replayed revoke writes no event.
+   *
+   * It takes no parameters: the candidate is `auth.uid()`, read inside the
+   * function from the session this client already carries. There is nothing
+   * for a caller to choose, and therefore nothing to forge — which is why it
+   * is the one definer function a browser is allowed to execute.
+   */
+  const { data, error } = await supabase.rpc('worker_revoke_supervisor');
 
   if (error) {
+    // The reason is never echoed: a database message can quote a statement.
     return NextResponse.json({ ok: false, reason: 'update_failed' }, { status: 500, headers: noStore });
   }
 
-  // Any outstanding invitation goes too: revoking the worker should not leave
-  // a live code someone could still redeem.
-  await supabase
-    .from('worker_pairings')
-    .update({ revoked_at: now })
-    .eq('user_id', user.id)
-    .is('redeemed_at', null)
-    .is('revoked_at', null);
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row?.ok) {
+    return NextResponse.json({ ok: false, reason: 'update_failed' }, { status: 500, headers: noStore });
+  }
 
   return NextResponse.json(
-    { ok: true, revoked: Array.isArray(data) ? data.length : 0 },
+    { ok: true, revoked: row.revoked_count ?? 0 },
     { status: 200, headers: noStore }
   );
 }

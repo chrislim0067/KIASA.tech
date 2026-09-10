@@ -263,6 +263,38 @@ export function createTaskMemory({ credentials, uuid, now }) {
       return { ok: true, reason: disposition };
     },
 
+    /**
+     * The two registration events, as migration 28 writes them: inside the
+     * redemption, one of each, never for a redemption that lost its race.
+     *
+     * Named rather than generic on purpose. A fake with a `recordEvent(kind)`
+     * method would let a test write a kind the database would refuse, and the
+     * test would pass.
+     */
+    recordRegistration({ userId, supervisorId, slotId, platform, agentVersion }) {
+      events.push({
+        id: uuid(), user_id: userId, supervisor_id: supervisorId, slot_id: null,
+        task_id: null, kind: 'supervisor_registered',
+        detail: { platform, agent_version: agentVersion },
+        occurred_at: at().toISOString(),
+      });
+      events.push({
+        id: uuid(), user_id: userId, supervisor_id: supervisorId, slot_id: slotId,
+        task_id: null, kind: 'slot_registered', detail: { slot_index: 1 },
+        occurred_at: at().toISOString(),
+      });
+    },
+
+    /** One `supervisor_revoked`, and only where a row actually transitioned. */
+    recordRevocation({ userId, supervisorId }) {
+      events.push({
+        id: uuid(), user_id: userId, supervisor_id: supervisorId, slot_id: null,
+        task_id: null, kind: 'supervisor_revoked',
+        detail: { reason: 'candidate_requested' },
+        occurred_at: at().toISOString(),
+      });
+    },
+
     /** The pause/stop rules, applied to a slot row the caller owns. */
     applyReadiness(slot, readiness, reason) {
       if (readiness === 'paused') {

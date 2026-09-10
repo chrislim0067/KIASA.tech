@@ -599,6 +599,223 @@ section('12. Nothing here can authorise a submission or reach a browser');
     'a test fixture that drifts from the contract proves nothing');
 }
 
+section('13. Absence is an absent argument, not an empty string');
+
+{
+  const beat = (extra) => E.HeartbeatRequest.safeParse({
+    sequence: 1, lifecycle: 'running', slot_readiness: 'ready', ...extra,
+  });
+
+  /*
+   * THE SENTINEL IS GONE, AND '' MUST NOT QUIETLY MEAN "NONE".
+   *
+   * Migration 27 sent '' for "no reason" because the generated Args type could
+   * not express a nullable parameter. Migration 28 gives `p_reason` a DEFAULT,
+   * so absence is an omitted argument — and '' is now just a value in neither
+   * vocabulary, refused wherever a reason is required and refused again where
+   * none belongs.
+   */
+  check('an EMPTY reason is refused where a reason is required',
+    !beat({ slot_readiness: 'paused', reason: '' }).success,
+    'the empty string is not a member of any vocabulary');
+  check('  and refused where no reason belongs',
+    !beat({ reason: '' }).success);
+  check('a MISSING reason is refused where one is required',
+    !beat({ slot_readiness: 'paused' }).success);
+  check('  naming which one is missing',
+    beat({ slot_readiness: 'paused' }).error?.issues.some(
+      (i) => i.message === 'pause_reason_required'));
+  check('  and for a stop, the stop one',
+    beat({ slot_readiness: 'stopped' }).error?.issues.some(
+      (i) => i.message === 'stop_reason_required'));
+  check('an INVALID reason is refused',
+    !beat({ slot_readiness: 'paused', reason: 'because' }).success);
+  check('  including a stop reason used for a pause',
+    !beat({ slot_readiness: 'paused', reason: 'kill_switch' }).success);
+  check('a VALID pause reason parses',
+    beat({ slot_readiness: 'paused', reason: 'captcha_detected' }).success);
+  check('a VALID stop reason parses',
+    beat({ slot_readiness: 'stopped', reason: 'kill_switch' }).success);
+
+  const store = readFileSync(path.join(ROOT, 'lib', 'worker', 'store.ts'), 'utf8');
+  check('the store OMITS the argument rather than sending a stand-in',
+    /\.\.\.\(input\.reason === null \? \{\} : \{ p_reason: input\.reason \}\)/.test(store),
+    'an absent reason reaches the database as an absent argument');
+  check('  and no empty-string stand-in survives anywhere in it',
+    !/p_reason: input\.reason \?\? ''/.test(store));
+}
+
+section('14. Ready clears, and a replay changes nothing');
+
+{
+  const w = makeWorld();
+  const alice = w.pair(ALICE);
+  const slot = { readiness: 'initializing', pause_reason: null, stop_reason: null };
+  const cred = w.credentials.get(alice.credentialId);
+
+  const apply = (readiness, reason = null) => {
+    const previous = slot.readiness;
+    const refusal = w.memory.applyReadiness(slot, readiness, reason);
+    if (refusal) return refusal;
+    w.memory.recordSlotTransition(cred, slot, previous, readiness, reason);
+    return null;
+  };
+
+  check('pausing sets exactly one reason column',
+    apply('paused', 'unknown_page') === null &&
+      slot.pause_reason === 'unknown_page' && slot.stop_reason === null);
+  check('READY CLEARS IT, and leaves neither behind',
+    apply('ready') === null && slot.pause_reason === null && slot.stop_reason === null);
+  check('stopping sets the other one',
+    apply('stopped', 'kill_switch') === null &&
+      slot.stop_reason === 'kill_switch' && slot.pause_reason === null);
+  check('  working clears that too',
+    apply('working') === null && slot.stop_reason === null && slot.pause_reason === null);
+  check('crashed needs no reason and carries none',
+    apply('crashed') === null && slot.pause_reason === null && slot.stop_reason === null);
+  check('an empty reason is refused by the model as well',
+    apply('paused', '') === 'pause_reason_required');
+
+  const before = w.memory.events.length;
+  apply('crashed');
+  check('REPEATING THE SAME STATE WRITES NO EVENT', w.memory.events.length === before,
+    `${w.memory.events.length - before} extra`);
+}
+
+section('15. Registration and revocation are recorded, once each');
+
+{
+  const w = makeWorld();
+  const alice = w.pair(ALICE);
+  const cred = w.credentials.get(alice.credentialId);
+
+  w.memory.recordRegistration({
+    userId: ALICE, supervisorId: cred.supervisor_id, slotId: cred.slot_id,
+    platform: 'linux', agentVersion: '0.1.0',
+  });
+  const kinds = w.memory.events.map((e) => e.kind);
+  check('registration writes exactly one supervisor_registered',
+    kinds.filter((k) => k === 'supervisor_registered').length === 1);
+  check('  and exactly one slot_registered',
+    kinds.filter((k) => k === 'slot_registered').length === 1);
+
+  const registration = w.memory.events.find((e) => e.kind === 'supervisor_registered');
+  check('  the supervisor event names the platform and version only',
+    Object.keys(registration.detail).sort().join(',') === 'agent_version,platform',
+    JSON.stringify(registration.detail));
+  check('  and belongs to the candidate the credential names',
+    registration.user_id === ALICE);
+
+  w.memory.recordRevocation({ userId: ALICE, supervisorId: cred.supervisor_id });
+  check('revocation writes exactly one supervisor_revoked',
+    w.memory.events.filter((e) => e.kind === 'supervisor_revoked').length === 1);
+  check('  with a bounded reason and nothing else',
+    JSON.stringify(w.memory.events.at(-1).detail) === '{"reason":"candidate_requested"}');
+
+  const everything = JSON.stringify(w.memory.events);
+  check('no registration or revocation event carries a hash',
+    !/[0-9a-f]{64}/.test(everything));
+  check('  a URL', !/https?:\/\//.test(everything));
+  check('  a token', !/\.[A-Za-z0-9_-]{43}/.test(everything));
+  check('  or an email', !/@/.test(everything));
+}
+
+section('16. Migration 28 keeps the boundary where 26 and 27 put it');
+
+{
+  const M28 = readFileSync(
+    path.join(ROOT, 'supabase', 'migrations', '20260910000028_worker_audit_events.sql'),
+    'utf8'
+  );
+  const CODE28 = M28.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*--.*$/gm, '');
+
+  check('the reason parameter has a DEFAULT, so absence is an omitted argument',
+    (CODE28.match(/p_reason text default null/g) ?? []).length === 2,
+    `${(CODE28.match(/p_reason text default null/g) ?? []).length} of 2`);
+  check('  and no function special-cases the empty string any more',
+    !/coalesce\(p_reason, ''\)/.test(CODE28),
+    "migration 27's sentinel is gone");
+
+  const revoke = CODE28.slice(
+    CODE28.indexOf('create or replace function public.worker_revoke_supervisor()'),
+    CODE28.indexOf('$fn$;', CODE28.indexOf('create or replace function public.worker_revoke_supervisor()'))
+  );
+  check('the revoke function exists', revoke.length > 0);
+  check('  IT TAKES NO ARGUMENTS AT ALL',
+    /worker_revoke_supervisor\(\)/.test(CODE28) && !/worker_revoke_supervisor\(\s*p_/.test(CODE28),
+    'nothing for a browser to choose, so nothing to forge');
+  check('  the candidate comes from the verified session',
+    /auth\.uid\(\)/.test(revoke), 'never from a parameter');
+  check('  the event is written per row that actually transitioned',
+    /where user_id = v_user and revoked_at is null/.test(revoke) &&
+      /returning id/.test(revoke),
+    'a replayed revoke matches no row and writes nothing');
+  check('  and it is granted to authenticated ALONE',
+    /revoke all on function public\.worker_revoke_supervisor\(\) from public, anon, service_role;/
+      .test(CODE28) &&
+      /grant execute on function public\.worker_revoke_supervisor\(\) to authenticated;/
+        .test(CODE28));
+
+  check('the browser loses INSERT on the audit table',
+    /revoke insert on public\.worker_events from authenticated;/.test(CODE28),
+    'events record what the system did, not what a client said it did');
+  check('  and the migration asserts it kept SELECT',
+    /authenticated can no longer read its own worker_events/.test(M28));
+  check('  and asserts the write is gone',
+    /authenticated can still write worker_events/.test(M28));
+
+  const redeem = CODE28.slice(
+    CODE28.indexOf('create or replace function public.worker_redeem_pairing('),
+    CODE28.indexOf('$fn$;', CODE28.indexOf('create or replace function public.worker_redeem_pairing('))
+  );
+  check('registration writes both events inside the redemption',
+    /'supervisor_registered'/.test(redeem) && /'slot_registered'/.test(redeem),
+    'the same transaction that creates the rows');
+  check('  after the invitation is claimed, so a loser records nothing',
+    redeem.indexOf('set redeemed_at = v_now') < redeem.indexOf("'supervisor_registered'"));
+  check('  and the candidate comes from the locked pairing row',
+    /v_pairing\.user_id, v_supervisor, null, 'supervisor_registered'/.test(redeem));
+
+  check('  EXACTLY ONE supervisor_registered insert, and one slot_registered',
+    (redeem.match(/'supervisor_registered'/g) ?? []).length === 1 &&
+      (redeem.match(/'slot_registered'/g) ?? []).length === 1,
+    'a duplicated insert would double the audit trail for one registration');
+  check('  and neither event insert mentions a hash or a token',
+    !/p_token_hash|p_secret_hash|token_hash|secret_hash/.test(
+      // FORWARD from the first event insert, not backward. The first version
+      // read the 400 characters BEFORE it — which is the credential insert —
+      // so it failed on a `p_token_hash` it was never meant to examine, and
+      // would have passed with a hash in the payload.
+      redeem.slice(redeem.indexOf("'supervisor_registered'"))),
+    'the payload is built from the platform bucket and the agent version');
+
+  /*
+   * EVERY EXECUTE GRANT, ACCOUNTED FOR.
+   *
+   * Four go to service_role — the redeem, the heartbeat, the report, and
+   * nothing else this migration replaces — and exactly one goes to
+   * authenticated, the argument-less revoke. A grant to any other role, or a
+   * second grant to authenticated, changes one of these counts.
+   */
+  const grants = CODE28.match(/grant execute on function[\s\S]*?;/g) ?? [];
+  check('every EXECUTE grant goes to service_role, except one',
+    grants.filter((g) => /to service_role;/.test(g)).length === grants.length - 1,
+    `${grants.length} grant(s)`);
+  check('  and that one goes to authenticated, for the revoke alone',
+    grants.filter((g) => /to authenticated;/.test(g)).length === 1 &&
+      grants.some((g) => /worker_revoke_supervisor\(\) to authenticated;/.test(g)),
+    grants.filter((g) => /to authenticated;/.test(g)).join(' | '));
+
+  check('no new table grant appears anywhere in the migration',
+    !/^grant (select|insert|update|delete)/m.test(CODE28));
+  check('the migration still asserts the zero-grant invariant',
+    /service_role gained a table grant/.test(M28));
+  check('  and that no worker-callable function can write a submission status',
+    /a worker-callable function can write a submission status/.test(M28));
+  check('  and that the browser function takes no arguments',
+    /worker_revoke_supervisor takes arguments/.test(M28));
+}
+
 console.log(`\n${'='.repeat(56)}`);
 if (failed === 0) {
   console.log(`ALL ${passed} WORKER-TASK CHECKS PASSED`);

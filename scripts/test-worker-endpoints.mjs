@@ -172,6 +172,14 @@ function makeStore() {
       });
 
       pairing.redeemed_at = now.toISOString();
+      // The two registration events, written with the registration itself.
+      taskMemory.recordRegistration({
+        userId: pairing.user_id,
+        supervisorId,
+        slotId,
+        platform: input.platform,
+        agentVersion: input.agentVersion,
+      });
       pairing.redeemed_supervisor_id = supervisorId;
       return { ok: true, supervisorId, slotId };
     },

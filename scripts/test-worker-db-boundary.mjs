@@ -866,9 +866,15 @@ try {
      * reported without a single readiness transition. That absence is the
      * transition-only rule working; section 21 exercises the other direction.
      */
+    /*
+     * SEVEN KINDS: the two registrations that pairing wrote, and the five the
+     * task cycle caused. There is no `slot_heartbeat` because this
+     * candidate's slot never changed readiness — the transition-only rule.
+     */
     check('the cycle recorded exactly the events it caused',
       kinds.split(',').sort().join(',') ===
-        'lease_acquired,lease_released,lease_renewed,task_completed,task_started',
+        'lease_acquired,lease_released,lease_renewed,slot_registered,' +
+        'supervisor_registered,task_completed,task_started',
       kinds);
 
     const bad = sql(`select coalesce(string_agg(distinct kind, ','), 'none')
@@ -890,8 +896,9 @@ try {
                       from public.worker_events e,
                            lateral jsonb_object_keys(e.detail) k
                       where e.user_id = '${hank.id}'`);
-    check('  and every payload key is one of three scalars',
-      keys.split(',').sort().join(',') === 'disposition,fence', keys);
+    check('  and every payload key is one of the bounded scalars',
+      keys.split(',').sort().join(',') === 'agent_version,disposition,fence,platform,slot_index',
+      keys);
 
     const leaked = sql(`select count(*) from public.worker_events
       where detail::text ~ '[0-9a-f]{64}'
@@ -981,8 +988,17 @@ try {
     check('  nor renew', renew.ok === false && renew.reason === 'revoked', renew.reason);
     const report = await E.reportTask(store, id, { fence_token: 1, disposition: 'released' });
     check('  nor report', report.ok === false && report.reason === 'revoked', report.reason);
-    check('  and it wrote no events at all', countOf('worker_events', ivy.id) === 0,
+    /*
+     * MEASURED AGAINST REGISTRATION, NOT AGAINST ZERO. Pairing writes two
+     * events before any of this, so "wrote nothing" means "added nothing" —
+     * and the two that exist are the two the pairing itself caused.
+     */
+    check('  and added no event of its own', countOf('worker_events', ivy.id) === 2,
       String(countOf('worker_events', ivy.id)));
+    check('  the two that exist are its registration',
+      sql(`select coalesce(string_agg(kind, ',' order by kind), 'none')
+           from public.worker_events where user_id = '${ivy.id}'`)
+        === 'slot_registered,supervisor_registered');
   }
 
   section('23. Cross-candidate isolation over tasks, leases and events');
@@ -1041,9 +1057,10 @@ try {
     const definers = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.prosecdef`);
-    check('  the definer allow-list is exactly six',
+    check('  the definer allow-list is exactly seven',
       definers === 'worker_claim_task,worker_record_heartbeat,worker_redeem_pairing,' +
-        'worker_renew_lease,worker_report_task,worker_resolve_credential',
+        'worker_renew_lease,worker_report_task,worker_resolve_credential,' +
+        'worker_revoke_supervisor',
       definers);
 
     const callable = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
@@ -1058,13 +1075,28 @@ try {
       !callable.includes('worker_resolve_credential'),
       'it runs only inside another definer function');
 
+    /*
+     * ONE EXCEPTION, AND IT IS THE SHAPE THAT MAKES IT SAFE.
+     *
+     * `worker_revoke_supervisor` is executable by `authenticated` because a
+     * candidate revoking their own worker has a session and no worker
+     * credential. It takes NO arguments — the candidate is `auth.uid()`, read
+     * inside the function — so there is nothing a caller can choose and
+     * nothing to validate. Every other definer function stays unreachable
+     * from a browser.
+     */
     const browser = sql(`select coalesce(string_agg(p.proname || ':' || r.rolname, ','), 'none')
       from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
       cross join (select rolname from pg_roles where rolname in ('anon', 'authenticated')) r
       where n.nspname = 'public' and p.prosecdef
         and has_function_privilege(r.rolname, p.oid, 'EXECUTE')`);
-    check('  and no browser role can execute any of them', browser === 'none', browser);
+    check('  a browser role can execute exactly one definer function',
+      browser === 'worker_revoke_supervisor:authenticated', browser);
+    check('  which takes no arguments', Number(sql(
+      `select pronargs from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.proname = 'worker_revoke_supervisor'`)) === 0);
+    check('  and anon can execute none of them', !browser.includes(':anon'), browser);
   }
 
   section('25. Account deletion is still clean with tasks, leases and events');
@@ -1078,6 +1110,219 @@ try {
       check(`  ${table} is empty for them`, countOf(table, hank.id) === 0,
         String(countOf(table, hank.id)));
     }
+  }
+
+  /* ==================================== 26. REGISTRATION AND REVOCATION */
+
+  section('26. Registration writes two events, inside the registration');
+
+  const ivan = await makeCandidate('ivan');
+
+  {
+    const invite = await E.startPairing(store, ivan.id, new Date());
+    const worker = await E.redeemPairing(store, redeemBody(invite.secret), new Date());
+    check('the worker pairs', worker.ok === true, worker.ok ? '' : worker.reason);
+
+    const kinds = sql(`select coalesce(string_agg(kind, ',' order by kind), 'none')
+                       from public.worker_events where user_id = '${ivan.id}'`);
+    check('EXACTLY ONE supervisor_registered AND ONE slot_registered',
+      kinds === 'slot_registered,supervisor_registered', kinds);
+    check('  the supervisor event names the supervisor that was created',
+      sql(`select supervisor_id from public.worker_events
+           where user_id = '${ivan.id}' and kind = 'supervisor_registered'`)
+        === worker.supervisorId);
+    check('  the slot event names the slot',
+      sql(`select slot_id from public.worker_events
+           where user_id = '${ivan.id}' and kind = 'slot_registered'`) === worker.slotId);
+
+    const keys = sql(`select coalesce(string_agg(distinct k, ',' order by k), 'none')
+                      from public.worker_events e, lateral jsonb_object_keys(e.detail) k
+                      where e.user_id = '${ivan.id}'`);
+    check('  and the payload keys are the three the schema constrains',
+      keys === 'agent_version,platform,slot_index', keys);
+
+    /*
+     * A SECOND REDEMPTION OF THE SAME INVITATION REGISTERS NOTHING.
+     *
+     * The replay returns `already_redeemed` before any INSERT, so there is no
+     * second supervisor, no second slot, no second credential — and no second
+     * pair of registration events.
+     */
+    const replay = await E.redeemPairing(store, redeemBody(invite.secret), new Date());
+    check('a replayed redemption is refused',
+      replay.ok === false && replay.reason === 'already_redeemed', replay.reason);
+    check('  and registered nothing a second time',
+      Number(sql(`select count(*) from public.worker_events
+                  where user_id = '${ivan.id}'
+                    and kind in ('supervisor_registered', 'slot_registered')`)) === 2);
+    check('  no second supervisor', countOf('worker_supervisors', ivan.id) === 1);
+    check('  no second slot', countOf('worker_slots', ivan.id) === 1);
+    check('  and no second credential', countOf('worker_credentials', ivan.id) === 1);
+  }
+
+  section('27. Concurrent redemption registers exactly one of everything');
+
+  {
+    const jade = await makeCandidate('jade');
+    const invite = await E.startPairing(store, jade.id, new Date());
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () => E.redeemPairing(store, redeemBody(invite.secret), new Date()))
+    );
+    const winners = results.filter((r) => r.ok).length;
+    check('exactly one of eight simultaneous redemptions wins', winners === 1,
+      `${winners} winner(s)`);
+    check('  one supervisor', countOf('worker_supervisors', jade.id) === 1,
+      String(countOf('worker_supervisors', jade.id)));
+    check('  one slot', countOf('worker_slots', jade.id) === 1);
+    check('  one credential', countOf('worker_credentials', jade.id) === 1);
+    check('  AND EXACTLY ONE SET OF REGISTRATION EVENTS',
+      Number(sql(`select count(*) from public.worker_events
+                  where user_id = '${jade.id}'
+                    and kind in ('supervisor_registered', 'slot_registered')`)) === 2,
+      'the losers rolled back their inserts along with everything else');
+  }
+
+  section('28. Revocation writes one event, and only on a real transition');
+
+  {
+    const before = Number(sql(`select count(*) from public.worker_events
+                               where user_id = '${ivan.id}' and kind = 'supervisor_revoked'`));
+    check('nothing has been revoked yet', before === 0);
+
+    const { data: first, error: firstError } = await ivan.session.rpc('worker_revoke_supervisor');
+    const firstRow = Array.isArray(first) ? first[0] : null;
+    check('the candidate revokes through their own session',
+      !firstError && firstRow?.ok === true, firstError?.message ?? firstRow?.reason);
+    check('  one supervisor transitioned', firstRow?.revoked_count === 1,
+      String(firstRow?.revoked_count));
+    check('  ONE supervisor_revoked was written',
+      Number(sql(`select count(*) from public.worker_events
+                  where user_id = '${ivan.id}' and kind = 'supervisor_revoked'`)) === 1);
+    check('  the supervisor really is revoked', sql(
+      `select coalesce(revoked_at::text, 'live') from public.worker_supervisors
+       where user_id = '${ivan.id}'`) !== 'live');
+    check('  the credential too', sql(
+      `select coalesce(revoked_at::text, 'live') from public.worker_credentials
+       where user_id = '${ivan.id}'`) !== 'live');
+
+    /*
+     * REPLAYING THE REQUEST CANNOT MANUFACTURE A HISTORY.
+     *
+     * The event is written per row that actually transitioned, and a second
+     * revoke matches none.
+     */
+    const { data: second } = await ivan.session.rpc('worker_revoke_supervisor');
+    const secondRow = Array.isArray(second) ? second[0] : null;
+    check('a replayed revoke reports already_revoked',
+      secondRow?.ok === true && secondRow?.reason === 'already_revoked', secondRow?.reason);
+    check('  and wrote no second event',
+      Number(sql(`select count(*) from public.worker_events
+                  where user_id = '${ivan.id}' and kind = 'supervisor_revoked'`)) === 1);
+
+    for (let i = 0; i < 5; i++) await ivan.session.rpc('worker_revoke_supervisor');
+    check('FIVE MORE REVOKES PRODUCE NO EVENT STORM',
+      Number(sql(`select count(*) from public.worker_events
+                  where user_id = '${ivan.id}' and kind = 'supervisor_revoked'`)) === 1,
+      'one transition, one event');
+
+    // A candidate with nothing paired revokes nothing and records nothing.
+    const kim = await makeCandidate('kim');
+    const { data: none } = await kim.session.rpc('worker_revoke_supervisor');
+    const noneRow = Array.isArray(none) ? none[0] : null;
+    check('a candidate with no worker revokes nothing',
+      noneRow?.ok === true && noneRow?.revoked_count === 0, String(noneRow?.revoked_count));
+    check('  and records no false event', countOf('worker_events', kim.id) === 0,
+      String(countOf('worker_events', kim.id)));
+  }
+
+  section('29. A revoked worker writes no further event');
+
+  {
+    const cred = sql(`select id from public.worker_credentials where user_id = '${ivan.id}'`);
+    const before = countOf('worker_events', ivan.id);
+    const beat = await store.recordHeartbeat({
+      credentialId: cred,
+      tokenHash: 'f'.repeat(64),
+      sequence: 900,
+      lifecycle: 'running',
+      readiness: 'paused',
+      reason: 'captcha_detected',
+    });
+    check('a revoked worker cannot heartbeat', beat.applied === false, beat.reason);
+    check('  and wrote nothing', countOf('worker_events', ivan.id) === before,
+      `${countOf('worker_events', ivan.id) - before} extra`);
+  }
+
+  section('30. The audit table takes no write from a browser');
+
+  {
+    const { error } = await ivan.session.from('worker_events').insert({
+      user_id: ivan.id,
+      kind: 'supervisor_registered',
+      detail: {},
+    });
+    check('A CANDIDATE CANNOT FORGE AN EVENT FOR THEMSELVES', error !== null,
+      error ? 'refused by the privilege' : 'INSERTED');
+
+    const { data: mine } = await ivan.session.from('worker_events').select('id, kind');
+    check('  but can still read their own history', (mine ?? []).length > 0,
+      `${(mine ?? []).length} row(s)`);
+
+    const grants = sql(`select coalesce(string_agg(privilege_type, ',' order by privilege_type), 'none')
+      from information_schema.role_table_grants
+      where table_schema = 'public' and table_name = 'worker_events'
+        and grantee = 'authenticated'`);
+    check('  and holds SELECT and nothing else', grants === 'SELECT', grants);
+
+    /*
+     * B HAS EVENTS OF ITS OWN NOW — its worker was paired earlier — so the
+     * property is OWNERSHIP, not emptiness. An assertion that the list is
+     * empty would have started failing the moment B did anything, and the
+     * honest question was never "does B see nothing" but "does B see any of
+     * A's".
+     */
+    const { data: theirs } = await bob.session.from('worker_events').select('id, user_id');
+    check("Candidate B sees not one of A's events",
+      (theirs ?? []).every((e) => e.user_id === bob.id),
+      `${(theirs ?? []).filter((e) => e.user_id !== bob.id).length} foreign row(s)`);
+    check('  and A cannot see B’s either',
+      ((await ivan.session.from('worker_events').select('id, user_id')).data ?? [])
+        .every((e) => e.user_id === ivan.id));
+
+    const { error: rpcError } = await bob.session.rpc('worker_record_heartbeat', {
+      p_credential_id: randomUUID(),
+      p_token_hash: 'a'.repeat(64),
+      p_sequence: 1,
+      p_lifecycle: 'running',
+      p_readiness: 'ready',
+    });
+    check('  and cannot call an event-writing function directly', rpcError !== null,
+      rpcError ? 'refused by the privilege' : 'EXECUTED');
+  }
+
+  section('31. Nothing in the audit trail is a secret');
+
+  {
+    const leaked = sql(`select count(*) from public.worker_events
+      where detail::text ~ '[0-9a-f]{64}'
+         or detail::text ~ 'https?://'
+         or detail::text ~ '\\.[A-Za-z0-9_-]{43}'
+         or detail::text ~ '@'`);
+    check('NO EVENT PAYLOAD CARRIES A HASH, URL, TOKEN OR ADDRESS',
+      leaked === '0', `${leaked} row(s)`);
+
+    const keys = sql(`select coalesce(string_agg(distinct k, ',' order by k), 'none')
+                      from public.worker_events e, lateral jsonb_object_keys(e.detail) k`);
+    check('  and every payload key across the whole table is allow-listed',
+      keys.split(',').filter(Boolean).every((k) =>
+        ['agent_version', 'disposition', 'fence', 'platform', 'reason', 'slot_index'].includes(k)),
+      keys);
+
+    const widest = Number(sql(`select coalesce(max(length(detail::text)), 0)
+                               from public.worker_events`));
+    check('  the widest payload is far inside the 2000-character bound', widest <= 200,
+      `${widest} chars`);
   }
 
 } catch (err) {

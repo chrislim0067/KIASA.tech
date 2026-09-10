@@ -145,6 +145,14 @@ function makeStore() {
         revoked_at: null,
       });
       pairing.redeemed_at = new Date().toISOString();
+      // The two registration events, written with the registration itself.
+      taskMemory.recordRegistration({
+        userId: pairing.user_id,
+        supervisorId,
+        slotId,
+        platform: input.platform,
+        agentVersion: input.agentVersion,
+      });
       pairing.redeemed_supervisor_id = supervisorId;
       return { ok: true, supervisorId, slotId };
     },
