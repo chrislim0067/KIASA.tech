@@ -32,33 +32,41 @@ import { z } from 'zod';
 export const PROVIDER_USAGE_STATUSES = ['succeeded', 'failed', 'not_attempted'] as const;
 export type ProviderUsageStatus = (typeof PROVIDER_USAGE_STATUSES)[number];
 
-/** The operations that may call a provider. Extended deliberately, not casually. */
-export const PROVIDER_OPERATIONS = ['resume_extraction', 'job_scoring'] as const;
-export type ProviderOperation = (typeof PROVIDER_OPERATIONS)[number];
-
 /**
- * The operations the DATABASE currently accepts — a SUBSET of the above.
+ * Every operation that may be served BY OPENROUTER, and therefore every
+ * operation that may appear on a usage row.
  *
- * `provider_usage.operation` carries a CHECK constraint that today lists
- * `resume_extraction` only (migration 21). Milestone 2C added `job_scoring` to
- * the vocabulary above but is not permitted to touch migrations, so the two
- * are deliberately out of step for now.
+ * This is exactly `AI_CAPABILITIES` from `lib/agent/ai-mode.ts` MINUS
+ * `eligibility_evaluation`, which is decided by deterministic rules and never
+ * reaches a provider at all.
  *
- * That gap is made EXPLICIT here rather than left latent. Without this list,
- * the first caller to persist a `job_scoring` row would get a constraint
- * violation from PostgREST at runtime — the kind of defect that only appears
- * once real traffic exists. `recordProviderUsage()` consults this list and
- * refuses up front with a named reason instead.
+ * It is written out here rather than imported, because importing
+ * `lib/agent/ai-mode.ts` would create a cycle: ai-mode → contracts → usage →
+ * ai-mode. `scripts/test-openrouter-gateway.mjs` asserts the two lists agree
+ * in both directions, so the duplication cannot drift silently.
  *
- * TO CLOSE THE GAP: a later migration must extend the CHECK to match
- * `PROVIDER_OPERATIONS`, after which this list becomes the same set and can be
- * deleted. Until then, job-scoring usage is reported in telemetry and not
- * persisted.
+ * NOTE THAT THE THREE CANDIDATE-VOICE CAPABILITIES ARE HERE. In
+ * `claude_max_assisted` they route to the candidate's own Claude and produce
+ * no usage row at all — a local call has no provider, no key and no cost to
+ * record. In `openrouter_only` the same three ARE provider calls, and those
+ * rows are legitimate. The mode decides; the vocabulary covers both.
+ *
+ * Extended deliberately, not casually: every addition needs a migration that
+ * widens `provider_usage_operation_allowed` to match, and a parity test keeps
+ * the two honest.
  */
-export const PERSISTABLE_OPERATIONS: readonly ProviderOperation[] = ['resume_extraction'];
-
-export const isPersistableOperation = (operation: ProviderOperation): boolean =>
-  PERSISTABLE_OPERATIONS.includes(operation);
+export const PROVIDER_OPERATIONS = [
+  'resume_extraction',
+  'resume_analysis',
+  'job_scanning',
+  'job_analysis',
+  'job_scoring',
+  'structured_task_creation',
+  'resume_tailoring',
+  'application_answer_generation',
+  'candidate_profile_drafting',
+] as const;
+export type ProviderOperation = (typeof PROVIDER_OPERATIONS)[number];
 
 const nonNegativeInt = z.number().int().min(0);
 

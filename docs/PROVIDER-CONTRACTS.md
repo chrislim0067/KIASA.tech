@@ -192,13 +192,35 @@ owner, and a cost record that can be edited is not a cost record. `user_id` is
 
 ## 9. Adding a model or an operation
 
-**A model:** set `OPENROUTER_RESUME_MODEL`. It must support structured JSON
+**A model:** two variables, and they behave differently on purpose.
+
+`OPENROUTER_RESUME_MODEL` has a default and may be left unset. `OPENROUTER_MODEL`
+— used by job scoring and everything else that is not résumé extraction — has
+**no default**: unset is `model_not_configured`, the call is refused before any
+request, and nothing is billed. A default there would spend the candidate's
+money on a model nobody chose, and a slug hardcoded from stale knowledge is a
+404 waiting for a deploy. Either way the model must support structured JSON
 output; if it does not, calls fail as `invalid_structure` rather than producing
-bad data. No code change.
+bad data.
 
 **An operation:** add it to `PROVIDER_OPERATIONS` in `lib/ai/usage.ts` *and* to
-the `provider_usage_operation_allowed` CHECK constraint. Both, deliberately —
-the constraint is what stops an operation being recorded that nobody reviewed.
+the `provider_usage_operation_allowed` CHECK constraint, in a new migration.
+Both, deliberately — RLS lets a client PATCH `provider_usage` straight through
+PostgREST, so the constraint is what stops an operation being recorded that
+nobody reviewed, and the enum is what stops it reaching the database at all.
+
+The two are compared in both directions by `npm run test:gateway`, which parses
+the migration, so they cannot drift silently. The vocabulary is exactly
+`AI_CAPABILITIES` minus `eligibility_evaluation` — eligibility is decided by
+deterministic rules and never reaches a provider, so a usage row for it would
+record something that cannot happen.
+
+Note that the three candidate-voice capabilities — résumé tailoring,
+application-answer generation, candidate-profile drafting — ARE in the
+vocabulary. In `claude_max_assisted` they run on the candidate's own machine
+and produce no usage row at all: a local call has no provider, no key and no
+cost to record. In `openrouter_only` the same three are ordinary provider calls
+and those rows are legitimate. The mode decides; the vocabulary covers both.
 
 **A provider:** not without a review that answers, at minimum: where is the
 second credential read, what is the disclosure surface, how is cost attributed,

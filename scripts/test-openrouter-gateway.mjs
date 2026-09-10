@@ -382,43 +382,225 @@ section('13. The request sends the key ONLY as a header');
     'an AbortController bounds every call');
 }
 
-section('14. Usage is metadata, and job_scoring is not persistable yet');
+section('14. The usage vocabulary is closed, and matches the database exactly');
 
 {
-  check('job_scoring is a known operation', USAGE.PROVIDER_OPERATIONS.includes('job_scoring'));
-  check('  but NOT persistable', USAGE.isPersistableOperation('job_scoring') === false,
-    'migration 21 CHECKs operation in (resume_extraction); 2C may not change migrations');
-  check('  resume_extraction still is', USAGE.isPersistableOperation('resume_extraction') === true);
-  check('the gap is named, not latent',
-    USAGE.PERSISTABLE_OPERATIONS.length < USAGE.PROVIDER_OPERATIONS.length,
-    'the writer refuses up front rather than hitting a constraint violation');
+  /*
+   * The vocabulary lives in TWO places — the Zod enum and the CHECK in
+   * migration 23 — because RLS lets a client PATCH `provider_usage` straight
+   * through PostgREST, so a TypeScript-only rule would be advisory. Two copies
+   * drift, so they are compared here in both directions.
+   *
+   * `lib/ai/usage.ts` cannot import `lib/agent/ai-mode.ts` (ai-mode →
+   * contracts → usage → ai-mode is a cycle), so the third comparison below
+   * pins the enum against the canonical capability list instead.
+   */
+  const sql = readFileSync(
+    path.join(ROOT, 'supabase', 'migrations', '20260910000023_provider_usage_operations.sql'),
+    'utf8'
+  );
+  const constraint = sql.slice(
+    sql.indexOf('add constraint provider_usage_operation_allowed'),
+    sql.indexOf('-- Self-verification') === -1 ? undefined : sql.indexOf('-- Self-verification')
+  );
+  const inDatabase = [...constraint.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
+  const inCode = [...USAGE.PROVIDER_OPERATIONS].sort();
+
+  check('the migration lists every operation the code knows',
+    inCode.every((o) => inDatabase.includes(o)),
+    inCode.filter((o) => !inDatabase.includes(o)).join(', ') || 'none missing');
+  check('the code knows every operation the migration lists',
+    inDatabase.every((o) => inCode.includes(o)),
+    inDatabase.filter((o) => !inCode.includes(o)).join(', ') || 'none extra');
+  check('  the two lists are the same length',
+    inDatabase.length === inCode.length, `db=${inDatabase.length} ts=${inCode.length}`);
+
+  const expected = MODE.AI_CAPABILITIES.filter((c) => c !== 'eligibility_evaluation').sort();
+  check('and both equal AI_CAPABILITIES minus eligibility_evaluation',
+    inCode.join(',') === expected.join(','), inCode.join(','));
+  check('eligibility_evaluation is NOT a provider operation',
+    !inCode.includes('eligibility_evaluation') && !inDatabase.includes('eligibility_evaluation'),
+    'it is decided by deterministic rules and never reaches a provider');
+
+  check('the vocabulary is still CLOSED, not free text',
+    /check \(operation in \(/.test(sql) && !/operation text\b(?![\s\S]{0,200}check)/.test(sql));
+  check('the migration aborts if the constraint is wrong',
+    /raise exception 'operation % is not permitted by the constraint'/.test(sql));
+  check('  and if eligibility ever appears in it',
+    /must never be a provider operation/.test(sql));
+  check('  and if RLS, grants or immutability were disturbed',
+    /lost RLS/.test(sql) && /granted to anon or PUBLIC/.test(sql) &&
+      /immutability trigger is missing/.test(sql));
+  check('it touches no other table',
+    (sql.match(/alter table public\.\w+/g) ?? []).every((s) => s.endsWith('provider_usage')),
+    'one constraint, one table');
+}
+
+section('14b. The writer accepts every known operation and rejects the rest');
+
+{
+  const WRITER = await import('../lib/ai/usage-writer.ts');
+  const base = {
+    provider: 'openrouter', model: 'vendor/m', status: 'succeeded',
+    failure_class: null, failure_code: null, latency_ms: 10, attempts: 1,
+    prompt_tokens: 1, completion_tokens: 1, total_tokens: 2, cost_usd: 0.01,
+    provider_request_id: 'gen-1', correlation_id: null,
+  };
+  const captured = [];
+  const client = {
+    from: () => ({
+      insert: (row) => { captured.push(row); return {
+        select: () => ({ maybeSingle: async () => ({ data: { id: 'row-1' }, error: null }) }),
+      }; },
+    }),
+  };
+
+  for (const operation of USAGE.PROVIDER_OPERATIONS) {
+    const r = await WRITER.recordProviderUsage({ ...base, operation }, null, client);
+    check(`accepts ${operation}`, r.ok === true, r.ok ? '' : `${r.reason}: ${r.detail}`);
+  }
+
+  for (const operation of ['eligibility_evaluation', 'send_email', 'SCORING', 'job scoring', '', null, 42]) {
+    const r = await WRITER.recordProviderUsage({ ...base, operation }, null, client);
+    check(`rejects ${JSON.stringify(operation)}`,
+      r.ok === false && r.reason === 'invalid_record', r.ok ? 'ACCEPTED' : r.reason);
+  }
+
+  check('a rejected record never reached the database',
+    captured.length === USAGE.PROVIDER_OPERATIONS.length,
+    `${captured.length} inserts for ${USAGE.PROVIDER_OPERATIONS.length} valid operations`);
+  check('every written row has exactly the approved column set',
+    captured.every((row) => JSON.stringify(Object.keys(row).sort()) ===
+      JSON.stringify([...WRITER.USAGE_ROW_KEYS].sort())),
+    'no prompt, no key, no response body — a fixed column list built field by field');
+  /*
+   * Reuses the detector from lib/agent/worker-state.ts rather than a second
+   * regex here. The first attempt matched `prompt_tokens` and
+   * `completion_tokens` — token COUNTS, not credentials — which is exactly the
+   * false positive that detector was already written and tested to avoid.
+   */
+  const W = await import('../lib/agent/worker-state.ts');
+  check('  and no row carries a credential-shaped key',
+    captured.every((row) => W.findCredentialLikeKeys(row).length === 0),
+    'token counts are not tokens');
+  check('  the detector still fires on a planted one',
+    W.findCredentialLikeKeys({ ...captured[0], api_key: 'x' }).includes('api_key'),
+    'an allow-list that never reports anything is not a control');
+}
+
+section('14c. Local-Claude work is never recorded as an OpenRouter call');
+
+{
+  const T = await import('../lib/local-claude/transport.ts');
+  const SUPPORTED_LOCAL = {
+    status: 'supported', adapter: 'claude_code_cli', version: '2.1.267', model: 'sonnet',
+  };
+  const outcome = await T.createMockTransport({
+    availability: SUPPORTED_LOCAL,
+    responses: [JSON.stringify({ answer: 'x', used_fact_keys: [], uncertain: false })],
+  }).run({
+    request_id: '00000001-1111-4111-8111-111111111111',
+    candidate_id: '00000002-1111-4111-8111-111111111111',
+    task_id: '00000003-1111-4111-8111-111111111111',
+    capability: 'application_answer_generation',
+    model: 'sonnet', prompt: 'draft', timeout_ms: 60_000,
+  });
+  check('a local outcome carries no usage record at all',
+    outcome.status === 'ok' && !('usage' in outcome),
+    'a local call has no provider, no key and no cost to record');
+  check('  and no provider field',
+    !JSON.stringify(outcome).includes('openrouter'),
+    Object.keys(outcome).join(', '));
+  check('the usage schema admits only openrouter as provider',
+    USAGE.ProviderUsageRecord.safeParse({
+      provider: 'claude_max', model: 'sonnet', operation: 'application_answer_generation',
+      status: 'succeeded', failure_class: null, failure_code: null, latency_ms: 1, attempts: 1,
+      prompt_tokens: null, completion_tokens: null, total_tokens: null, cost_usd: null,
+      provider_request_id: null, correlation_id: null,
+    }).success === false,
+    'a local call cannot be dressed up as a provider call');
 }
 
 /* =================================================== 15-16. ROUTING */
 
-section('15. Routing is unchanged for both AI modes');
+section('15. The routing contract, stated as a table and checked exhaustively');
 
 {
-  const or = MODE.routingTable('openrouter_only');
-  for (const c of MODE.AI_CAPABILITIES) {
-    const expected = c === 'eligibility_evaluation' ? 'deterministic_rules' : 'openrouter';
-    check(`openrouter_only: ${c} -> ${expected}`, or[c].destination === expected);
-  }
+  /*
+   * EVERY capability, in BOTH modes, written out rather than derived.
+   *
+   * A test that computes its own expectation from the code under test only
+   * proves the code is self-consistent. This table is the contract as
+   * specified, so if the implementation changes, this fails — which is the
+   * whole point of writing it down twice.
+   */
+  const CONTRACT = {
+    //                              openrouter_only        claude_max_assisted (local available)
+    resume_extraction:             ['openrouter',          'openrouter'],
+    resume_analysis:               ['openrouter',          'openrouter'],
+    job_scanning:                  ['openrouter',          'openrouter'],
+    job_analysis:                  ['openrouter',          'openrouter'],
+    job_scoring:                   ['openrouter',          'openrouter'],
+    structured_task_creation:      ['openrouter',          'openrouter'],
+    resume_tailoring:              ['openrouter',          'local_claude'],
+    application_answer_generation: ['openrouter',          'local_claude'],
+    candidate_profile_drafting:    ['openrouter',          'local_claude'],
+    eligibility_evaluation:        ['deterministic_rules', 'deterministic_rules'],
+  };
 
   const supported = {
     status: 'supported', adapter: 'claude_code_cli', version: '2.1.267', model: 'sonnet',
   };
+  const or = MODE.routingTable('openrouter_only');
   const assisted = MODE.routingTable('claude_max_assisted', supported);
-  for (const c of ['resume_extraction', 'resume_analysis', 'job_scanning', 'job_analysis',
-    'job_scoring', 'structured_task_creation']) {
-    check(`claude_max_assisted: ${c} -> openrouter`, assisted[c].destination === 'openrouter');
+
+  check('the contract covers every capability, and no more',
+    Object.keys(CONTRACT).sort().join(',') === [...MODE.AI_CAPABILITIES].sort().join(','),
+    'a new capability must be routed here deliberately');
+
+  for (const [capability, [expectedOr, expectedAssisted]] of Object.entries(CONTRACT)) {
+    check(`openrouter_only: ${capability} -> ${expectedOr}`,
+      or[capability].destination === expectedOr, or[capability].destination);
+    check(`claude_max_assisted: ${capability} -> ${expectedAssisted}`,
+      assisted[capability].destination === expectedAssisted, assisted[capability].destination);
   }
-  for (const c of MODE.LOCAL_CLAUDE_CAPABILITIES) {
-    check(`claude_max_assisted: ${c} -> local_claude`, assisted[c].destination === 'local_claude');
+
+  /* The prohibitions, stated as prohibitions rather than implied by the table. */
+  const NEVER_LOCAL = ['resume_extraction', 'resume_analysis', 'job_scanning',
+    'job_analysis', 'job_scoring', 'structured_task_creation', 'eligibility_evaluation'];
+  for (const capability of NEVER_LOCAL) {
+    check(`local Claude is NEVER used for ${capability}`,
+      assisted[capability].destination !== 'local_claude' &&
+        or[capability].destination !== 'local_claude');
   }
-  check('eligibility stays deterministic in both modes',
+  check('eligibility reaches no provider in either mode',
     or.eligibility_evaluation.destination === 'deterministic_rules' &&
-      assisted.eligibility_evaluation.destination === 'deterministic_rules');
+      assisted.eligibility_evaluation.destination === 'deterministic_rules' &&
+      or.eligibility_evaluation.credential_holder === 'none');
+  check('nothing is attended when local Claude is available',
+    MODE.requiresCandidateAction('claude_max_assisted', supported) === false);
+
+  /*
+   * The manual-paste fallback is PRESERVED, deliberately. It is not part of
+   * the routing contract above — that describes where work goes when the local
+   * capability exists — it is what happens when it does not, and the task is
+   * then marked attended so a completion rate cannot count hand-done work as
+   * automation.
+   */
+  for (const availability of [
+    { status: 'unsupported', reason: 'cli_not_installed' },
+    { status: 'manual_required', reason: 'candidate_has_not_consented' },
+  ]) {
+    const fallback = MODE.routingTable('claude_max_assisted', availability);
+    for (const capability of MODE.LOCAL_CLAUDE_CAPABILITIES) {
+      check(`${availability.reason}: ${capability} -> paste console`,
+        fallback[capability].destination === 'candidate_claude_max_paste');
+      check(`  and is marked attended`, fallback[capability].attended === true);
+    }
+    check(`  the OpenRouter half is unaffected`,
+      fallback.job_scoring.destination === 'openrouter' &&
+        fallback.resume_extraction.destination === 'openrouter');
+  }
 }
 
 section('16. The local Claude adapter was not touched');
