@@ -155,15 +155,28 @@ let sequence = 0;
  * credential is not something to retry through. The worker shuts down rather
  * than hammering an endpoint that will keep refusing it.
  */
-async function heartbeat(readiness = 'ready') {
+async function heartbeat(readiness = 'ready', reason = null) {
   if (!credential) return false;
+  /*
+   * A STATE THAT NEEDS A REASON CARRIES ONE, AND THE WORKER NEVER INVENTS IT.
+   *
+   * `worker_slots` requires a pause reason for `paused` and a stop reason for
+   * `stopping`/`stopped`, in both directions — a state that needs no reason
+   * must not carry one. The values come from the control plane's own bounded
+   * vocabulary; this process picks one that is true of itself
+   * (`supervisor_shutdown` when it is shutting itself down) and has no way to
+   * express anything else. There is no free-text field here.
+   */
+  const body = {
+    sequence: ++sequence,
+    lifecycle: stopping ? 'stopping' : 'running',
+    slot_readiness: readiness,
+  };
+  if (reason !== null) body.reason = reason;
+
   const { status, payload } = await request('/api/worker/heartbeat', {
     bearer: credential.token,
-    body: {
-      sequence: ++sequence,
-      lifecycle: stopping ? 'stopping' : 'running',
-      slot_readiness: readiness,
-    },
+    body,
   });
 
   if (status === 200) return true;
@@ -237,6 +250,63 @@ async function probeLocalClaude() {
   return outcome;
 }
 
+/* ------------------------------------------------------- the task cycle */
+
+/**
+ * Claim one task, renew its lease once, and hand it back.
+ *
+ * THIS DOES NO WORK, AND THAT IS THE POINT OF THIS MILESTONE. There is no
+ * browser here, no employer site, no form and no submission — the worker
+ * proves it can hold and return a lease safely, and nothing more. It reports
+ * `released`, which puts the task back in the queue, because pretending to
+ * have completed something it never attempted would be a lie in an audit
+ * trail.
+ *
+ * Fails closed at every step: no credential, a refusal, a stale fence, a dead
+ * lease or a malformed answer all end the cycle rather than continuing on a
+ * guess.
+ */
+async function taskCycle() {
+  if (!credential) return false;
+
+  const claim = await request('/api/worker/task/claim', { bearer: credential.token, body: {} });
+  if (claim.status !== 200) {
+    // `no_task_available` is the ordinary case, not a failure.
+    log(`no task claimed (${claim.status}): ${claim.payload?.reason ?? 'unknown'}`);
+    return false;
+  }
+
+  const fence = claim.payload?.fence_token;
+  const taskId = claim.payload?.task_id;
+  if (typeof fence !== 'number' || typeof taskId !== 'string') {
+    log('claim response was malformed; nothing was attempted.');
+    return false;
+  }
+  log(`claimed task ${taskId.slice(0, 8)}… at fence ${fence}.`);
+
+  const renew = await request('/api/worker/task/renew', {
+    bearer: credential.token,
+    body: { fence_token: fence },
+  });
+  if (renew.status !== 200) {
+    log(`lease renewal refused (${renew.status}): ${renew.payload?.reason ?? 'unknown'}`);
+    // Fall through: the lease is still ours to release until it expires.
+  } else {
+    log('lease renewed.');
+  }
+
+  const report = await request('/api/worker/task/report', {
+    bearer: credential.token,
+    body: { fence_token: fence, disposition: 'released' },
+  });
+  if (report.status !== 200) {
+    log(`report refused (${report.status}): ${report.payload?.reason ?? 'unknown'}`);
+    return false;
+  }
+  log('task released back to the queue. No application was attempted.');
+  return true;
+}
+
 /* ------------------------------------------------------------------ main */
 
 async function main() {
@@ -256,6 +326,10 @@ async function main() {
 
   if (PROBE) {
     await probeLocalClaude();
+    await heartbeat('ready');
+    // One control-plane cycle, so the probe exercises the task path as well as
+    // the pairing one. It claims nothing when the queue is empty.
+    await taskCycle();
     await heartbeat('ready');
     return;
   }
@@ -279,7 +353,9 @@ async function main() {
     stopping = true;
     clearInterval(timer);
     log('shutting down…');
-    await heartbeat('stopped').catch(() => {});
+    // Truthful, and from the control plane's list: this process is stopping
+    // because the supervisor was asked to stop.
+    await heartbeat('stopped', 'supervisor_shutdown').catch(() => {});
     // The credential is dropped with the process. Nothing was written to disk.
     credential = null;
     process.exit(0);

@@ -25,13 +25,15 @@ import type { CredentialRow, PairingRow } from '@/lib/worker/pairing';
  * migration 24 grants `service_role` exactly SELECT, INSERT and UPDATE on
  * those two tables, and asserts that set.
  *
- * `worker_supervisors` and `worker_slots` are NOT. Migration 22 revokes every
- * privilege from `service_role` on them and asserts the absence, so this
- * client cannot read or write them at all — which is why registration and
- * heartbeat go through `worker_redeem_pairing` and `worker_record_heartbeat`,
- * the two `security definer` functions from migration 26. Each performs one
- * protocol operation, takes a hash rather than an id as its proof, and reads
- * ownership out of the row that hash matched.
+ * `worker_supervisors`, `worker_slots`, `automation_tasks`, `task_leases` and
+ * `worker_events` are NOT. Migration 22 revokes every privilege from
+ * `service_role` on them and asserts the absence, so this client cannot read
+ * or write any of them — which is why every worker operation goes through a
+ * `security definer` function instead: `worker_redeem_pairing` and
+ * `worker_record_heartbeat` from migration 26, and `worker_claim_task`,
+ * `worker_renew_lease` and `worker_report_task` from migration 27. Each
+ * performs one protocol operation, takes a hash rather than an id as its
+ * proof, and reads ownership out of the row that hash matched.
  *
  * THE CANDIDATE-FACING PATHS DO NOT COME THROUGH HERE. Starting a pairing,
  * reading status and revoking all run under the candidate's own session and
@@ -204,11 +206,80 @@ export function createPairingStore(): PairingStore {
         p_sequence: input.sequence,
         p_lifecycle: input.lifecycle,
         p_readiness: input.readiness,
+        p_reason: input.reason,
       });
 
       const row = Array.isArray(data) ? data[0] : null;
-      if (error || !row || !row.ok) return { applied: false };
-      return { applied: row.applied };
+      /*
+       * The verdict is now RETURNED rather than collapsed into a boolean. A
+       * heartbeat refused for a missing pause reason and one refused because
+       * the credential was revoked are different things to tell a candidate,
+       * and `applied: false` said neither.
+       */
+      if (error || !row) return { ok: false, reason: 'refused', applied: false };
+      return { ok: row.ok, reason: row.reason, applied: row.applied };
+    },
+
+    /* ------------------------------------------------------------- tasks */
+
+    async claimTask(input) {
+      /*
+       * NO TASK ID IS SENT. The worker asks for work and the boundary hands it
+       * the oldest task this credential's candidate has approved. Everything
+       * that comes back is bounded — ids, a fence and an expiry — and there is
+       * no field for a job URL, an employer name or a description, because a
+       * field that exists is a field that leaks.
+       */
+      const { data, error } = await db.rpc('worker_claim_task', {
+        p_credential_id: input.credentialId,
+        p_token_hash: input.tokenHash,
+      });
+
+      const row = Array.isArray(data) ? data[0] : null;
+      if (error || !row) {
+        return {
+          ok: false,
+          reason: 'refused',
+          taskId: null,
+          leaseId: null,
+          fenceToken: null,
+          leaseExpiresAt: null,
+        };
+      }
+      return {
+        ok: row.ok,
+        reason: row.reason,
+        taskId: row.claimed_task_id,
+        leaseId: row.claimed_lease_id,
+        fenceToken: row.claimed_fence,
+        leaseExpiresAt: row.claimed_lease_expires_at,
+      };
+    },
+
+    async renewLease(input) {
+      const { data, error } = await db.rpc('worker_renew_lease', {
+        p_credential_id: input.credentialId,
+        p_token_hash: input.tokenHash,
+        p_fence_token: input.fenceToken,
+      });
+
+      const row = Array.isArray(data) ? data[0] : null;
+      if (error || !row) return { ok: false, reason: 'refused', expiresAt: null };
+      return { ok: row.ok, reason: row.reason, expiresAt: row.renewed_expires_at };
+    },
+
+    async reportTask(input) {
+      const { data, error } = await db.rpc('worker_report_task', {
+        p_credential_id: input.credentialId,
+        p_token_hash: input.tokenHash,
+        p_fence_token: input.fenceToken,
+        p_disposition: input.disposition,
+        p_reason: input.reason,
+      });
+
+      const row = Array.isArray(data) ? data[0] : null;
+      if (error || !row) return { ok: false, reason: 'refused' };
+      return { ok: row.ok, reason: row.reason };
     },
   };
 }

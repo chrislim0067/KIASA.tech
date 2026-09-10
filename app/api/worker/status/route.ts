@@ -44,6 +44,9 @@ export async function GET() {
 
   let lastHeartbeatAt: string | null = null;
   let slotIndex: number | null = null;
+  let readiness: string | null = null;
+  let pauseReason: string | null = null;
+  let stopReason: string | null = null;
   if (credential?.supervisor_id) {
     const { data: supervisor } = await supabase
       .from('worker_supervisors')
@@ -55,10 +58,21 @@ export async function GET() {
     if (credential.slot_id) {
       const { data: slot } = await supabase
         .from('worker_slots')
-        .select('slot_index')
+        .select('slot_index, readiness, pause_reason, stop_reason')
         .eq('id', credential.slot_id)
         .maybeSingle();
       slotIndex = slot?.slot_index ?? null;
+      /*
+       * READINESS IS A SLOT FACT, NOT A PAIRING FACT. An online worker whose
+       * slot is paused is still online and still reporting, so the two are
+       * shown side by side rather than one overriding the other.
+       *
+       * Only these three columns, and each is a value from a CHECK-constrained
+       * vocabulary — there is no free text on a slot for a browser to render.
+       */
+      readiness = slot?.readiness ?? null;
+      pauseReason = slot?.pause_reason ?? null;
+      stopReason = slot?.stop_reason ?? null;
     }
   }
 
@@ -74,6 +88,9 @@ export async function GET() {
     ),
     supervisor_id: credential?.supervisor_id ?? null,
     slot_index: slotIndex,
+    slot_readiness: readiness,
+    pause_reason: pauseReason,
+    stop_reason: stopReason,
     last_heartbeat_at: lastHeartbeatAt,
     paired_at: credential?.issued_at ?? null,
     expires_at: credential?.expires_at ?? null,
