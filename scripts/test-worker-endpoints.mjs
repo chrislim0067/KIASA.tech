@@ -48,7 +48,7 @@ const hashOf = (value) => P.hashSecret(value);
 
 // The task, lease and event half of the fake — one implementation, shared with
 // scripts/probe-worker-e2e.mjs so the two cannot drift apart.
-const { createTaskMemory, PAUSE_REASONS, STOP_REASONS } = await import(
+const { createTaskMemory } = await import(
   './lib/worker-task-memory.mjs'
 );
 

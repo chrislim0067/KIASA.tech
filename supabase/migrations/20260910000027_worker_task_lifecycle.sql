@@ -166,8 +166,22 @@ begin
    * WORKER_PAUSE_REASONS and WORKER_STOP_REASONS in lib/agent/contracts.ts.
    * No free text is accepted from a worker, here or anywhere.
    */
+  /*
+   * AN ABSENT REASON ARRIVES AS THE EMPTY STRING.
+   *
+   * `supabase gen types` cannot see that a text parameter is nullable — the
+   * catalogue does not record it — so the generated Args type says
+   * `p_reason: string` and a null would not typecheck at the call site. The
+   * alternatives were an unsafe cast, which hides a real question, or a
+   * DEFAULT, which changes the generated signature again for a property the
+   * database does not enforce either way.
+   *
+   * So the store sends '' for "no reason", and both spellings are treated
+   * identically here. '' is not a member of either vocabulary, so it can never
+   * be mistaken for a real reason: every branch below still refuses it.
+   */
   if p_readiness = 'paused' then
-    if p_reason is null or p_reason not in (
+    if coalesce(p_reason, '') = '' or p_reason not in (
       'employer_authentication_required', 'claude_authentication_required',
       'captcha_detected', 'anti_bot_challenge_detected', 'mfa_required',
       'sensitive_information_requested', 'unknown_page', 'unknown_question',
@@ -179,7 +193,7 @@ begin
     v_pause := p_reason;
     v_stop := null;
   elsif p_readiness in ('stopping', 'stopped') then
-    if p_reason is null or p_reason not in (
+    if coalesce(p_reason, '') = '' or p_reason not in (
       'candidate_requested', 'kill_switch', 'supervisor_shutdown', 'slot_crashed',
       'lease_lost', 'protocol_violation', 'update_required'
     ) then
@@ -191,7 +205,7 @@ begin
   else
     -- initializing, ready, working, crashed: neither column may be set, and a
     -- reason sent anyway is a protocol error rather than something to ignore.
-    if p_reason is not null then
+    if coalesce(p_reason, '') <> '' then
       return query select false, 'unexpected_reason'::text, false;
       return;
     end if;
@@ -257,7 +271,7 @@ begin
           (user_id, supervisor_id, slot_id, kind, detail)
         values (
           v_cred.cred_user_id, v_supervisor.id, v_slot.id, v_kind,
-          case when p_reason is null then '{}'::jsonb
+          case when coalesce(p_reason, '') = '' then '{}'::jsonb
                else jsonb_build_object('reason', p_reason)
           end
         );
@@ -551,7 +565,7 @@ begin
    * sending one is a protocol error rather than something to ignore.
    */
   if p_disposition = 'failed' then
-    if p_reason is null or p_reason not in (
+    if coalesce(p_reason, '') = '' or p_reason not in (
       'employer_authentication_required', 'claude_authentication_required',
       'captcha_detected', 'anti_bot_challenge_detected', 'mfa_required',
       'sensitive_information_requested', 'unknown_page', 'unknown_question',
@@ -560,7 +574,7 @@ begin
       return query select false, 'failure_reason_required'::text;
       return;
     end if;
-  elsif p_reason is not null then
+  elsif coalesce(p_reason, '') <> '' then
     return query select false, 'unexpected_reason'::text;
     return;
   end if;
