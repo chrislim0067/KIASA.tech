@@ -1131,6 +1131,208 @@ section('13. The transport gained no new powers');
     /fail\('invalid_structure', false/.test(code));
 }
 
+/* ------------- 14. a diagnostic can never break the row it describes */
+
+section('14. An unusable detail becomes null, never a refused UPDATE');
+
+/*
+ * THE FAILURE MODE THIS CLOSES
+ *
+ * `describeSchemaFailure` can legitimately produce an empty string — a
+ * root-level Zod issue carries an empty path. The write then did
+ * `providerFailureDetail ?? null`, and `??` catches null and undefined but not
+ * `''`. So an empty string reached the column, which accepts null or one to
+ * three hundred path characters and nothing in between.
+ *
+ * The consequence was not a missing diagnostic. It was the WHOLE UPDATE being
+ * refused: no status, no failure class, no provider code, and the import
+ * stranded in `parsing` — silently, because markFailed's return value is not
+ * checked by its caller.
+ */
+
+const { usableDetail } = await import('../lib/resume/imports.ts');
+
+/** The database's own constraint, copied so the two are compared directly. */
+const DETAIL_SHAPE = /^[A-Za-z0-9_.]+(,[A-Za-z0-9_.]+)*$/;
+const acceptable = (v) => v === null || (v.length >= 1 && v.length <= 300 && DETAIL_SHAPE.test(v));
+
+{
+  check('a real path list passes through unchanged',
+    usableDetail('work_experiences.3.end_date,phone_e164')
+      === 'work_experiences.3.end_date,phone_e164');
+
+  /* THE BUG. */
+  check('an empty string becomes null, not an empty string',
+    usableDetail('') === null,
+    String(usableDetail('')));
+  check('undefined becomes null', usableDetail(undefined) === null);
+
+  check('a dangling separator is repaired', usableDetail('phone_e164,') === 'phone_e164');
+  check('a leading separator is repaired', usableDetail(',phone_e164') === 'phone_e164');
+  check('a doubled separator is repaired',
+    usableDetail('city,,phone_e164') === 'city,phone_e164');
+  check('a string of only separators becomes null', usableDetail(',,,') === null);
+
+  /* Anything that could not satisfy the column becomes null rather than a refusal. */
+  const hostile = [
+    'the candidate lives at 12 Example Street',
+    'ada@example.test',
+    '+6591234567',
+    "'; drop table resume_imports; --",
+    'ERROR:  duplicate key value violates unique constraint',
+    ' ',
+    '   ,   ',
+    'x'.repeat(400),
+  ];
+  for (const value of hostile) {
+    const out = usableDetail(value);
+    check(`  "${value.slice(0, 26)}…" yields something the column accepts`,
+      acceptable(out), String(out));
+    check(`    and carries none of the original punctuation`,
+      out === null || !/[^A-Za-z0-9_.,]/.test(out), String(out));
+  }
+
+  /*
+   * EVERY OUTPUT IS ACCEPTABLE, not just the ones thought of above. A short
+   * sweep over awkward shapes, all compared against the database's own regex.
+   */
+  const sweep = ['', ',', '.', '..', 'a', 'a,', ',a', 'a..b', 'a.b,c.d', '_', '0', 'A_1.2'];
+  check('every swept value produces null or a column-acceptable string',
+    sweep.every((v) => acceptable(usableDetail(v))),
+    sweep.filter((v) => !acceptable(usableDetail(v))).join(' | '));
+}
+
+{
+  /* The producer no longer emits a value that would need repairing. */
+  const empty = describeSchemaFailure([{ path: [] }]);
+  check('a root-level issue produces an empty string at the source',
+    empty === '', JSON.stringify(empty));
+
+  /* Truncation happens at a separator, so the tail is never half a path. */
+  const many = Array.from({ length: 60 }, (_, i) => ({
+    path: ['work_experiences', i, 'end_date'],
+  }));
+  const capped = describeSchemaFailure(many);
+  check('a long list truncates at a separator, never mid-path',
+    capped === '' || DETAIL_SHAPE.test(capped), capped);
+  check('  and never ends with a dangling separator', !capped.endsWith(','), capped);
+}
+
+await withKey(async () => {
+  /*
+   * END TO END: a reply that fails validation at the ROOT — an array where an
+   * object belongs — has no field path to report. The extraction must still
+   * fail cleanly, still carry the provider code, and simply carry no detail.
+   */
+  const { impl } = recordingFetch(() => providerReply([]));
+  const r = await extract.extractResume(textPdf([RESUME_LINES]), null, impl);
+
+  check('a root-level schema failure is still invalid_structure',
+    !r.ok && r.providerCode === 'invalid_structure',
+    r.ok ? 'unexpectedly ok' : String(r.providerCode));
+  check('  and carries no detail rather than an empty one',
+    !r.ok && r.providerDetail === undefined,
+    r.ok ? '' : JSON.stringify(r.providerDetail));
+  check('  and what would be written is acceptable to the column',
+    !r.ok && acceptable(usableDetail(r.providerDetail)));
+});
+
+/* ------------- 15. what markFailed actually writes */
+
+section('15. markFailed writes nothing the column would refuse');
+
+/*
+ * Section 14 proves the normaliser is correct. This proves markFailed USES it —
+ * without which the normaliser could be perfect and the write still broken,
+ * which is exactly the shape the original bug had.
+ *
+ * The client is a stub that captures the payload. No database is involved and
+ * nothing is written anywhere.
+ */
+{
+  const { markFailed } = await import('../lib/resume/imports.ts');
+
+  const captureClient = () => {
+    const captured = {};
+    const client = {
+      from() {
+        return {
+          update(payload) {
+            Object.assign(captured, payload);
+            /*
+             * Chainable and awaitable: markFailed ends at .eq(), discardImport
+             * continues to .in(). A stub supporting only one shape would fail
+             * on the other for reasons unrelated to what is under test.
+             */
+            const chain = {
+              eq: () => chain,
+              in: () => chain,
+              then: (resolve) => resolve({ error: null }),
+            };
+            return chain;
+          },
+        };
+      },
+    };
+    return { client, captured };
+  };
+
+  const cases = [
+    ['a real path list', 'work_experiences.3.end_date', 'work_experiences.3.end_date'],
+    ['an EMPTY STRING', '', null],
+    ['undefined', undefined, null],
+    ['a dangling separator', 'phone_e164,', 'phone_e164'],
+    ['a sentence', 'the candidate lives at 12 Example Street', null],
+    ['an email address', 'ada@example.test', null],
+    ['a SQL error', 'ERROR:  duplicate key value violates unique constraint', null],
+  ];
+
+  for (const [label, input, expected] of cases) {
+    const { client, captured } = captureClient();
+    await markFailed(client, 'id', 'unreadable', 'no_structured_output',
+      'invalid_structure', input);
+
+    check(`markFailed with ${label} writes ${JSON.stringify(expected)}`,
+      captured.provider_failure_detail === expected,
+      JSON.stringify(captured.provider_failure_detail));
+    check(`  and the value is one the column accepts`,
+      captured.provider_failure_detail === null ||
+        /^[A-Za-z0-9_.]+(,[A-Za-z0-9_.]+)*$/.test(captured.provider_failure_detail));
+  }
+
+  /*
+   * DISCARD MUST CLEAR THE PROVIDER COLUMNS TOO.
+   *
+   * `resume_imports_provider_code_only_when_failed` says a provider outcome
+   * belongs only to a failed row. Moving a row to `discarded` while leaving
+   * one behind violates it, the UPDATE is refused, and because the return
+   * value is not checked the candidate simply sees Dismiss do nothing.
+   */
+  {
+    const { discardImport } = await import('../lib/resume/imports.ts');
+    const { client, captured } = captureClient();
+    await discardImport(client, 'id');
+    check('discard clears the provider failure code',
+      captured.provider_failure_code === null, JSON.stringify(captured.provider_failure_code));
+    check('  and the provider failure detail',
+      captured.provider_failure_detail === null,
+      JSON.stringify(captured.provider_failure_detail));
+    check('  alongside the candidate-facing pair it always cleared',
+      captured.failure_class === null && captured.failure_code === null);
+    check('  so no column is left describing a failure the row no longer claims',
+      captured.status === 'discarded');
+  }
+  /* The rest of the row is still recorded, which is the whole point. */
+  const { client, captured } = captureClient();
+  await markFailed(client, 'id', 'unreadable', 'no_structured_output', 'invalid_structure', '');
+  check('an unusable detail does not stop the failure being recorded',
+    captured.status === 'failed' &&
+      captured.failure_class === 'unreadable' &&
+      captured.failure_code === 'no_structured_output' &&
+      captured.provider_failure_code === 'invalid_structure',
+    JSON.stringify(captured));
+}
+
 /* ---------------------------------------------------------------- report */
 
 console.log('\n========================================================');

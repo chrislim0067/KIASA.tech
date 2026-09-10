@@ -264,6 +264,51 @@ export async function markParsed(
 }
 
 /**
+ * A failure detail the column will definitely accept, or null.
+ *
+ * WHY THIS EXISTS: A DIAGNOSTIC MUST NEVER BREAK THE ROW IT DESCRIBES.
+ *
+ * `resume_imports_provider_failure_detail_shape` accepts null, or between one
+ * and three hundred characters matching `[A-Za-z0-9_.]+(,[A-Za-z0-9_.]+)*`. An
+ * empty string satisfies neither — and `?? null` would have let one through,
+ * because `??` catches null and undefined and not `''`.
+ *
+ * The consequence was not a missing diagnostic. It was the WHOLE UPDATE being
+ * refused: no status, no failure class, no provider code, and an import left
+ * stranded in `parsing` for ever. `markFailed`'s return value is not checked by
+ * its caller, so it would have been silent.
+ *
+ * So the value is normalised into something acceptable rather than trusted.
+ * The producer already emits only whole paths, and this is the second line:
+ * anything that arrives malformed — from a future caller, a refactor, a Zod
+ * that changes shape — becomes null and the row is still recorded.
+ */
+const DETAIL_SHAPE = /^[A-Za-z0-9_.]+(,[A-Za-z0-9_.]+)*$/;
+
+export function usableDetail(value: string | undefined): string | null {
+  if (typeof value !== 'string') return null;
+
+  /*
+   * REJECT, DO NOT LAUNDER.
+   *
+   * An earlier version of this stripped every character outside the path
+   * alphabet. That satisfied the column — and quietly turned "the candidate
+   * lives at 12 Example Street" into "thecandidatelivesat12ExampleStreet",
+   * which matches the shape perfectly and still contains the address. Sanitising
+   * prose into something path-shaped defeats the entire point of the
+   * constraint: it launders content into a column that exists to be incapable
+   * of holding any.
+   *
+   * So only SEPARATOR tidying is done — a dangling or doubled comma, which is a
+   * formatting artefact rather than content — and anything that is still not a
+   * path list is refused outright.
+   */
+  const tidied = value.trim().replace(/,+/g, ',').replace(/^,|,$/g, '');
+  if (tidied === '' || tidied.length > 300) return null;
+  return DETAIL_SHAPE.test(tidied) ? tidied : null;
+}
+
+/**
  * Record a failure.
  *
  * `failureCode` is a fixed vocabulary from `lib/resume/extract.ts` — never a
@@ -299,7 +344,7 @@ export async function markFailed(
        * keep a stale provider code describing a different attempt.
        */
       provider_failure_code: providerFailureCode ?? null,
-      provider_failure_detail: providerFailureDetail ?? null,
+      provider_failure_detail: usableDetail(providerFailureDetail),
     })
     .eq('id', importId);
 
