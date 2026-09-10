@@ -169,6 +169,13 @@ jobs:
       - name: Local Claude mode (offline, mocked)
         run: npm run test:local
 
+      # The one-slot task lifecycle: schemas, transitions, replay, fencing,
+      # pause semantics and the closed refusal vocabulary — plus structural
+      # assertions on migration 27, including that no worker-callable function
+      # can write a submission status.
+      - name: Worker task lifecycle (offline)
+        run: npm run test:tasks
+
       # The one-slot vertical slice against the local fixture, plus structural
       # assertions on migration 22. Five of the six fixture pages must stop
       # with nothing typed.

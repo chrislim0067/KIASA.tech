@@ -22,6 +22,9 @@ interface WorkerView {
   status: Status;
   supervisor_id: string | null;
   slot_index: number | null;
+  slot_readiness: string | null;
+  pause_reason: string | null;
+  stop_reason: string | null;
   last_heartbeat_at: string | null;
   paired_at: string | null;
   expires_at: string | null;
@@ -50,6 +53,74 @@ const STATUS_COPY: Record<Status, { label: string; detail: string }> = {
     detail: 'The connection has aged out. Pair again to reconnect.',
   },
 };
+
+/**
+ * Why a slot stopped, in words.
+ *
+ * EVERY KEY IS A VALUE THE DATABASE CONSTRAINS. The slot's `pause_reason` and
+ * `stop_reason` columns are CHECK-constrained to these exact strings, so this
+ * map is total and nothing arbitrary can reach a screen. An unrecognised value
+ * — which would mean the vocabulary grew without this map — falls back to a
+ * sentence that says something true rather than showing the raw token.
+ */
+const REASON_COPY: Record<string, string> = {
+  // Waiting for something a person must do.
+  employer_authentication_required: 'The employer’s site wants you to sign in.',
+  claude_authentication_required: 'Claude on your computer needs you to sign in again.',
+  captcha_detected: 'The site showed a CAPTCHA. KIASA does not solve those.',
+  anti_bot_challenge_detected: 'The site showed a bot check. KIASA stopped rather than push past it.',
+  mfa_required: 'The site asked for a second factor. Only you can provide that.',
+  sensitive_information_requested: 'The form asked for something sensitive, so KIASA stopped.',
+  unknown_page: 'KIASA did not recognise the page and stopped rather than guess.',
+  unknown_question: 'A question came up that KIASA has no answer for.',
+  unsupported_site: 'This site is not one KIASA knows how to use.',
+  control_plane_paused: 'Paused from here.',
+  // Ending.
+  candidate_requested: 'You asked it to stop.',
+  kill_switch: 'The kill switch was used.',
+  supervisor_shutdown: 'The worker shut down normally.',
+  slot_crashed: 'The worker slot crashed.',
+  lease_lost: 'The worker lost its claim on the task.',
+  protocol_violation: 'The worker sent something the server refused.',
+  update_required: 'The worker needs updating before it can run again.',
+};
+
+/**
+ * Why an action was refused, in words.
+ *
+ * The server's refusal vocabulary is closed — see WORKER_OPERATION_FAILURES —
+ * and each member gets a sentence. Nothing from an exception, a SQL error or a
+ * response body is ever rendered: the key is looked up here or it is not shown.
+ */
+const REFUSAL_COPY: Record<string, string> = {
+  registration_failed: 'Your computer could not be registered. Try pairing again.',
+  pause_reason_required: 'The worker paused without saying why, so nothing was recorded.',
+  stop_reason_required: 'The worker stopped without saying why, so nothing was recorded.',
+  failure_reason_required: 'The worker reported a failure without naming a cause.',
+  unexpected_reason: 'The worker sent a reason where none belongs.',
+  slot_busy: 'That computer is already working on something.',
+  no_task_available: 'There is nothing approved for it to work on.',
+  no_active_lease: 'That work had already been handed back.',
+  stale_fence: 'Another worker took over this task. The older one was refused.',
+  lease_expired: 'The worker went quiet for too long and lost the task.',
+  task_not_active: 'That task is no longer in progress.',
+  attempts_exhausted: 'This task has been attempted too many times.',
+  revoked: 'That connection was turned off.',
+  expired: 'That connection has aged out.',
+  refused: 'The server refused that. Nothing was changed.',
+};
+
+/** A refusal a person can read, or a neutral sentence — never a raw code. */
+export function refusalCopy(reason: string | null): string | null {
+  if (reason === null) return null;
+  return REFUSAL_COPY[reason] ?? 'That could not be done. Nothing was changed.';
+}
+
+/** A pause or stop reason a person can read. */
+export function reasonCopy(reason: string | null): string | null {
+  if (reason === null) return null;
+  return REASON_COPY[reason] ?? 'The worker stopped for a reason this page does not recognise.';
+}
 
 export default function WorkerPairingPanel() {
   const [worker, setWorker] = useState<WorkerView | null>(null);
@@ -94,7 +165,13 @@ export default function WorkerPairingPanel() {
       const response = await fetch('/api/worker/pair', { method: 'POST' });
       const payload = await response.json();
       if (!payload?.ok) {
-        setError('Could not start pairing. Please try again.');
+        /*
+         * The server sends a code from a closed list; `refusalCopy` turns it
+         * into a sentence or into a neutral one. The code itself is never
+         * rendered, and neither is anything else from the response.
+         */
+        setError(refusalCopy(typeof payload?.reason === 'string' ? payload.reason : null)
+          ?? 'Could not start pairing. Please try again.');
         return;
       }
       setCode(payload.pairing_secret);
@@ -123,11 +200,36 @@ export default function WorkerPairingPanel() {
   const status = worker?.status ?? 'not_paired';
   const copy = STATUS_COPY[status];
 
+  /*
+   * A sentence about the slot, or nothing. Built only from values the database
+   * constrains — a readiness and a reason, each from a CHECK list — and looked
+   * up in a map, so no server string is ever rendered directly.
+   */
+  const slotReason = reasonCopy(worker?.pause_reason ?? worker?.stop_reason ?? null);
+  const slotSentence =
+    worker?.slot_readiness === 'paused'
+      ? `Paused. ${slotReason ?? ''}`.trim()
+      : worker?.slot_readiness === 'stopped' || worker?.slot_readiness === 'stopping'
+        ? `Stopped. ${slotReason ?? ''}`.trim()
+        : worker?.slot_readiness === 'working'
+          ? 'Working on a task.'
+          : worker?.slot_readiness === 'crashed'
+            ? 'The worker slot crashed. Pair again or restart it.'
+            : null;
+
   return (
     <div className="kprof__fieldset">
       <p className="kprof__hint">
         <strong>{copy.label}.</strong> {copy.detail}
       </p>
+
+      {/*
+        THE SLOT IS SHOWN BESIDE THE PAIRING, NOT INSTEAD OF IT. An online
+        worker whose slot is paused is still online; conflating the two would
+        make "not responding" and "waiting for you" look the same, and they
+        need different actions from a candidate.
+      */}
+      {slotSentence ? <p className="kprof__hint">{slotSentence}</p> : null}
 
       {worker?.last_heartbeat_at ? (
         <p className="kprof__hint">

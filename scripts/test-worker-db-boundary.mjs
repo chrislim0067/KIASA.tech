@@ -229,8 +229,13 @@ try {
     auth.ok && auth.userId === alice.id);
 
   const identity = auth.ok ? { credentialId: auth.credentialId, tokenHash: auth.tokenHash } : null;
-  const beat = (sequence, readiness = 'ready', lifecycle = 'running') =>
-    E.heartbeat(store, identity, { sequence, lifecycle, slot_readiness: readiness }, new Date());
+  const beat = (sequence, readiness = 'ready', lifecycle = 'running', reason = undefined) =>
+    E.heartbeat(
+      store,
+      identity,
+      { sequence, lifecycle, slot_readiness: readiness, ...(reason ? { reason } : {}) },
+      new Date()
+    );
 
   const first = await beat(1);
   check('THE HEARTBEAT IS APPLIED BY THE DATABASE', first.ok === true && first.applied === true,
@@ -267,11 +272,18 @@ try {
    * constraint. Both directions are checked because only the second one fails
    * quietly.
    */
-  const stopped = await beat(3, 'stopped', 'stopping');
-  check('a stopped slot is accepted', stopped.ok === true && stopped.applied === true);
-  check('  with the reason the constraint requires',
+  const noReason = await beat(3, 'stopped', 'stopping');
+  check('a stopped slot with NO reason is refused',
+    noReason.ok === false && noReason.reason === 'stop_reason_required',
+    noReason.ok ? 'ACCEPTED' : noReason.reason);
+
+  const stopped = await beat(3, 'stopped', 'stopping', 'supervisor_shutdown');
+  check('a stopped slot that names its reason is accepted',
+    stopped.ok === true && stopped.applied === true, stopped.ok ? '' : stopped.reason);
+  check('  and the reason stored is the one the WORKER sent',
     sql(`select readiness || '/' || coalesce(stop_reason, 'none') from public.worker_slots
-         where id = '${issued.slotId}'`) === 'stopped/supervisor_shutdown');
+         where id = '${issued.slotId}'`) === 'stopped/supervisor_shutdown',
+    'migration 26 invented this value; migration 27 requires it to be sent');
   const restarted = await beat(4, 'ready');
   check('and a slot that reports ready again clears it', restarted.applied === true);
   check('  leaving no stale reason behind',
@@ -484,9 +496,10 @@ try {
       sequence: 99,
       lifecycle: 'running',
       readiness: 'ready',
+      reason: null,
     });
     check('  and the boundary refuses the write even with a valid token hash',
-      afterBeat.applied === false);
+      afterBeat.applied === false && afterBeat.reason === 'revoked', afterBeat.reason);
     check('  the sequence did not move',
       Number(sql(`select heartbeat_sequence from public.worker_supervisors
                   where id = '${issued.supervisorId}'`)) === 4);
@@ -572,6 +585,7 @@ try {
       sequence: 100,
       lifecycle: 'running',
       readiness: 'ready',
+      reason: null,
     });
     check('  AND A REVOKED SUPERVISOR ACCEPTS NO HEARTBEAT', zombie.applied === false,
       'the credential was never revoked; the machine was disowned');
@@ -693,17 +707,379 @@ try {
     await refuse('  and a hash matching no invitation is refused',
       base, 'not_found');
 
+    /*
+     * SIX ARGUMENTS, NOT FIVE. Migration 27 dropped the old overload, so a
+     * call missing `p_reason` matches no function and PostgREST answers with
+     * nothing at all — which is how this check failed while the behaviour it
+     * describes was perfectly correct.
+     */
     const { data: hb } = await svcClient().rpc('worker_record_heartbeat', {
       p_credential_id: randomUUID(),
       p_token_hash: 'c'.repeat(64),
       p_sequence: 1,
       p_lifecycle: 'running',
       p_readiness: 'paused',
+      p_reason: null,
     });
     check('a paused slot is refused rather than given an invented reason',
       Array.isArray(hb) && hb[0]?.reason === 'pause_reason_required',
       hb?.[0]?.reason ?? 'no row');
   }
+  /* ============================ 16. THE TASK LIFECYCLE, END TO END */
+
+  section('16. A candidate approves a task and their worker claims it');
+
+  const hank = await makeCandidate('hank');
+  const hankInvite = await E.startPairing(store, hank.id, new Date());
+  const hankWorker = await E.redeemPairing(store, redeemBody(hankInvite.secret), new Date());
+  check('a worker is paired for the task tests', hankWorker.ok === true,
+    hankWorker.ok ? '' : hankWorker.reason);
+  const hankAuth = await E.authenticateWorker(store, `Bearer ${hankWorker.token}`, new Date());
+  const hankId = { credentialId: hankAuth.credentialId, tokenHash: hankAuth.tokenHash };
+
+  /*
+   * THE CANDIDATE'S OWN SESSION MAKES AND APPROVES THE TASK.
+   *
+   * Not psql, and not the service role: this is the half of the protocol that
+   * runs under RLS, and doing it any other way would skip the only check that
+   * matters here. The task walks the real pipeline to `queued`, because
+   * `queued` IS the approval gate the worker's claim tests for.
+   */
+  {
+    const { data: job, error: jobError } = await hank.session
+      .from('jobs')
+      .insert({
+        user_id: hank.id,
+        submitted_url: 'https://example.test/synthetic/role-1',
+        canonical_url: 'https://example.test/synthetic/role-1',
+        source: 'user_link',
+      })
+      .select('id')
+      .maybeSingle();
+    check('the candidate creates a job through their own session', !jobError && job !== null,
+      jobError?.message ?? 'created');
+
+    const { data: task, error: taskError } = await hank.session
+      .from('automation_tasks')
+      .insert({
+        user_id: hank.id,
+        job_id: job.id,
+        mode: 'claude_max_assisted',
+        idempotency_key: 'synthetic-task-lifecycle-0001',
+        correlation_id: randomUUID(),
+      })
+      .select('id, status')
+      .maybeSingle();
+    check('  and a task, which starts at received', !taskError && task?.status === 'received',
+      taskError?.message ?? task?.status);
+
+    // An illegal jump is refused by the trigger, for the candidate too.
+    const { error: jump } = await hank.session
+      .from('automation_tasks')
+      .update({ status: 'queued' })
+      .eq('id', task.id);
+    check('  a jump straight to queued is refused', jump !== null,
+      jump ? 'refused by the transition guard' : 'ALLOWED');
+
+    for (const next of ['validated', 'snapshot_stored', 'normalized', 'scored', 'queued']) {
+      const { error } = await hank.session
+        .from('automation_tasks')
+        .update({ status: next })
+        .eq('id', task.id);
+      if (error) check(`  advancing to ${next}`, false, error.message);
+    }
+    check('  the candidate walks it to queued', sql(
+      `select status from public.automation_tasks where user_id = '${hank.id}'`) === 'queued');
+  }
+
+  section('17. Forty concurrent claims produce exactly one lease');
+
+  {
+    const results = await Promise.all(
+      Array.from({ length: 40 }, () => E.claimTask(store, hankId))
+    );
+    const winners = results.filter((r) => r.ok);
+    check('EXACTLY ONE CLAIM WINS', winners.length === 1, `${winners.length} winner(s)`);
+    check('  every loser was refused with a bounded reason',
+      results.filter((r) => !r.ok).every((r) =>
+        E.WORKER_OPERATION_FAILURES.includes(r.reason)),
+      [...new Set(results.filter((r) => !r.ok).map((r) => r.reason))].join(','));
+    check('  exactly one lease row exists', countOf('task_leases', hank.id) === 1,
+      String(countOf('task_leases', hank.id)));
+    check('  and exactly one of them is active',
+      Number(sql(`select count(*) from public.task_leases
+                  where user_id = '${hank.id}' and released_at is null`)) === 1);
+    check('  the task is being worked on', sql(
+      `select status from public.automation_tasks where user_id = '${hank.id}'`) === 'processing');
+    check('  the fence rose exactly once', Number(sql(
+      `select fence_token from public.automation_tasks where user_id = '${hank.id}'`)) === 1,
+      'forty attempts, one increment');
+    check('  and the attempt was counted exactly once', Number(sql(
+      `select attempt from public.automation_tasks where user_id = '${hank.id}'`)) === 1);
+
+    const fence = winners[0].fenceToken;
+
+    section('18. Renewal is bound to the fence and to the credential');
+
+    const stale = await E.renewLease(store, hankId, { fence_token: fence + 1 });
+    check('a fence from the future is refused',
+      stale.ok === false && stale.reason === 'stale_fence', stale.reason);
+    const behind = await E.renewLease(store, hankId, { fence_token: fence });
+    check('  the right fence is accepted', behind.ok === true, behind.ok ? '' : behind.reason);
+
+    section('19. Report moves the task, and a replay is refused');
+
+    const done = await E.reportTask(store, hankId, {
+      fence_token: fence,
+      disposition: 'completed',
+    });
+    check('the worker reports completion', done.ok === true, done.ok ? '' : done.reason);
+    check('  THE TASK LANDS IN manual_review, NOT ready_to_submit', sql(
+      `select status from public.automation_tasks where user_id = '${hank.id}'`) === 'manual_review',
+      'no worker path reaches submission');
+    check('  the lease was released as completed', sql(
+      `select release_reason from public.task_leases where user_id = '${hank.id}'`) === 'completed');
+
+    const replay = await E.reportTask(store, hankId, {
+      fence_token: fence,
+      disposition: 'completed',
+    });
+    check('REPLAYING THE REPORT IS REFUSED, NOT REPEATED',
+      replay.ok === false && replay.reason === 'no_active_lease', replay.reason);
+    check('  and the task did not move again', sql(
+      `select status from public.automation_tasks where user_id = '${hank.id}'`) === 'manual_review');
+
+    const afterTerminal = await E.claimTask(store, hankId);
+    check('there is nothing left to claim',
+      afterTerminal.ok === false && afterTerminal.reason === 'no_task_available',
+      afterTerminal.reason);
+  }
+
+  section('20. Events: allow-listed, bounded, and free of content');
+
+  {
+    const kinds = sql(`select coalesce(string_agg(distinct kind, ','), 'none')
+                       from public.worker_events where user_id = '${hank.id}'`);
+    /*
+     * FIVE KINDS, NOT SIX. There is no `slot_heartbeat` here because this
+     * candidate's slot never changed readiness — it was claimed, renewed and
+     * reported without a single readiness transition. That absence is the
+     * transition-only rule working; section 21 exercises the other direction.
+     */
+    check('the cycle recorded exactly the events it caused',
+      kinds.split(',').sort().join(',') ===
+        'lease_acquired,lease_released,lease_renewed,task_completed,task_started',
+      kinds);
+
+    const bad = sql(`select coalesce(string_agg(distinct kind, ','), 'none')
+      from public.worker_events
+      where kind not in (
+        'supervisor_registered', 'supervisor_revoked', 'supervisor_heartbeat',
+        'slot_registered', 'slot_heartbeat', 'slot_paused', 'slot_stopped', 'slot_crashed',
+        'lease_acquired', 'lease_renewed', 'lease_expired', 'lease_released', 'lease_refused',
+        'task_started', 'task_paused', 'task_completed', 'task_failed',
+        'local_claude_used', 'local_claude_unavailable', 'manual_fallback_used')`);
+    check('  no event kind outside the table’s own list', bad === 'none', bad);
+
+    const widest = Number(sql(`select coalesce(max(length(detail::text)), 0)
+                               from public.worker_events where user_id = '${hank.id}'`));
+    check('  the widest payload is far inside the 2000-character bound', widest <= 200,
+      `${widest} chars`);
+
+    const keys = sql(`select coalesce(string_agg(distinct k, ','), 'none')
+                      from public.worker_events e,
+                           lateral jsonb_object_keys(e.detail) k
+                      where e.user_id = '${hank.id}'`);
+    check('  and every payload key is one of three scalars',
+      keys.split(',').sort().join(',') === 'disposition,fence', keys);
+
+    const leaked = sql(`select count(*) from public.worker_events
+      where detail::text ~ '[0-9a-f]{64}'
+         or detail::text ~ 'https?://'
+         or detail::text ~ '\\.[A-Za-z0-9_-]{43}'`);
+    check('  NO EVENT CARRIES A HASH, A URL OR A TOKEN', leaked === '0', `${leaked} row(s)`);
+  }
+
+  section('21. Pause semantics, against the constraints that caused them');
+
+  {
+    const beat = (sequence, readiness, reason) =>
+      E.heartbeat(store, hankId, {
+        sequence,
+        lifecycle: 'running',
+        slot_readiness: readiness,
+        ...(reason === undefined ? {} : { reason }),
+      }, new Date());
+
+    const noReason = await beat(50, 'paused');
+    check('pausing without a reason is refused',
+      noReason.ok === false && noReason.reason === 'pause_reason_required',
+      noReason.ok ? 'ACCEPTED' : noReason.reason);
+    check('  and the slot did not move', sql(
+      `select readiness from public.worker_slots where user_id = '${hank.id}'`) !== 'paused');
+
+    const paused = await beat(51, 'paused', 'mfa_required');
+    check('pausing WITH an allowed reason works', paused.ok === true,
+      paused.ok ? '' : paused.reason);
+    check('  the slot carries the reason', sql(
+      `select readiness || '/' || coalesce(pause_reason, 'none')
+       from public.worker_slots where user_id = '${hank.id}'`) === 'paused/mfa_required');
+    check('  and it was recorded once', Number(sql(
+      `select count(*) from public.worker_events
+       where user_id = '${hank.id}' and kind = 'slot_paused'`)) === 1);
+
+    const resumed = await beat(52, 'ready');
+    check('returning to ready clears the reason', resumed.ok === true);
+    check('  BOTH reason columns are empty', sql(
+      `select coalesce(pause_reason, 'none') || '/' || coalesce(stop_reason, 'none')
+       from public.worker_slots where user_id = '${hank.id}'`) === 'none/none',
+      'the constraint binds in this direction too');
+
+    const stopNoReason = await beat(53, 'stopped');
+    check('stopping without a reason is refused',
+      stopNoReason.ok === false && stopNoReason.reason === 'stop_reason_required',
+      stopNoReason.reason);
+    const stopped = await beat(54, 'stopped', 'supervisor_shutdown');
+    check('  with one, the slot stops', stopped.ok === true, stopped.ok ? '' : stopped.reason);
+    check('  carrying the stop reason and no pause reason', sql(
+      `select coalesce(pause_reason, 'none') || '/' || coalesce(stop_reason, 'none')
+       from public.worker_slots where user_id = '${hank.id}'`) === 'none/supervisor_shutdown');
+
+    const readyAgain = await beat(55, 'ready');
+    check('and ready again clears the stop reason', readyAgain.ok === true && sql(
+      `select coalesce(stop_reason, 'none') from public.worker_slots
+       where user_id = '${hank.id}'`) === 'none');
+
+    const repeats = Number(sql(`select count(*) from public.worker_events
+      where user_id = '${hank.id}' and kind = 'slot_heartbeat'`));
+    await beat(56, 'ready');
+    await beat(57, 'ready');
+    await beat(58, 'ready');
+    check('THREE MORE READY BEATS WRITE NO EVENTS', Number(sql(
+      `select count(*) from public.worker_events
+       where user_id = '${hank.id}' and kind = 'slot_heartbeat'`)) === repeats,
+      'on transition only — the bounded-rate rule');
+  }
+
+  section('22. A revoked worker can do nothing to a task');
+
+  {
+    const ivy = await makeCandidate('ivy');
+    const invite = await E.startPairing(store, ivy.id, new Date());
+    const worker = await E.redeemPairing(store, redeemBody(invite.secret), new Date());
+    const auth = await E.authenticateWorker(store, `Bearer ${worker.token}`, new Date());
+    const id = { credentialId: auth.credentialId, tokenHash: auth.tokenHash };
+
+    sql(`update public.worker_credentials
+         set revoked_at = now(), revoked_reason = 'candidate_requested'
+         where user_id = '${ivy.id}'`);
+
+    const claim = await E.claimTask(store, id);
+    check('a revoked credential cannot claim',
+      claim.ok === false && claim.reason === 'revoked', claim.reason);
+    const renew = await E.renewLease(store, id, { fence_token: 1 });
+    check('  nor renew', renew.ok === false && renew.reason === 'revoked', renew.reason);
+    const report = await E.reportTask(store, id, { fence_token: 1, disposition: 'released' });
+    check('  nor report', report.ok === false && report.reason === 'revoked', report.reason);
+    check('  and it wrote no events at all', countOf('worker_events', ivy.id) === 0,
+      String(countOf('worker_events', ivy.id)));
+  }
+
+  section('23. Cross-candidate isolation over tasks, leases and events');
+
+  {
+    for (const table of ['automation_tasks', 'task_leases', 'worker_events']) {
+      const { data } = await bob.session.from(table).select('id');
+      check(`B reads no row of ${table}`, (data ?? []).length === 0,
+        `${(data ?? []).length} row(s)`);
+    }
+    const { data: mine } = await hank.session.from('worker_events').select('id, user_id');
+    check("H sees only H's own events",
+      (mine ?? []).length > 0 && (mine ?? []).every((e) => e.user_id === hank.id),
+      `${(mine ?? []).length} row(s)`);
+
+    // And B's worker, holding a perfectly valid credential of its own, finds
+    // nothing of H's to take.
+    const bobInvite = await E.startPairing(store, bob.id, new Date());
+    const bobWorker = await E.redeemPairing(store, redeemBody(bobInvite.secret), new Date());
+    const bobAuth = await E.authenticateWorker(store, `Bearer ${bobWorker.token}`, new Date());
+    const bobClaim = await E.claimTask(store, {
+      credentialId: bobAuth.credentialId,
+      tokenHash: bobAuth.tokenHash,
+    });
+    check("B's worker cannot claim H's work",
+      bobClaim.ok === false && bobClaim.reason === 'no_task_available',
+      bobClaim.ok ? 'CLAIMED IT' : bobClaim.reason);
+
+    for (const fn of ['worker_claim_task', 'worker_renew_lease', 'worker_report_task']) {
+      const { error } = await bob.session.rpc(fn, {
+        p_credential_id: randomUUID(),
+        p_token_hash: 'a'.repeat(64),
+        ...(fn === 'worker_claim_task'
+          ? {}
+          : fn === 'worker_renew_lease'
+            ? { p_fence_token: 1 }
+            : { p_fence_token: 1, p_disposition: 'released', p_reason: null }),
+      });
+      check(`  and cannot call ${fn}() at all`, error !== null,
+        error ? 'refused by the privilege' : 'EXECUTED');
+    }
+  }
+
+  section('24. The boundary did not widen');
+
+  {
+    const tableGrants = sql(`select coalesce(string_agg(distinct table_name, ','), 'none')
+      from information_schema.role_table_grants
+      where table_schema = 'public'
+        and table_name in ('worker_supervisors', 'worker_slots', 'automation_tasks',
+                           'task_leases', 'worker_events')
+        and grantee = 'service_role'`);
+    check('SERVICE_ROLE STILL HOLDS NO TABLE GRANT ON ANY OF THEM',
+      tableGrants === 'none', tableGrants);
+
+    const definers = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.prosecdef`);
+    check('  the definer allow-list is exactly six',
+      definers === 'worker_claim_task,worker_record_heartbeat,worker_redeem_pairing,' +
+        'worker_renew_lease,worker_report_task,worker_resolve_credential',
+      definers);
+
+    const callable = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and has_function_privilege('service_role', p.oid, 'EXECUTE')`);
+    check('  and service_role may execute exactly five of them',
+      callable === 'worker_claim_task,worker_record_heartbeat,worker_redeem_pairing,' +
+        'worker_renew_lease,worker_report_task',
+      callable);
+    check('  the credential resolver is reachable by nobody',
+      !callable.includes('worker_resolve_credential'),
+      'it runs only inside another definer function');
+
+    const browser = sql(`select coalesce(string_agg(p.proname || ':' || r.rolname, ','), 'none')
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      cross join (select rolname from pg_roles where rolname in ('anon', 'authenticated')) r
+      where n.nspname = 'public' and p.prosecdef
+        and has_function_privilege(r.rolname, p.oid, 'EXECUTE')`);
+    check('  and no browser role can execute any of them', browser === 'none', browser);
+  }
+
+  section('25. Account deletion is still clean with tasks, leases and events');
+
+  {
+    const { error } = await svcClient().auth.admin.deleteUser(hank.id);
+    check('DELETING A CANDIDATE WITH A FULL TASK HISTORY SUCCEEDS', !error,
+      error?.message ?? 'deleted');
+    for (const table of ['automation_tasks', 'task_leases', 'worker_events',
+                         'worker_slots', 'worker_supervisors', 'worker_credentials']) {
+      check(`  ${table} is empty for them`, countOf(table, hank.id) === 0,
+        String(countOf(table, hank.id)));
+    }
+  }
+
 } catch (err) {
   failed++;
   console.error(err);

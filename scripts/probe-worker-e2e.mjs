@@ -58,6 +58,9 @@ function check(label, ok, detail = '') {
 
 const E = await import('../lib/worker/endpoints.ts');
 const P = await import('../lib/worker/pairing.ts');
+const HTTP = await import('../lib/worker/http.ts');
+
+import { createTaskMemory } from './lib/worker-task-memory.mjs';
 
 /* ------------------------------------------- the disposable control plane */
 
@@ -67,8 +70,16 @@ function makeStore() {
   const supervisors = new Map();
   const slots = new Map();
   const beats = [];
+  // The task, lease and event half — one implementation, shared with
+  // scripts/test-worker-endpoints.mjs so the two cannot drift.
+  const taskMemory = createTaskMemory({ credentials, uuid: randomUUID });
   return {
     pairings, credentials, supervisors, slots, beats,
+    tasks: taskMemory.tasks, leases: taskMemory.leases, events: taskMemory.events,
+    seedTask: taskMemory.seedTask,
+    claimTask: taskMemory.claimTask,
+    renewLease: taskMemory.renewLease,
+    reportTask: taskMemory.reportTask,
     async createPairing(row) {
       for (const [, p] of pairings) {
         if (p.user_id === row.user_id && !p.redeemed_at && !p.revoked_at) {
@@ -146,18 +157,29 @@ function makeStore() {
       // Resolved from the credential the id AND hash match, exactly as
       // worker_record_heartbeat resolves it.
       const c = credentials.get(input.credentialId);
-      if (!c || c.token_hash !== input.tokenHash || c.revoked_at !== null) {
-        return { applied: false };
+      if (!c || c.token_hash !== input.tokenHash) {
+        return { ok: false, reason: 'not_found', applied: false };
       }
+      if (c.revoked_at !== null) return { ok: false, reason: 'revoked', applied: false };
+
+      const slot = c.slot_id ? slots.get(c.slot_id) : null;
+      const previous = slot ? slot.readiness : null;
+      if (slot) {
+        // The pause and stop rules, before anything is written.
+        const refusal = taskMemory.applyReadiness(slot, input.readiness, input.reason);
+        if (refusal) return { ok: false, reason: refusal, applied: false };
+      }
+
       const last = beats.filter((b) => b.supervisorId === c.supervisor_id).pop();
-      if (last && input.sequence <= last.sequence) return { applied: false };
+      if (last && input.sequence <= last.sequence) {
+        return { ok: true, reason: 'stale_sequence', applied: false };
+      }
       const at = new Date().toISOString();
       beats.push({ ...input, supervisorId: c.supervisor_id, slotId: c.slot_id, at });
       const s = supervisors.get(c.supervisor_id);
       if (s) s.last_heartbeat_at = at;
-      const slot = c.slot_id ? slots.get(c.slot_id) : null;
-      if (slot) slot.readiness = input.readiness;
-      return { applied: true };
+      if (slot) taskMemory.recordSlotTransition(c, slot, previous, input.readiness, input.reason);
+      return { ok: true, reason: 'applied', applied: true };
     },
   };
 }
@@ -203,6 +225,9 @@ function memoryBacking() {
     revokeCredential: () => {
       one(s.credentials).revoked_at = new Date().toISOString();
     },
+    seedTask: () => s.seedTask('00000000-0000-4000-8000-0000000000aa'),
+    taskStatus: () => (one(s.tasks) ? one(s.tasks).status : 'none'),
+    eventKinds: () => [...new Set(s.events.map((e) => e.kind))].sort().join(','),
     cleanup: async () => {},
   };
 }
@@ -278,6 +303,31 @@ async function databaseBacking() {
       q(`update public.worker_credentials
          set revoked_at = now(), revoked_reason = 'candidate_requested'
          where user_id = '${candidate}'`),
+    /*
+     * A synthetic job and task, walked through the real pipeline to `queued`.
+     * `queued` is the approval gate the worker's claim tests for, so a task
+     * inserted straight into it would skip the only state that matters.
+     */
+    seedTask: () => {
+      const jobId = q(`insert into public.jobs (user_id, submitted_url, canonical_url, source)
+        values ('${candidate}', 'https://example.test/probe/role-1',
+                'https://example.test/probe/role-1', 'user_link')
+        returning id`);
+      const taskId = q(`insert into public.automation_tasks
+        (user_id, job_id, mode, idempotency_key, correlation_id)
+        values ('${candidate}', '${jobId}', 'claude_max_assisted',
+                'synthetic-probe-task-000001', gen_random_uuid())
+        returning id`);
+      for (const next of ['validated', 'snapshot_stored', 'normalized', 'scored', 'queued']) {
+        q(`update public.automation_tasks set status = '${next}' where id = '${taskId}'`);
+      }
+      return taskId;
+    },
+    taskStatus: () =>
+      blank(q(`select coalesce(status, '') ${mine('automation_tasks')} limit 1`)) ?? 'none',
+    eventKinds: () =>
+      q(`select coalesce(string_agg(distinct kind, ',' order by kind), '')
+         ${mine('worker_events')}`),
     cleanup: async () => {
       await admin.auth.admin.deleteUser(candidate).catch(() => {});
     },
@@ -287,7 +337,7 @@ async function databaseBacking() {
 const inspect = DATABASE_MODE ? await databaseBacking() : memoryBacking();
 const store = inspect.store;
 const CANDIDATE = inspect.candidate;
-const seen = { redeem: 0, heartbeat: 0, unauthorised: 0 };
+const seen = { redeem: 0, heartbeat: 0, unauthorised: 0, claim: 0, renew: 0, report: 0 };
 
 const readBody = (req) =>
   new Promise((resolve) => {
@@ -336,6 +386,45 @@ const server = createServer(async (req, res) => {
     return send(res, 200, { ok: true, applied: result.applied });
   }
 
+  /*
+   * THE TASK ROUTES, THROUGH THE SAME ENDPOINT FUNCTIONS THE APP USES.
+   *
+   * The status mapping is `lib/worker/http.ts`'s, imported rather than
+   * retyped: a probe that mapped refusals its own way would prove the worker
+   * copes with THIS server rather than with the real one.
+   */
+  const taskRoute = url.pathname.startsWith('/api/worker/task/') && req.method === 'POST';
+  if (taskRoute) {
+    const auth = await E.authenticateWorker(store, req.headers.authorization ?? null, now);
+    if (!auth.ok) {
+      seen.unauthorised += 1;
+      return send(res, HTTP.authStatus(auth.reason), { ok: false, reason: auth.reason });
+    }
+    const identity = { credentialId: auth.credentialId, tokenHash: auth.tokenHash };
+
+    if (url.pathname === '/api/worker/task/claim') {
+      seen.claim += 1;
+      const r = await E.claimTask(store, identity);
+      if (!r.ok) return send(res, HTTP.operationStatus(r.reason), { ok: false, reason: r.reason });
+      return send(res, 200, {
+        ok: true, task_id: r.taskId, lease_id: r.leaseId,
+        fence_token: r.fenceToken, lease_expires_at: r.leaseExpiresAt,
+      });
+    }
+    if (url.pathname === '/api/worker/task/renew') {
+      seen.renew += 1;
+      const r = await E.renewLease(store, identity, await readBody(req));
+      if (!r.ok) return send(res, HTTP.operationStatus(r.reason), { ok: false, reason: r.reason });
+      return send(res, 200, { ok: true, lease_expires_at: r.expiresAt });
+    }
+    if (url.pathname === '/api/worker/task/report') {
+      seen.report += 1;
+      const r = await E.reportTask(store, identity, await readBody(req));
+      if (!r.ok) return send(res, HTTP.operationStatus(r.reason), { ok: false, reason: r.reason });
+      return send(res, 200, { ok: true, disposition: r.disposition });
+    }
+  }
+
   return send(res, 404, { ok: false, reason: 'not_found' });
 });
 
@@ -380,6 +469,9 @@ try {
   check('  the plaintext is nowhere in the row',
     !inspect.pairingRowsText().includes(P.normalisePairingSecret(started.secret)));
 
+  // One approved task, waiting. The worker claims it during its probe run.
+  inspect.seedTask();
+
   section('2. A real worker redeems it and heartbeats');
 
   const run = await runWorker(['--probe'], started.secret);
@@ -396,6 +488,28 @@ try {
   check('  none was rejected', seen.unauthorised === 0, `${seen.unauthorised} rejected`);
   check('  the supervisor now has a check-in time',
     typeof inspect.supervisorLastBeat() === 'string');
+
+  section('2b. The worker ran one control-plane task cycle');
+
+  check('it claimed the approved task', /claimed task/.test(log),
+    log.split('\n').find((l) => /claimed task|no task claimed/.test(l)) ?? '(no line)');
+  check('  exactly one claim request reached the server', seen.claim === 1, String(seen.claim));
+  check('  it renewed the lease', seen.renew === 1, String(seen.renew));
+  check('  and reported once', seen.report === 1, String(seen.report));
+  check('  the task went back to the queue', inspect.taskStatus() === 'queued',
+    inspect.taskStatus());
+  check('  NO APPLICATION WAS ATTEMPTED', /No application was attempted/.test(log),
+    'the worker holds and returns a lease; it does not do the work');
+  check('  the cycle was recorded', /lease_acquired/.test(inspect.eventKinds()) &&
+    /lease_released/.test(inspect.eventKinds()), inspect.eventKinds());
+  check('  and no event kind is outside the table’s list',
+    inspect.eventKinds().split(',').filter(Boolean).every((k) => [
+      'supervisor_registered', 'supervisor_revoked', 'supervisor_heartbeat',
+      'slot_registered', 'slot_heartbeat', 'slot_paused', 'slot_stopped', 'slot_crashed',
+      'lease_acquired', 'lease_renewed', 'lease_expired', 'lease_released', 'lease_refused',
+      'task_started', 'task_paused', 'task_completed', 'task_failed',
+      'local_claude_used', 'local_claude_unavailable', 'manual_fallback_used',
+    ].includes(k)), inspect.eventKinds());
 
   section('3. Status transitions as the candidate would see it');
 

@@ -1956,11 +1956,23 @@ export type Database = {
         Args: { arr: string[]; max_items: number; max_len: number }
         Returns: boolean
       }
+      worker_claim_task: {
+        Args: { p_credential_id: string; p_token_hash: string }
+        Returns: {
+          claimed_fence: number
+          claimed_lease_expires_at: string
+          claimed_lease_id: string
+          claimed_task_id: string
+          ok: boolean
+          reason: string
+        }[]
+      }
       worker_record_heartbeat: {
         Args: {
           p_credential_id: string
           p_lifecycle: string
           p_readiness: string
+          p_reason: string
           p_sequence: number
           p_token_hash: string
         }
@@ -1982,6 +1994,41 @@ export type Database = {
         Returns: {
           new_slot_id: string
           new_supervisor_id: string
+          ok: boolean
+          reason: string
+        }[]
+      }
+      worker_renew_lease: {
+        Args: {
+          p_credential_id: string
+          p_fence_token: number
+          p_token_hash: string
+        }
+        Returns: {
+          ok: boolean
+          reason: string
+          renewed_expires_at: string
+        }[]
+      }
+      worker_report_task: {
+        Args: {
+          p_credential_id: string
+          p_disposition: string
+          p_fence_token: number
+          p_reason: string
+          p_token_hash: string
+        }
+        Returns: {
+          ok: boolean
+          reason: string
+        }[]
+      }
+      worker_resolve_credential: {
+        Args: { p_credential_id: string; p_token_hash: string }
+        Returns: {
+          cred_slot_id: string
+          cred_supervisor_id: string
+          cred_user_id: string
           ok: boolean
           reason: string
         }[]

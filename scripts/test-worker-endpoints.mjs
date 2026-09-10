@@ -46,6 +46,12 @@ const P = await import('../lib/worker/pairing.ts');
 /** The same hash the protocol uses, so a test never invents its own. */
 const hashOf = (value) => P.hashSecret(value);
 
+// The task, lease and event half of the fake — one implementation, shared with
+// scripts/probe-worker-e2e.mjs so the two cannot drift apart.
+const { createTaskMemory } = await import(
+  './lib/worker-task-memory.mjs'
+);
+
 const uuid = (n) => `${String(n).padStart(8, '0')}-1111-4111-8111-111111111111`;
 const ALICE = uuid(1);
 const BOB = uuid(2);
@@ -67,8 +73,15 @@ function makeStore() {
   const heartbeats = [];
   let seq = 100;
 
+  const taskMemory = createTaskMemory({ credentials, uuid: () => uuid(++seq), now: () => now });
+
   return {
     pairings, credentials, supervisors, slots, heartbeats,
+    tasks: taskMemory.tasks, leases: taskMemory.leases, events: taskMemory.events,
+    seedTask: taskMemory.seedTask,
+    claimTask: taskMemory.claimTask,
+    renewLease: taskMemory.renewLease,
+    reportTask: taskMemory.reportTask,
     async createPairing(row) {
       const id = uuid(++seq);
       // The real table has a partial unique index making this one-live-per-user.
@@ -142,6 +155,9 @@ function makeStore() {
         user_id: pairing.user_id,
         supervisor_id: supervisorId,
         slot_index: 1,
+        readiness: 'initializing',
+        pause_reason: null,
+        stop_reason: null,
       });
       credentials.set(input.credentialId, {
         id: input.credentialId,
@@ -173,14 +189,27 @@ function makeStore() {
        * accepts a supervisor id, because the real boundary does not.
        */
       const c = credentials.get(input.credentialId);
-      if (!c || c.token_hash !== input.tokenHash) return { applied: false };
-      if (c.revoked_at !== null) return { applied: false };
+      if (!c || c.token_hash !== input.tokenHash) {
+        return { ok: false, reason: 'not_found', applied: false };
+      }
+      if (c.revoked_at !== null) return { ok: false, reason: 'revoked', applied: false };
+
+      const slot = c.slot_id ? slots.get(c.slot_id) : null;
+      const previous = slot ? slot.readiness : null;
+      if (slot) {
+        const refusal = taskMemory.applyReadiness(slot, input.readiness, input.reason);
+        if (refusal) return { ok: false, reason: refusal, applied: false };
+      }
+
       const supervisorId = c.supervisor_id;
       const last = heartbeats.filter((h) => h.supervisorId === supervisorId).pop();
       // Strictly newer only: a replay or a late arrival changes nothing.
-      if (last && input.sequence <= last.sequence) return { applied: false };
+      if (last && input.sequence <= last.sequence) {
+        return { ok: true, reason: 'stale_sequence', applied: false };
+      }
       heartbeats.push({ ...input, supervisorId, slotId: c.slot_id });
-      return { applied: true };
+      if (slot) taskMemory.recordSlotTransition(c, slot, previous, input.readiness, input.reason);
+      return { ok: true, reason: 'applied', applied: true };
     },
   };
 }
