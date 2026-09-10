@@ -70,6 +70,12 @@ export type ExtractResult =
        * was.
        */
       providerCode?: ProviderFailureCode;
+      /**
+       * Which fields failed validation, as paths. Present only for
+       * `invalid_structure`, the one outcome where a field can be named.
+       * Never a value — see `describeSchemaFailure`.
+       */
+      providerDetail?: string;
       /** Written for the candidate, not for a developer. */
       message: string;
       /** Whether trying the same file again could plausibly succeed. */
@@ -379,6 +385,7 @@ export async function extractResume(
     return {
       ...fromProviderFailure(result.code, result.status),
       providerCode: result.code,
+      providerDetail: result.detail,
       usage: result.usage,
     };
   }

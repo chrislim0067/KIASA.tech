@@ -180,7 +180,26 @@ export async function saveDraft(
  */
 export async function discardImport(supabase: unknown, importId: string): Promise<boolean> {
   const { error } = await table(supabase)
-    .update({ status: 'discarded', failure_class: null, failure_code: null })
+    .update({
+      status: 'discarded',
+      failure_class: null,
+      failure_code: null,
+      /*
+       * THE PROVIDER COLUMNS MUST GO TOO, OR THE DISCARD IS REFUSED.
+       *
+       * `resume_imports_provider_code_only_when_failed` says a provider outcome
+       * belongs only to a row that failed. Leaving one behind while moving the
+       * row to `discarded` violates it, and because this function's return value
+       * is not checked by its caller, the failure was silent: the candidate
+       * pressed Dismiss and nothing happened.
+       *
+       * Migration 30 introduced that constraint without this line. It is the
+       * constraint doing exactly its job — a row is not allowed to
+       * half-remember having failed.
+       */
+      provider_failure_code: null,
+      provider_failure_detail: null,
+    })
     .eq('id', importId)
     .in('status', ['parsed', 'failed']);
 
@@ -266,7 +285,8 @@ export async function markFailed(
   importId: string,
   failureClass: ExtractFailureClass,
   failureCode: string,
-  providerFailureCode?: ProviderFailureCode
+  providerFailureCode?: ProviderFailureCode,
+  providerFailureDetail?: string
 ): Promise<boolean> {
   const { error } = await table(admin)
     .update({
@@ -279,6 +299,7 @@ export async function markFailed(
        * keep a stale provider code describing a different attempt.
        */
       provider_failure_code: providerFailureCode ?? null,
+      provider_failure_detail: providerFailureDetail ?? null,
     })
     .eq('id', importId);
 
