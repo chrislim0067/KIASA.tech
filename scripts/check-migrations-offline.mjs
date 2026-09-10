@@ -120,6 +120,38 @@ for (const { name } of versions) {
   if (body === '') fail(`Migration is empty: ${name}`);
 }
 
+/* ----------------------------------------------------------- dollar quoting */
+
+/*
+ * EVERY DOLLAR-QUOTED BLOCK MUST CLOSE.
+ *
+ * A migration whose $$ or $fn$ delimiters do not pair is not a migration that
+ * fails a check -- it is a syntax error, and the only place it surfaces is the
+ * moment the stack applies it. From outside CI that looks identical to the
+ * database failing to boot: exit code 1, no annotation, nothing naming a file.
+ *
+ * Not hypothetical. Migration 26 was corrupted by an editing script whose
+ * replacement text contained a dollar-apostrophe, which String.replace expands
+ * to "everything after the match"; the truncated function body then cost two CI
+ * cycles before anyone counted the delimiters. Ten lines here catch it offline,
+ * in a second.
+ *
+ * Parity only: this proves the delimiters pair, not that the SQL between them
+ * is correct. Postgres is the authority on that, and CI still asks it.
+ */
+for (const { name } of versions) {
+  const body = readFileSync(join(DIR, name), 'utf8');
+  const tags = new Map();
+  for (const [tag] of body.matchAll(/\$[A-Za-z_][A-Za-z0-9_]*\$|\$\$/g)) {
+    tags.set(tag, (tags.get(tag) ?? 0) + 1);
+  }
+  for (const [tag, count] of tags) {
+    if (count % 2 !== 0) {
+      fail(`Unbalanced dollar quoting in ${name}: ${tag} appears ${count} time(s)`);
+    }
+  }
+}
+
 /* ---------------------------------------------------------------- checksums */
 
 /**

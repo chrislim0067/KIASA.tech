@@ -16,12 +16,22 @@ import type { CredentialRow, PairingRow } from '@/lib/worker/pairing';
  *
  * What keeps that safe is that ownership is never taken from the caller.
  * `findPairingByHash` looks up by a hash the caller must already possess, and
- * every downstream write uses the `user_id` from the row it found. A worker
- * cannot name a candidate, so it cannot choose one.
+ * every downstream write derives the candidate from the row that hash found. A
+ * worker cannot name a candidate, so it cannot choose one.
  *
- * Migration 24 grants `service_role` exactly SELECT, INSERT and UPDATE on the
- * two new tables — no DELETE, and nothing on any existing table. The migration
- * asserts that set and aborts if it differs.
+ * TWO DIFFERENT KINDS OF ACCESS LIVE HERE, AND THE DIFFERENCE MATTERS
+ *
+ * `worker_pairings` and `worker_credentials` are read and written directly:
+ * migration 24 grants `service_role` exactly SELECT, INSERT and UPDATE on
+ * those two tables, and asserts that set.
+ *
+ * `worker_supervisors` and `worker_slots` are NOT. Migration 22 revokes every
+ * privilege from `service_role` on them and asserts the absence, so this
+ * client cannot read or write them at all — which is why registration and
+ * heartbeat go through `worker_redeem_pairing` and `worker_record_heartbeat`,
+ * the two `security definer` functions from migration 26. Each performs one
+ * protocol operation, takes a hash rather than an id as its proof, and reads
+ * ownership out of the row that hash matched.
  *
  * THE CANDIDATE-FACING PATHS DO NOT COME THROUGH HERE. Starting a pairing,
  * reading status and revoking all run under the candidate's own session and
@@ -78,20 +88,43 @@ export function createPairingStore(): PairingStore {
       return (data as PairingRow | null) ?? null;
     },
 
-    async claimPairing(id, supervisorId) {
+    async completeRedemption(input) {
       /*
-       * THE CONDITIONAL UPDATE. `.is('redeemed_at', null)` is what makes
-       * redemption single-use under concurrency: two workers racing both reach
-       * here, and Postgres lets exactly one row-update win. The loser gets zero
-       * rows back and is told the invitation was already redeemed.
+       * REGISTRATION IS ONE TRANSACTION, AND IT IS NOT THIS PROCESS'S TO MAKE.
+       *
+       * `service_role` holds nothing on `worker_supervisors` or `worker_slots`
+       * — migration 22 revoked it and asserts the absence — so this cannot be
+       * four statements from here however carefully they are ordered. It is
+       * one call into `worker_redeem_pairing`, which takes the pairing row's
+       * lock, checks state, creates the supervisor, the slot and the
+       * credential, and claims the invitation.
+       *
+       * That also closes a race the four-statement version had: it created the
+       * supervisor, slot and credential BEFORE claiming, so the loser of a
+       * concurrent redemption left all three behind. Inside the function the
+       * loser blocks on the row lock, re-reads a redeemed invitation, and
+       * writes nothing at all.
+       *
+       * NO ID IS SENT AS PROOF. The secret's hash is the proof; the candidate
+       * comes out of the row it matches.
        */
-      const { data } = await db
-        .from('worker_pairings')
-        .update({ redeemed_at: new Date().toISOString(), redeemed_supervisor_id: supervisorId })
-        .eq('id', id)
-        .is('redeemed_at', null)
-        .select('id');
-      return Array.isArray(data) && data.length === 1;
+      const { data, error } = await db.rpc('worker_redeem_pairing', {
+        p_secret_hash: input.secretHash,
+        p_platform: input.platform,
+        p_agent_version: input.agentVersion,
+        p_credential_id: input.credentialId,
+        p_token_hash: input.tokenHash,
+        p_credential_expires_at: input.credentialExpiresAt,
+      });
+
+      const row = Array.isArray(data) ? data[0] : null;
+      // A transport error, a missing function, a revoked EXECUTE grant: all
+      // indistinguishable from here, and all mean the same thing to a worker.
+      if (error || !row) return { ok: false, reason: 'registration_failed' };
+      if (!row.ok || !row.new_supervisor_id || !row.new_slot_id) {
+        return { ok: false, reason: row.reason };
+      }
+      return { ok: true, supervisorId: row.new_supervisor_id, slotId: row.new_slot_id };
     },
 
     async recordFailedAttempt(id) {
@@ -134,57 +167,6 @@ export function createPairingStore(): PairingStore {
       await db.from('worker_pairings').update({ attempts: -1 }).eq('id', id);
     },
 
-    /*
-     * KNOWN BLOCKER, PROVEN BY scripts/test-worker-pairing-db.mjs.
-     *
-     * service_role holds NO grant on `worker_supervisors` or `worker_slots`.
-     * Migration 22 revokes every privilege from it and then asserts the
-     * absence, so this insert — and `createSlot` and `recordHeartbeat` below —
-     * are refused by a real database. Redemption fails closed with
-     * `registration_failed` (a 500, no disclosure), but it fails.
-     *
-     * The two ways out are a service-role grant on those two tables, or moving
-     * supervisor registration to the candidate's own session, which already
-     * holds SELECT and INSERT there. Both are privilege decisions, so neither
-     * was taken here. Until one is, one-worker pairing works only against the
-     * in-memory store used by scripts/probe-worker-e2e.mjs.
-     */
-    async createSupervisor(row) {
-      const { data, error } = await db
-        .from('worker_supervisors')
-        .insert({ ...row, declared_slots: 1, lifecycle: 'starting' })
-        .select('id')
-        .maybeSingle<{ id: string }>();
-      return error || !data ? null : { id: data.id };
-    },
-
-    async createSlot(row) {
-      const { data, error } = await db
-        .from('worker_slots')
-        .insert({
-          user_id: row.user_id,
-          supervisor_id: row.supervisor_id,
-          // ONE slot in this milestone. The schema allows ten; the runtime
-          // uses the first and only.
-          slot_index: 1,
-          browser_context_id: 'slot-1',
-          capabilities: ['form_fill'],
-          readiness: 'initializing',
-        })
-        .select('id')
-        .maybeSingle<{ id: string }>();
-      return error || !data ? null : { id: data.id };
-    },
-
-    async createCredential(row) {
-      const { data, error } = await db
-        .from('worker_credentials')
-        .insert(row)
-        .select('id')
-        .maybeSingle<{ id: string }>();
-      return error || !data ? null : { id: data.id };
-    },
-
     async findCredentialById(id) {
       const { data } = await db
         .from('worker_credentials')
@@ -200,40 +182,33 @@ export function createPairingStore(): PairingStore {
 
     async recordHeartbeat(input) {
       /*
-       * Monotonic by sequence. A retry that overtakes what it was retrying, or
-       * a duplicate delivery, must not move the worker's state backwards — a
-       * crashed slot showing as `working` would leave its task leased.
+       * ONE CALL, AND NO SUPERVISOR OR SLOT ID CROSSES IT.
+       *
+       * The read-then-write this replaced had two problems. The smaller one is
+       * that `service_role` cannot read or write either table, so neither
+       * statement could ever have run. The larger one is that it took
+       * `supervisorId` and `slotId` as arguments: the server derived them
+       * honestly from the credential, but the DATABASE had no way to know
+       * that, and a boundary that trusts its caller's ids is a boundary in
+       * name only.
+       *
+       * `worker_record_heartbeat` takes the credential id and the token's
+       * hash, requires both to match one row, and reads the candidate, the
+       * supervisor and the slot out of it. It also owns the monotonic-sequence
+       * check, which is now a comparison inside one transaction rather than a
+       * read and a write with a gap between them.
        */
-      const { data: current } = await db
-        .from('worker_supervisors')
-        .select('heartbeat_sequence')
-        .eq('id', input.supervisorId)
-        .maybeSingle<{ heartbeat_sequence: number }>();
+      const { data, error } = await db.rpc('worker_record_heartbeat', {
+        p_credential_id: input.credentialId,
+        p_token_hash: input.tokenHash,
+        p_sequence: input.sequence,
+        p_lifecycle: input.lifecycle,
+        p_readiness: input.readiness,
+      });
 
-      if (current && input.sequence <= current.heartbeat_sequence) {
-        return { applied: false };
-      }
-
-      await db
-        .from('worker_supervisors')
-        .update({
-          heartbeat_sequence: input.sequence,
-          last_heartbeat_at: input.at,
-          lifecycle: input.lifecycle,
-        })
-        .eq('id', input.supervisorId);
-
-      if (input.slotId) {
-        await db
-          .from('worker_slots')
-          .update({
-            heartbeat_sequence: input.sequence,
-            last_heartbeat_at: input.at,
-            readiness: input.readiness,
-          })
-          .eq('id', input.slotId);
-      }
-      return { applied: true };
+      const row = Array.isArray(data) ? data[0] : null;
+      if (error || !row || !row.ok) return { applied: false };
+      return { applied: row.applied };
     },
   };
 }

@@ -72,6 +72,27 @@ const CHECK_HELPER_SIGNATURES = {
 };
 /** Functions that must no longer exist at all. */
 const REMOVED_FUNCTIONS = ['text_array_no_blanks', 'set_updated_at'];
+/**
+ * THE WORKER AUTHORIZATION BOUNDARY, AND NOTHING ELSE.
+ *
+ * Two invariants below used to read zero: `service_role` executed no public
+ * function, and no public function was SECURITY DEFINER. Both were the right
+ * default and both still are — migration 26 makes exactly two exceptions, and
+ * they exist to REMOVE privilege rather than add it.
+ *
+ * A worker redeeming a pairing secret has no session, so there is no candidate
+ * context for RLS to evaluate and its writes cannot run under one. The
+ * alternative to these two functions was granting `service_role` SELECT,
+ * INSERT and UPDATE on `worker_supervisors` and `worker_slots` — every row of
+ * every candidate's worker state, reachable from any bug in any server route.
+ * Two named functions, each performing one operation and reading ownership out
+ * of a row the caller has proved it holds, is by far the smaller surface.
+ *
+ * So the two checks become allow-lists rather than zeroes, which is stricter
+ * in the way that matters: a THIRD definer function, or a third EXECUTE grant,
+ * still fails here. Sorted by name, because string_agg is.
+ */
+const WORKER_BOUNDARY_FUNCTIONS = ['worker_record_heartbeat', 'worker_redeem_pairing'];
 const API_ROLES = ['anon', 'authenticated', 'service_role'];
 
 let failed = 0;
@@ -147,9 +168,18 @@ for (const role of ['anon', 'service_role']) {
 
 section('3. The helper functions');
 for (const role of ['anon', 'service_role']) {
-  const n = sql(`select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-                 where n.nspname='public' and has_function_privilege('${role}',p.oid,'EXECUTE')`);
-  check(`${role} cannot execute any public function`, n === '0', `${n} executable`);
+  const executable = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
+                          from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                          where n.nspname='public'
+                            and has_function_privilege('${role}',p.oid,'EXECUTE')`);
+  const allowed = role === 'service_role' ? WORKER_BOUNDARY_FUNCTIONS.join(',') : 'none';
+  check(
+    role === 'service_role'
+      ? 'service_role executes the worker boundary and nothing else'
+      : `${role} cannot execute any public function`,
+    executable === allowed,
+    executable
+  );
 }
 {
   const pub = sql(`select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
@@ -175,12 +205,22 @@ for (const role of ['anon', 'service_role']) {
     check(`authenticated can execute ${fn} (required by CHECK)`, can === 't', can);
   }
 
+  // An empty search_path is required of EVERY function, definer or not. It is
+  // what stops a shadowing object in another schema being reached by an
+  // unqualified name.
   const unsafe = sql(`select coalesce(string_agg(p.proname,','),'none') from pg_proc p
                       join pg_namespace n on n.oid=p.pronamespace
                       where n.nspname='public'
-                        and (p.prosecdef or p.proconfig is null
+                        and (p.proconfig is null
                              or not (p.proconfig && array['search_path=""','search_path=']))`);
-  check('all functions are SECURITY INVOKER with empty search_path', unsafe === 'none', unsafe);
+  check('every public function pins an empty search_path', unsafe === 'none', unsafe);
+
+  // And SECURITY DEFINER is confined to the two that need it.
+  const definers = sql(`select coalesce(string_agg(p.proname, ',' order by p.proname), 'none')
+                        from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                        where n.nspname='public' and p.prosecdef`);
+  check('SECURITY DEFINER is confined to the worker boundary',
+    definers === WORKER_BOUNDARY_FUNCTIONS.join(','), definers);
 }
 
 console.log(`\n${'='.repeat(56)}`);

@@ -100,36 +100,47 @@ export interface PairingStore {
   }): Promise<{ id: string } | null>;
   /** Find the one live invitation for a secret hash, across all candidates. */
   findPairingByHash(secretHash: string): Promise<PairingRow | null>;
-  /**
-   * Claim the invitation. MUST be a conditional update — `where redeemed_at is
-   * null` — so two workers racing produce exactly one winner.
-   */
-  claimPairing(id: string, supervisorId: string): Promise<boolean>;
   /** Count a failed attempt. Bounded by a CHECK, so this can fail loudly. */
   recordFailedAttempt(id: string): Promise<void>;
-  createSupervisor(row: {
-    user_id: string;
+  /**
+   * Claim the invitation, register the supervisor and its one slot, and issue
+   * the credential — ATOMICALLY, as a single operation.
+   *
+   * These were four calls once, and the ordering was a standing hazard: the
+   * loser of a concurrent redemption had already created a supervisor, a slot
+   * and a credential by the time its claim failed. One operation removes the
+   * ordering question rather than answering it.
+   *
+   * NO OWNERSHIP FIELD IS AN ARGUMENT. `secretHash` is the proof, and the
+   * candidate is whoever the matching invitation belongs to. An implementation
+   * that accepted a candidate id here would be trusting its caller.
+   */
+  completeRedemption(input: {
+    secretHash: string;
     platform: string;
-    agent_version: string;
-  }): Promise<{ id: string } | null>;
-  createSlot(row: { user_id: string; supervisor_id: string }): Promise<{ id: string } | null>;
-  createCredential(row: {
-    id: string;
-    user_id: string;
-    supervisor_id: string;
-    slot_id: string;
-    token_hash: string;
-    expires_at: string;
-  }): Promise<{ id: string } | null>;
+    agentVersion: string;
+    credentialId: string;
+    tokenHash: string;
+    credentialExpiresAt: string;
+  }): Promise<
+    { ok: true; supervisorId: string; slotId: string } | { ok: false; reason: string }
+  >;
   findCredentialById(id: string): Promise<CredentialRow | null>;
   touchCredential(id: string, at: string): Promise<void>;
+  /**
+   * Record one heartbeat.
+   *
+   * Identified by the credential and the hash of the token presented with it —
+   * never by a supervisor or slot id. Those are read from the credential row
+   * by the implementation, so a caller cannot aim a heartbeat at a worker it
+   * does not hold a token for.
+   */
   recordHeartbeat(input: {
-    supervisorId: string;
-    slotId: string | null;
+    credentialId: string;
+    tokenHash: string;
     sequence: number;
     lifecycle: string;
     readiness: string;
-    at: string;
   }): Promise<{ applied: boolean }>;
 }
 
@@ -172,6 +183,23 @@ export type RedeemFailure =
   | 'registration_failed';
 
 /**
+ * The same list, as a value, so a reason coming back from the database can be
+ * checked against it rather than trusted. Kept adjacent to the type because
+ * the two must not drift; `scripts/test-worker-endpoints.mjs` asserts they
+ * have not.
+ */
+const REDEEM_FAILURES: ReadonlySet<RedeemFailure> = new Set([
+  'malformed_request',
+  'not_found',
+  'expired',
+  'already_redeemed',
+  'revoked',
+  'too_many_attempts',
+  'secret_mismatch',
+  'registration_failed',
+]);
+
+/**
  * Redeem a pairing secret for a scoped credential.
  *
  * THIS ENDPOINT HAS NO SESSION. The worker is not signed in — proving it holds
@@ -211,18 +239,6 @@ export async function redeemPairing(
     return { ok: false, reason: verdict.reason };
   }
 
-  const userId = verdict.userId;
-
-  const supervisor = await store.createSupervisor({
-    user_id: userId,
-    platform: parsed.data.platform,
-    agent_version: parsed.data.agent_version,
-  });
-  if (!supervisor) return { ok: false, reason: 'registration_failed' };
-
-  const slot = await store.createSlot({ user_id: userId, supervisor_id: supervisor.id });
-  if (!slot) return { ok: false, reason: 'registration_failed' };
-
   /*
    * THE ID IS MINTED HERE, NOT BY THE DATABASE.
    *
@@ -241,24 +257,40 @@ export async function redeemPairing(
   const credentialId = randomUUID();
   const { token, secret } = generateWorkerToken(credentialId);
 
-  const stored = await store.createCredential({
-    id: credentialId,
-    user_id: userId,
-    supervisor_id: supervisor.id,
-    slot_id: slot.id,
-    token_hash: hashSecret(secret),
-    expires_at: expiresAt,
+  const registered = await store.completeRedemption({
+    // The same hash the lookup above used. The store never sees the plaintext.
+    secretHash: hashSecret(presented),
+    platform: parsed.data.platform,
+    agentVersion: parsed.data.agent_version,
+    credentialId,
+    tokenHash: hashSecret(secret),
+    credentialExpiresAt: expiresAt,
   });
-  if (!stored) return { ok: false, reason: 'registration_failed' };
 
-  const claimed = await store.claimPairing(row!.id, supervisor.id);
-  if (!claimed) return { ok: false, reason: 'already_redeemed' };
+  if (!registered.ok) {
+    /*
+     * THE STORE'S REASON IS NOT PASSED THROUGH.
+     *
+     * The registration boundary re-checks every precondition this function
+     * already checked — it is a second layer, and it can legitimately refuse
+     * something that looked fine a microsecond earlier, most often because
+     * another worker won the race. Its vocabulary happens to overlap this
+     * one's, but "happens to" is not a contract: an unrecognised reason
+     * becomes `registration_failed` rather than reaching a worker unexamined.
+     */
+    return {
+      ok: false,
+      reason: REDEEM_FAILURES.has(registered.reason as RedeemFailure)
+        ? (registered.reason as RedeemFailure)
+        : 'registration_failed',
+    };
+  }
 
   return {
     ok: true,
     token,
-    supervisorId: supervisor.id,
-    slotId: slot.id,
+    supervisorId: registered.supervisorId,
+    slotId: registered.slotId,
     expiresAt,
   };
 }
@@ -276,7 +308,14 @@ export async function authenticateWorker(
   authorizationHeader: string | null,
   now: Date
 ): Promise<
-  | { ok: true; userId: string; supervisorId: string; slotId: string | null; credentialId: string }
+  | {
+      ok: true;
+      userId: string;
+      supervisorId: string;
+      slotId: string | null;
+      credentialId: string;
+      tokenHash: string;
+    }
   | { ok: false; reason: WorkerAuthFailure }
 > {
   if (!authorizationHeader) return { ok: false, reason: 'missing_credential' };
@@ -299,6 +338,15 @@ export async function authenticateWorker(
     supervisorId: verdict.supervisorId,
     slotId: verdict.slotId,
     credentialId: parsed.credentialId,
+    /*
+     * Computed only after `evaluateCredential` has accepted the secret in
+     * constant time. It is carried on so that a downstream write can prove to
+     * the DATABASE which credential it is acting for, rather than asserting an
+     * id the database would have to take on faith. It is the hash of a secret
+     * the caller already presented — it discloses nothing the caller does not
+     * already hold — and it never leaves the server.
+     */
+    tokenHash: hashSecret(parsed.secret),
   };
 }
 
@@ -313,23 +361,21 @@ export async function authenticateWorker(
  */
 export async function heartbeat(
   store: PairingStore,
-  identity: { supervisorId: string; slotId: string | null; credentialId: string },
+  identity: { credentialId: string; tokenHash: string },
   body: unknown,
   now: Date
 ): Promise<{ ok: true; applied: boolean } | { ok: false; reason: 'malformed_request' }> {
   const parsed = HeartbeatRequest.safeParse(body);
   if (!parsed.success) return { ok: false, reason: 'malformed_request' };
 
-  const at = now.toISOString();
   const { applied } = await store.recordHeartbeat({
-    supervisorId: identity.supervisorId,
-    slotId: identity.slotId,
+    credentialId: identity.credentialId,
+    tokenHash: identity.tokenHash,
     sequence: parsed.data.sequence,
     lifecycle: parsed.data.lifecycle,
     readiness: parsed.data.slot_readiness,
-    at,
   });
-  await store.touchCredential(identity.credentialId, at);
+  await store.touchCredential(identity.credentialId, now.toISOString());
   return { ok: true, applied };
 }
 

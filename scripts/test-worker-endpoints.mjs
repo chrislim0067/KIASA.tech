@@ -43,6 +43,9 @@ function check(label, ok, detail = '') {
 const E = await import('../lib/worker/endpoints.ts');
 const P = await import('../lib/worker/pairing.ts');
 
+/** The same hash the protocol uses, so a test never invents its own. */
+const hashOf = (value) => P.hashSecret(value);
+
 const uuid = (n) => `${String(n).padStart(8, '0')}-1111-4111-8111-111111111111`;
 const ALICE = uuid(1);
 const BOB = uuid(2);
@@ -79,13 +82,6 @@ function makeStore() {
       for (const [, p] of pairings) if (p.secret_hash === hash) return p;
       return null;
     },
-    async claimPairing(id, supervisorId) {
-      const p = pairings.get(id);
-      if (!p || p.redeemed_at !== null) return false;   // the conditional UPDATE
-      p.redeemed_at = now.toISOString();
-      p.redeemed_supervisor_id = supervisorId;
-      return true;
-    },
     /*
      * THIS FAKE IS MORE CAPABLE THAN THE REAL THING, AND THAT MATTERS.
      *
@@ -103,26 +99,65 @@ function makeStore() {
       const p = pairings.get(id);
       if (p) p.attempts += 1;
     },
-    async createSupervisor(row) {
-      const id = uuid(++seq);
-      supervisors.set(id, { id, ...row });
-      return { id };
-    },
-    async createSlot(row) {
-      const id = uuid(++seq);
-      slots.set(id, { id, slot_index: 1, ...row });
-      return { id };
-    },
-    async createCredential(row) {
-      // The real table has a partial unique index: one live credential per
-      // supervisor. A second insert for the same supervisor must fail.
+    async completeRedemption(input) {
+      /*
+       * ONE OPERATION, MODELLED AS ONE OPERATION.
+       *
+       * The real thing is `worker_redeem_pairing` (migration 26): it takes the
+       * invitation's row lock, checks state, and creates the supervisor, slot
+       * and credential only if the claim is still available. This fake keeps
+       * the same order and the same all-or-nothing property, because the
+       * ordering IS what is being tested — a fake that created the rows first
+       * and claimed afterwards would prove the opposite of the truth.
+       *
+       * Note what is absent from the arguments: any candidate, supervisor or
+       * slot id. The candidate is read out of the invitation the hash matched.
+       */
+      let pairing = null;
+      for (const [, p] of pairings) if (p.secret_hash === input.secretHash) pairing = p;
+      if (!pairing) return { ok: false, reason: 'not_found' };
+      if (pairing.revoked_at !== null) return { ok: false, reason: 'revoked' };
+      if (pairing.redeemed_at !== null) return { ok: false, reason: 'already_redeemed' };
+      if (pairing.attempts >= 10) return { ok: false, reason: 'too_many_attempts' };
+
+      // One live credential per supervisor, as the partial unique index says.
       for (const [, c] of credentials) {
-        if (c.supervisor_id === row.supervisor_id && c.revoked_at === null) return null;
+        if (c.supervisor_id === input.supervisorId && c.revoked_at === null) {
+          return { ok: false, reason: 'registration_failed' };
+        }
       }
-      credentials.set(row.id, {
-        audience: 'kiasa-worker', scope: 'slot:heartbeat', revoked_at: null, ...row,
+
+      const supervisorId = uuid(++seq);
+      supervisors.set(supervisorId, {
+        id: supervisorId,
+        user_id: pairing.user_id,
+        platform: input.platform,
+        agent_version: input.agentVersion,
+        heartbeat_sequence: 0,
+        revoked_at: null,
       });
-      return { id: row.id };
+      const slotId = uuid(++seq);
+      slots.set(slotId, {
+        id: slotId,
+        user_id: pairing.user_id,
+        supervisor_id: supervisorId,
+        slot_index: 1,
+      });
+      credentials.set(input.credentialId, {
+        id: input.credentialId,
+        user_id: pairing.user_id,
+        supervisor_id: supervisorId,
+        slot_id: slotId,
+        token_hash: input.tokenHash,
+        expires_at: input.credentialExpiresAt,
+        audience: 'kiasa-worker',
+        scope: 'slot:heartbeat',
+        revoked_at: null,
+      });
+
+      pairing.redeemed_at = now.toISOString();
+      pairing.redeemed_supervisor_id = supervisorId;
+      return { ok: true, supervisorId, slotId };
     },
     async findCredentialById(id) {
       return credentials.get(id) ?? null;
@@ -132,10 +167,19 @@ function makeStore() {
       if (c) c.last_used_at = atIso;
     },
     async recordHeartbeat(input) {
-      const last = heartbeats.filter((h) => h.supervisorId === input.supervisorId).pop();
+      /*
+       * Resolved the way the database resolves it: id AND hash must match one
+       * credential, and the supervisor is read from that row. Nothing here
+       * accepts a supervisor id, because the real boundary does not.
+       */
+      const c = credentials.get(input.credentialId);
+      if (!c || c.token_hash !== input.tokenHash) return { applied: false };
+      if (c.revoked_at !== null) return { applied: false };
+      const supervisorId = c.supervisor_id;
+      const last = heartbeats.filter((h) => h.supervisorId === supervisorId).pop();
       // Strictly newer only: a replay or a late arrival changes nothing.
       if (last && input.sequence <= last.sequence) return { applied: false };
-      heartbeats.push(input);
+      heartbeats.push({ ...input, supervisorId, slotId: c.slot_id });
       return { applied: true };
     },
   };
@@ -384,9 +428,7 @@ section('9. Heartbeats are authenticated, idempotent and monotonic');
   const started = await E.startPairing(store, ALICE, now);
   const issued = await E.redeemPairing(store, redeemBody(started.secret), now);
   const auth = await E.authenticateWorker(store, `Bearer ${issued.token}`, now);
-  const identity = {
-    supervisorId: auth.supervisorId, slotId: auth.slotId, credentialId: auth.credentialId,
-  };
+  const identity = { credentialId: auth.credentialId, tokenHash: auth.tokenHash };
   const beat = (sequence, when = now) =>
     E.heartbeat(store, identity, { sequence, lifecycle: 'running', slot_readiness: 'ready' }, when);
 
@@ -442,7 +484,7 @@ section('11. No response carries credential material');
 
   const hb = await E.heartbeat(
     store,
-    { supervisorId: issued.supervisorId, slotId: issued.slotId, credentialId: issued.token.split('.')[0] },
+    { credentialId: issued.token.split('.')[0], tokenHash: hashOf(issued.token.split('.')[1]) },
     { sequence: 1, lifecycle: 'running', slot_readiness: 'ready' }, now
   );
   const serialised = JSON.stringify(hb);
@@ -451,9 +493,25 @@ section('11. No response carries credential material');
   check('  it is a status, not material', Object.keys(hb).sort().join(',') === 'applied,ok');
 
   const auth = await E.authenticateWorker(store, `Bearer ${issued.token}`, now);
-  check('an auth result carries no hash and no secret',
-    !/[0-9a-f]{64}/.test(JSON.stringify(auth)) &&
-      !JSON.stringify(auth).includes(issued.token.split('.')[1]));
+  const authText = JSON.stringify(auth);
+  /*
+   * THE AUTH RESULT USED TO CARRY NO HASH AT ALL, AND NOW CARRIES EXACTLY ONE.
+   *
+   * worker_record_heartbeat identifies a credential by id AND token hash, so
+   * that the DATABASE verifies which credential a write acts for rather than
+   * trusting an id the server handed it. That hash has to reach the store, so
+   * it rides on the verified identity.
+   *
+   * The assertion is narrowed rather than dropped: no plaintext secret, and no
+   * hash OTHER than the one the boundary requires. What actually protects a
+   * worker — that none of this reaches a response body — is asserted just
+   * above, and again over real HTTP in scripts/probe-worker-e2e.mjs.
+   */
+  check('an auth result carries no plaintext secret',
+    !authText.includes(issued.token.split('.')[1]));
+  check('  and exactly one hash: the credential token hash the database needs',
+    (authText.match(/[0-9a-f]{64}/g) ?? []).join(',') === hashOf(issued.token.split('.')[1]),
+    'not the pairing secret hash, not a secret, and never serialised to a caller');
 }
 
 section('12. The module holds no key, shell or vendor path');

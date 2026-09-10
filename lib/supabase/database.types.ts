@@ -1956,6 +1956,36 @@ export type Database = {
         Args: { arr: string[]; max_items: number; max_len: number }
         Returns: boolean
       }
+      worker_record_heartbeat: {
+        Args: {
+          p_credential_id: string
+          p_lifecycle: string
+          p_readiness: string
+          p_sequence: number
+          p_token_hash: string
+        }
+        Returns: {
+          applied: boolean
+          ok: boolean
+          reason: string
+        }[]
+      }
+      worker_redeem_pairing: {
+        Args: {
+          p_agent_version: string
+          p_credential_expires_at: string
+          p_credential_id: string
+          p_platform: string
+          p_secret_hash: string
+          p_token_hash: string
+        }
+        Returns: {
+          new_slot_id: string
+          new_supervisor_id: string
+          ok: boolean
+          reason: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

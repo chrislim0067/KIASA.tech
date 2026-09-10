@@ -47,7 +47,10 @@ export async function POST(request: Request) {
 
   const result = await heartbeat(
     store,
-    { supervisorId: auth.supervisorId, slotId: auth.slotId, credentialId: auth.credentialId },
+    // The credential, and the hash of the token presented for it. No
+    // supervisor or slot id crosses this call: the database reads those out of
+    // the credential row, so nothing downstream has to be taken on trust.
+    { credentialId: auth.credentialId, tokenHash: auth.tokenHash },
     body,
     now
   );
