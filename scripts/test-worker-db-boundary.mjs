@@ -1415,7 +1415,15 @@ try {
     const auth = await E.authenticateWorker(store, `Bearer ${worker.token}`, new Date());
     const id = { credentialId: auth.credentialId, tokenHash: auth.tokenHash };
 
-    // The candidate's own session creates both rows, under RLS.
+    /*
+     * A PROFILE ROW HAS TO EXIST TO VERSION AGAINST.
+     *
+     * Creating an auth user does not create one — onboarding does, and the
+     * route refuses with `profile_missing` when it has not. The fixture makes
+     * one so the rest of the flow has something to be optimistic about.
+     */
+    sql(`insert into public.profiles (user_id) values ('${mara.id}')
+         on conflict (user_id) do nothing`);
     const version = sql(`select updated_at from public.profiles where user_id = '${mara.id}'`);
     check('the candidate has a profile row to version against', version.length > 0, version);
 
