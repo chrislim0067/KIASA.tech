@@ -65,13 +65,20 @@ const sql = (statement) =>
     { encoding: 'utf8' }
   ).trim();
 
-/** Runs a statement expected to FAIL, and returns the message it failed with. */
-function sqlExpectingFailure(statement) {
+/**
+ * True when the database refused a statement.
+ *
+ * Refusal shows up two ways depending on the rule that did the refusing: psql
+ * exits non-zero on a raised exception, and prints nothing when a privilege
+ * simply is not there. Treating only the first as refusal would let the second
+ * read as success, so EVERY statement passed here is written to RETURN
+ * something when it works — and "no output" therefore means refused too.
+ */
+function refused(statement) {
   try {
-    sql(statement);
-    return null;
-  } catch (err) {
-    return String(err.stderr ?? err.message ?? err).replace(/\s+/g, ' ').trim();
+    return sql(statement) === '';
+  } catch {
+    return true;
   }
 }
 
@@ -347,10 +354,35 @@ try {
      * directly through PostgREST is refused by the privilege, not by a check
      * inside them.
      */
-    for (const fn of ['worker_redeem_pairing', 'worker_record_heartbeat']) {
-      const { error } = await bob.session.rpc(fn, {});
-      check(`  and cannot call ${fn}()`, error !== null,
-        error ? 'refused' : 'EXECUTED');
+    /*
+     * Called with a COMPLETE and well-formed argument list, so the signature
+     * matches and the only thing left to stop it is the EXECUTE privilege. An
+     * empty payload would have been refused for the wrong reason — no such
+     * overload — and would have passed this check while proving nothing.
+     *
+     * The hashes match nothing, so even a successful call would create no row.
+     */
+    const bobsAttempts = {
+      worker_redeem_pairing: {
+        p_secret_hash: 'f'.repeat(64),
+        p_platform: 'linux',
+        p_agent_version: '0.1.0',
+        p_credential_id: randomUUID(),
+        p_token_hash: 'e'.repeat(64),
+        p_credential_expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+      },
+      worker_record_heartbeat: {
+        p_credential_id: randomUUID(),
+        p_token_hash: 'd'.repeat(64),
+        p_sequence: 1,
+        p_lifecycle: 'running',
+        p_readiness: 'ready',
+      },
+    };
+    for (const [fn, args] of Object.entries(bobsAttempts)) {
+      const { data, error } = await bob.session.rpc(fn, args);
+      check(`  and cannot call ${fn}()`, error !== null && data === null,
+        error ? 'refused by the privilege' : 'EXECUTED');
     }
   }
 
@@ -364,10 +396,8 @@ try {
       ['worker_credentials', 'token_hash'],
     ]) {
       for (const role of ['authenticated', 'anon']) {
-        const failure = sqlExpectingFailure(
-          `set local role ${role}; select ${column} from public.${table} limit 1`
-        );
-        check(`${role} cannot read ${table}.${column}`, failure !== null,
+        check(`${role} cannot read ${table}.${column}`,
+          refused(`set local role ${role}; select coalesce(${column}, 'x') from public.${table} limit 1`),
           'a column privilege, not a policy — RLS cannot hide a column');
       }
     }
@@ -447,63 +477,87 @@ try {
   section('11. Fence tokens only rise, and a revoked supervisor holds no lease');
 
   {
+    /*
+     * A CANDIDATE OF ITS OWN.
+     *
+     * This section revokes a supervisor, and revocation is final —
+     * `guard_worker_credential_immutable` refuses to restore a revoked
+     * credential, and rightly. Borrowing Alice's worker here would either
+     * corrupt the earlier assertions or need an un-revoke the database is
+     * correct to refuse.
+     */
+    const grace = await makeCandidate('grace');
+    const invitation = await E.startPairing(store, grace.id, new Date());
+    const worker = await E.redeemPairing(store, redeemBody(invitation.secret), new Date());
+    check('a second worker pairs cleanly', worker.ok === true,
+      worker.ok ? '' : worker.reason);
+    const graceAuth = await E.authenticateWorker(store, `Bearer ${worker.token}`, new Date());
+
     const jobId = sql(`insert into public.jobs (user_id, submitted_url, canonical_url, source)
-      values ('${alice.id}', 'https://example.test/job/1', 'https://example.test/job/1', 'user_link')
+      values ('${grace.id}', 'https://example.test/job/1', 'https://example.test/job/1', 'user_link')
       returning id`);
     const taskId = sql(`insert into public.automation_tasks
       (user_id, job_id, mode, idempotency_key, correlation_id, fence_token, attempt)
-      values ('${alice.id}', '${jobId}', 'claude_max_assisted',
+      values ('${grace.id}', '${jobId}', 'claude_max_assisted',
               'synthetic-boundary-fixture-0001', gen_random_uuid(), 4, 2)
       returning id`);
+    check('a task can hold a fence token',
+      Number(sql(`select fence_token from public.automation_tasks where id = '${taskId}'`)) === 4);
 
-    check('a task can hold a fence token', Number(sql(
-      `select fence_token from public.automation_tasks where id = '${taskId}'`)) === 4);
-
-    const lowered = sqlExpectingFailure(
-      `update public.automation_tasks set fence_token = 3 where id = '${taskId}'`);
-    check('LOWERING A FENCE TOKEN IS REFUSED', lowered !== null,
+    /*
+     * Every statement below RETURNS something on success, so "no output" and
+     * "raised an exception" both mean refused and neither can be mistaken for
+     * a silent success.
+     */
+    check('LOWERING A FENCE TOKEN IS REFUSED',
+      refused(`update public.automation_tasks set fence_token = 3
+               where id = '${taskId}' returning fence_token`),
       'a fence that can be lowered is not a fence');
-    const attemptBack = sqlExpectingFailure(
-      `update public.automation_tasks set attempt = 1 where id = '${taskId}'`);
-    check('  and attempts may not be walked back', attemptBack !== null);
-    sql(`update public.automation_tasks set fence_token = 5 where id = '${taskId}'`);
-    check('  raising it is allowed', Number(sql(
-      `select fence_token from public.automation_tasks where id = '${taskId}'`)) === 5);
+    check('  and attempts may not be walked back',
+      refused(`update public.automation_tasks set attempt = 1
+               where id = '${taskId}' returning attempt`));
+    check('  raising it is allowed',
+      sql(`update public.automation_tasks set fence_token = 5
+           where id = '${taskId}' returning fence_token`) === '5');
 
-    // A lease for a live supervisor is allowed; the same lease is refused once
-    // the supervisor is revoked. That is the stale-worker defence.
     const leaseId = sql(`insert into public.task_leases
       (user_id, task_id, slot_id, fence_token, expires_at)
-      values ('${alice.id}', '${taskId}', '${issued.slotId}', 5, now() + interval '2 minutes')
+      values ('${grace.id}', '${taskId}', '${worker.slotId}', 5, now() + interval '2 minutes')
       returning id`);
     check('a live supervisor may hold a lease', leaseId.length === 36, leaseId);
 
-    const crossCandidate = sqlExpectingFailure(`insert into public.task_leases
-      (user_id, task_id, slot_id, fence_token, expires_at)
-      values ('${bob.id}', '${taskId}', '${issued.slotId}', 6, now() + interval '2 minutes')`);
-    check('  a lease may not cross candidates', crossCandidate !== null,
-      'the slot belongs to A; the lease claimed to belong to B');
+    check('  a lease may not cross candidates',
+      refused(`insert into public.task_leases
+        (user_id, task_id, slot_id, fence_token, expires_at)
+        values ('${bob.id}', '${taskId}', '${worker.slotId}', 6, now() + interval '2 minutes')
+        returning id`),
+      'the slot belongs to one candidate; the lease claimed another');
 
     sql(`update public.worker_supervisors
          set revoked_at = now(), revoked_reason = 'candidate_requested', lifecycle = 'offline'
-         where id = '${issued.supervisorId}'`);
-    const staleLease = sqlExpectingFailure(`insert into public.task_leases
-      (user_id, task_id, slot_id, fence_token, expires_at)
-      values ('${alice.id}', '${taskId}', '${issued.slotId}', 7, now() + interval '2 minutes')`);
-    check('A REVOKED SUPERVISOR MAY NOT ACQUIRE A LEASE', staleLease !== null);
+         where id = '${worker.supervisorId}'`);
 
-    // And its worker cannot report in either, even holding a live credential.
-    sql(`update public.worker_credentials set revoked_at = null, revoked_reason = null
-         where user_id = '${alice.id}'`);
+    check('A REVOKED SUPERVISOR MAY NOT ACQUIRE A LEASE',
+      refused(`insert into public.task_leases
+        (user_id, task_id, slot_id, fence_token, expires_at)
+        values ('${grace.id}', '${taskId}', '${worker.slotId}', 7, now() + interval '2 minutes')
+        returning id`));
+
+    // And its worker cannot report in, even holding a credential that is
+    // itself still perfectly valid. The supervisor is the thing that was
+    // disowned.
     const zombie = await store.recordHeartbeat({
-      credentialId: identity.credentialId,
-      tokenHash: identity.tokenHash,
+      credentialId: graceAuth.credentialId,
+      tokenHash: graceAuth.tokenHash,
       sequence: 100,
       lifecycle: 'running',
       readiness: 'ready',
     });
-    check('  and a revoked supervisor accepts no heartbeat', zombie.applied === false,
-      'revocation is final in both directions');
+    check('  AND A REVOKED SUPERVISOR ACCEPTS NO HEARTBEAT', zombie.applied === false,
+      'the credential was never revoked; the machine was disowned');
+    check('  the credential really was still live',
+      sql(`select coalesce(revoked_at::text, 'live') from public.worker_credentials
+           where user_id = '${grace.id}'`) === 'live');
   }
 
   /* ====================== 12. SINGLE USE, REPLAY AND CONCURRENCY */

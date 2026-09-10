@@ -128,10 +128,10 @@ export function createPairingStore(): PairingStore {
       // A transport error, a missing function, a revoked EXECUTE grant: all
       // indistinguishable from here, and all mean the same thing to a worker.
       if (error || !row) return { ok: false, reason: 'registration_failed' };
-      if (!row.ok || !row.supervisor_id || !row.slot_id) {
+      if (!row.ok || !row.new_supervisor_id || !row.new_slot_id) {
         return { ok: false, reason: row.reason };
       }
-      return { ok: true, supervisorId: row.supervisor_id, slotId: row.slot_id };
+      return { ok: true, supervisorId: row.new_supervisor_id, slotId: row.new_slot_id };
     },
 
     async recordFailedAttempt(id) {

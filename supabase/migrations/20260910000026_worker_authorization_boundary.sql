@@ -76,7 +76,14 @@ create or replace function public.worker_redeem_pairing(
   p_token_hash text,
   p_credential_expires_at timestamptz
 )
-returns table (ok boolean, reason text, supervisor_id uuid, slot_id uuid)
+returns table (ok boolean, reason text, new_supervisor_id uuid, new_slot_id uuid)
+/*
+ * THE OUT PARAMETERS DO NOT SHARE A NAME WITH ANY COLUMN THIS FUNCTION WRITES.
+ *
+ * `worker_credentials` has both a `supervisor_id` and a `slot_id`, and plpgsql
+ * resolves an unqualified name to a variable before a column. Naming the
+ * outputs after those columns is a footgun with no upside, so they are not.
+ */
 language plpgsql
 security definer
 set search_path = ''
@@ -369,8 +376,111 @@ begin
 
     -- A definer function without a pinned search_path is a privilege
     -- escalation waiting for someone to create a shadowing object.
-    if p.proconfig is null or not (p.proconfig @> array['search_path=']) then
-      raise exception '% does not pin search_path to the empty string', target;
+    --
+    -- `search_path` is a GUC_LIST_QUOTE setting, so an empty value is stored
+    -- QUOTED — `search_path=""`, not `search_path=`. Matching the literal
+    -- aborted this migration on its first CI run. Both spellings are accepted
+    -- here and nothing else is.
+    if p.proconfig is null or not exists (
+      select 1 from unnest(p.proconfig) entry
+      where entry ~ '^search_path=(""|''''|)
+
+    -- No dynamic SQL. No string in this function may become a statement.
+    if p.prosrc ~* '\mexecute\M' then
+      raise exception '% contains dynamic SQL', target;
+    end if;
+
+    -- Not reachable by a browser or an anonymous caller.
+    if has_function_privilege('authenticated', p.oid, 'EXECUTE')
+       or has_function_privilege('anon', p.oid, 'EXECUTE')
+    then
+      raise exception '% is executable by an API role other than service_role', target;
+    end if;
+
+    /*
+     * And not by PUBLIC, which is where a function is most easily left open:
+     * EXECUTE is granted to PUBLIC BY DEFAULT, so a missing REVOKE is a silent
+     * hole rather than a visible one.
+     *
+     * Checked through the ACL rather than has_function_privilege(), which
+     * takes a role name and PUBLIC is not one — passing 'public' raises
+     * "role does not exist", which is how this aborted on its first CI run.
+     * A null ACL means default privileges, which for a function means
+     * PUBLIC EXECUTE; an ACL item beginning with '=' is an explicit PUBLIC
+     * grant. Both are refused.
+     */
+    if p.proacl is null then
+      raise exception '% still holds default privileges, which grant EXECUTE to PUBLIC', target;
+    end if;
+    if exists (select 1 from unnest(p.proacl) item where item::text like '=%') then
+      raise exception '% is executable by PUBLIC', target;
+    end if;
+    if not has_function_privilege('service_role', p.oid, 'EXECUTE') then
+      raise exception '% is not executable by service_role', target;
+    end if;
+
+    -- A definer function is only as safe as its owner. These write to tables
+    -- with FORCE ROW LEVEL SECURITY, which applies to the owner too, so the
+    -- owner must be able to bypass it.
+    if not exists (
+      select 1 from pg_roles r where r.oid = p.proowner and r.rolbypassrls
+    ) then
+      raise exception '% is owned by a role that cannot bypass forced RLS', target;
+    end if;
+  end loop;
+
+  -- THE INVARIANT THIS MIGRATION EXISTS TO PRESERVE. No table grant was added
+  -- to service_role on any migration-22 worker table.
+  select string_agg(distinct table_name || ':' || privilege_type, ', ') into offending
+  from information_schema.role_table_grants
+  where table_schema = 'public'
+    and table_name in ('worker_supervisors', 'worker_slots', 'automation_tasks',
+                       'task_leases', 'worker_events')
+    and grantee = 'service_role';
+  if offending is not null then
+    raise exception 'service_role gained a table grant: %', offending;
+  end if;
+
+  -- And the migration-24 grants are still exactly what migration 24 gave.
+  select string_agg(distinct privilege_type, ', ') into offending
+  from (
+    select distinct privilege_type
+    from information_schema.role_table_grants
+    where table_schema = 'public'
+      and table_name in ('worker_pairings', 'worker_credentials')
+      and grantee = 'service_role'
+    order by privilege_type
+  ) s;
+  if offending is distinct from 'INSERT, SELECT, UPDATE' then
+    raise exception 'service_role grants on the pairing tables changed: %', offending;
+  end if;
+
+  -- RLS is still enabled AND forced everywhere.
+  foreach target in array worker_tables loop
+    if not exists (
+      select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relname = target
+        and c.relrowsecurity and c.relforcerowsecurity
+    ) then
+      raise exception '% lost RLS', target;
+    end if;
+  end loop;
+
+  -- Nothing gained access to a hash column.
+  if exists (
+    select 1 from information_schema.column_privileges
+    where table_schema = 'public'
+      and table_name in ('worker_pairings', 'worker_credentials')
+      and column_name in ('secret_hash', 'token_hash')
+      and grantee in ('anon', 'authenticated', 'PUBLIC')
+  ) then
+    raise exception 'an API role can read a hash column';
+  end if;
+end $$;
+
+    ) then
+      raise exception '% does not pin search_path to the empty string: %',
+        target, coalesce(array_to_string(p.proconfig, ','), 'unset');
     end if;
 
     -- No dynamic SQL. No string in this function may become a statement.

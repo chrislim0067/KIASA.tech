@@ -33,12 +33,18 @@ export type WorkerRedeemArgs = {
   p_credential_expires_at: string;
 };
 
-/** One row. `supervisor_id` and `slot_id` are null on every refusal. */
+/**
+ * One row. Both ids are null on every refusal.
+ *
+ * They are named `new_*` because plpgsql resolves an unqualified name to a
+ * variable before a column, and `worker_credentials` has a `supervisor_id` and
+ * a `slot_id` that the function writes.
+ */
 export type WorkerRedeemRow = {
   ok: boolean;
   reason: string;
-  supervisor_id: string | null;
-  slot_id: string | null;
+  new_supervisor_id: string | null;
+  new_slot_id: string | null;
 };
 
 /** `worker_record_heartbeat(p_credential_id, …)` — migration 26. */
