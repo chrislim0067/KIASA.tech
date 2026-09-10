@@ -1,0 +1,20 @@
+node_modules
+.next
+out
+test-results
+playwright-report
+# Reference screenshots of the deleted original build are kept on purpose:
+# they are the only remaining record of how the old site looked.
+tests/e2e/__screenshots__/actual
+*.log
+.DS_Store
+tsconfig.tsbuildinfo
+
+# Archived dragon-hero experiment (see .en-only-backup
+.rebrand-backup
+.dragon-experiment/README.md)
+.dragon-experiment
+.texture-backup
+
+# Local secrets (OpenRouter key) - never commit
+.env*.local

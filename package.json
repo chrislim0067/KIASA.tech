@@ -1,0 +1,42 @@
+{
+  "name": "utsubo-next",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Utsubo website rebuilt on Next.js (App Router), React and TypeScript with a stable audio/WebGL runtime.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "extract:content": "node scripts/extract-content.mjs"
+  },
+  "dependencies": {
+    "comlink": "4.4.2",
+    "detect-gpu": "5.0.70",
+    "gsap": "3.12.5",
+    "howler": "2.2.4",
+    "lenis": "1.1.18",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "0.185.1",
+    "troika-three-text": "0.52.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/howler": "2.2.13",
+    "@types/node": "^24.10.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "@types/three": "0.185.4",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "16.3.4",
+    "node-html-parser": "9.0.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.0",
+    "jsdom": "^27.0.0"
+  }
+}

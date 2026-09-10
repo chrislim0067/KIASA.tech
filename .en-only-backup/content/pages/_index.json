@@ -1,0 +1,3215 @@
+[
+ {
+  "slug": "blog",
+  "id": "blog",
+  "lang": "en",
+  "title": "Blog | Interactive Installations & 3D Web Guides | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22585
+ },
+ {
+  "slug": "blog/2",
+  "id": "blog__2",
+  "lang": "en",
+  "title": "Blog | Interactive Installations & 3D Web Guides | Kiasa - Page 2",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22739
+ },
+ {
+  "slug": "blog/3",
+  "id": "blog__3",
+  "lang": "en",
+  "title": "Blog | Interactive Installations & 3D Web Guides | Kiasa - Page 3",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22781
+ },
+ {
+  "slug": "blog/3d-elearning-game-development-guide",
+  "id": "blog__3d-elearning-game-development-guide",
+  "lang": "en",
+  "title": "3D E-Learning Games: Business Guide to Immersive Training (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 69078
+ },
+ {
+  "slug": "blog/4",
+  "id": "blog__4",
+  "lang": "en",
+  "title": "Blog | Interactive Installations & 3D Web Guides | Kiasa - Page 4",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 23063
+ },
+ {
+  "slug": "blog/5",
+  "id": "blog__5",
+  "lang": "en",
+  "title": "Blog | Interactive Installations & 3D Web Guides | Kiasa - Page 5",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22644
+ },
+ {
+  "slug": "blog/6",
+  "id": "blog__6",
+  "lang": "en",
+  "title": "Blog | Interactive Installations & 3D Web Guides | Kiasa - Page 6",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22885
+ },
+ {
+  "slug": "blog/7",
+  "id": "blog__7",
+  "lang": "en",
+  "title": "Blog | Interactive Installations & 3D Web Guides | Kiasa - Page 7",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22945
+ },
+ {
+  "slug": "blog/8",
+  "id": "blog__8",
+  "lang": "en",
+  "title": "Blog | Interactive Installations & 3D Web Guides | Kiasa - Page 8",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 17568
+ },
+ {
+  "slug": "blog/accessible-museum-interactive-installations",
+  "id": "blog__accessible-museum-interactive-installations",
+  "lang": "en",
+  "title": "Accessible Museum Installations: WCAG 2.1 AA & ADA Compliance (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 56544
+ },
+ {
+  "slug": "blog/ai-website-vs-custom-design",
+  "id": "blog__ai-website-vs-custom-design",
+  "lang": "en",
+  "title": "AI Website vs Custom Design: Data-Backed Guide | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 64248
+ },
+ {
+  "slug": "blog/airport-transit-interactive-installation-guide",
+  "id": "blog__airport-transit-interactive-installation-guide",
+  "lang": "en",
+  "title": "Airport & Transit Interactive Installations | Project Guide 2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 74772
+ },
+ {
+  "slug": "blog/authors/default",
+  "id": "blog__authors__default",
+  "lang": "en",
+  "title": "Jocelyn Lecamus | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 15240
+ },
+ {
+  "slug": "blog/award-winning-website-design-guide",
+  "id": "blog__award-winning-website-design-guide",
+  "lang": "en",
+  "title": "Award-Winning Web Design: Judging Criteria Decoded | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 71496
+ },
+ {
+  "slug": "blog/best-japanese-web-design-studios-2026",
+  "id": "blog__best-japanese-web-design-studios-2026",
+  "lang": "en",
+  "title": "14 Japanese Web Studios That Actually Ship Great Work (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 57032
+ },
+ {
+  "slug": "blog/best-threejs-websites-2026",
+  "id": "blog__best-threejs-websites-2026",
+  "lang": "en",
+  "title": "Best Three.js Websites 2026: 8 Sites + Techniques | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 47154
+ },
+ {
+  "slug": "blog/branding-design-agency-asia-guide",
+  "id": "blog__branding-design-agency-asia-guide",
+  "lang": "en",
+  "title": "How to Hire a Branding & Design Agency in Asia (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 44122
+ },
+ {
+  "slug": "blog/brief-interactive-installation-studio-guide",
+  "id": "blog__brief-interactive-installation-studio-guide",
+  "lang": "en",
+  "title": "How to Brief an Interactive Installation Studio | RFP Guide 2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 48791
+ },
+ {
+  "slug": "blog/build-saas-with-ai-founder-kickoff-guide",
+  "id": "blog__build-saas-with-ai-founder-kickoff-guide",
+  "lang": "en",
+  "title": "Build a SaaS With AI: Founder Kickoff Guide (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 60470
+ },
+ {
+  "slug": "blog/built-with-ai-trust-signals-2026",
+  "id": "blog__built-with-ai-trust-signals-2026",
+  "lang": "en",
+  "title": "The \"Built with AI\" Tell: 12 Signals That Drop Trust (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 46975
+ },
+ {
+  "slug": "blog/childrens-museum-interactive-installation-guide",
+  "id": "blog__childrens-museum-interactive-installation-guide",
+  "lang": "en",
+  "title": "Children's Museum Interactive Installations | 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 72625
+ },
+ {
+  "slug": "blog/choose-interactive-installation-studio-guide",
+  "id": "blog__choose-interactive-installation-studio-guide",
+  "lang": "en",
+  "title": "How to Choose the Right Interactive Installation Studio: A Guide for Project Managers and Marketing Teams",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 37551
+ },
+ {
+  "slug": "blog/choose-web-design-agency-guide",
+  "id": "blog__choose-web-design-agency-guide",
+  "lang": "en",
+  "title": "How to Choose a Web Design Agency | Selection Guide 2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 62484
+ },
+ {
+  "slug": "blog/collecting-interactive-art-private-guide",
+  "id": "blog__collecting-interactive-art-private-guide",
+  "lang": "en",
+  "title": "Collecting Interactive Art | Private Buyer's Guide 2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 68628
+ },
+ {
+  "slug": "blog/corporate-office-lobby-interactive-installation-guide",
+  "id": "blog__corporate-office-lobby-interactive-installation-guide",
+  "lang": "en",
+  "title": "Corporate Office Interactive Installation Guide | Lobby & Reception",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 63251
+ },
+ {
+  "slug": "blog/creative-web-studios-kyoto",
+  "id": "blog__creative-web-studios-kyoto",
+  "lang": "en",
+  "title": "Best Creative Web Studios in Kyoto (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 39832
+ },
+ {
+  "slug": "blog/creative-web-studios-osaka",
+  "id": "blog__creative-web-studios-osaka",
+  "lang": "en",
+  "title": "15 Best Creative Web Studios in Osaka (2026): 3D, Interactive & Brand Sites",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 40183
+ },
+ {
+  "slug": "blog/creative-web-studios-tokyo",
+  "id": "blog__creative-web-studios-tokyo",
+  "lang": "en",
+  "title": "Best Tokyo Creative Web Agencies (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 41821
+ },
+ {
+  "slug": "blog/custom-web-app-cost-budget-guide",
+  "id": "blog__custom-web-app-cost-budget-guide",
+  "lang": "en",
+  "title": "Custom Web App Cost Guide 2026 | Budget $15K to $300K+",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 65547
+ },
+ {
+  "slug": "blog/department-stores-interactive-installations-japan-guide",
+  "id": "blog__department-stores-interactive-installations-japan-guide",
+  "lang": "en",
+  "title": "Japanese Department Stores: 4 Interactive Installation Playbooks (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 55366
+ },
+ {
+  "slug": "blog/digital-signage-vs-interactive-installations",
+  "id": "blog__digital-signage-vs-interactive-installations",
+  "lang": "en",
+  "title": "Digital Signage vs Interactive Installations | 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 61401
+ },
+ {
+  "slug": "blog/digital-twin-brand-showroom-guide",
+  "id": "blog__digital-twin-brand-showroom-guide",
+  "lang": "en",
+  "title": "Digital Twin Experiences for Brands & Showrooms (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 49994
+ },
+ {
+  "slug": "blog/digital-vs-physical-experience-guide",
+  "id": "blog__digital-vs-physical-experience-guide",
+  "lang": "en",
+  "title": "Digital vs Physical Experience | Budget & ROI Guide 2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 57497
+ },
+ {
+  "slug": "blog/evaluate-web-agency-checklist-startups",
+  "id": "blog__evaluate-web-agency-checklist-startups",
+  "lang": "en",
+  "title": "Evaluate a Web Agency: Founder Checklist + RFP Template (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 53542
+ },
+ {
+  "slug": "blog/experience-economy-guide",
+  "id": "blog__experience-economy-guide",
+  "lang": "en",
+  "title": "The Experience Economy Explained: Definition, Examples & Venue Checklist",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 44694
+ },
+ {
+  "slug": "blog/fintech-website-trust-design-patterns",
+  "id": "blog__fintech-website-trust-design-patterns",
+  "lang": "en",
+  "title": "Fintech Website Design Patterns: 12 Real Examples That Convert (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 60086
+ },
+ {
+  "slug": "blog/forward-deployed-designer-ai-startups",
+  "id": "blog__forward-deployed-designer-ai-startups",
+  "lang": "en",
+  "title": "Forward Deployed Designer: Embedded Brand for AI Startups",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 63551
+ },
+ {
+  "slug": "blog/forward-deployed-engineer-studio",
+  "id": "blog__forward-deployed-engineer-studio",
+  "lang": "en",
+  "title": "Forward Deployed Engineer Studio: The SMB Gap (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 56159
+ },
+ {
+  "slug": "blog/frontier-web-apis-2026-production-ready",
+  "id": "blog__frontier-web-apis-2026-production-ready",
+  "lang": "en",
+  "title": "Frontier Web APIs 2026: WebGPU, WebTransport & What's Production-Ready",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 65283
+ },
+ {
+  "slug": "blog/game-studio-immersive-website-guide",
+  "id": "blog__game-studio-immersive-website-guide",
+  "lang": "en",
+  "title": "Turn Your Game Website Into an Experience: The 2026 Guide to Immersive Game Studio Sites",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 55488
+ },
+ {
+  "slug": "blog/gaussian-splatting-commercial-real-estate",
+  "id": "blog__gaussian-splatting-commercial-real-estate",
+  "lang": "en",
+  "title": "Gaussian Splatting for Commercial Real Estate: Pre-Leasing, Investor Tours, and Development Marketing (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 53845
+ },
+ {
+  "slug": "blog/gaussian-splatting-guide",
+  "id": "blog__gaussian-splatting-guide",
+  "lang": "en",
+  "title": "3D Gaussian Splatting: Complete Guide to Services, Use Cases & Web Viewers (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 65165
+ },
+ {
+  "slug": "blog/gaussian-splatting-landing-page",
+  "id": "blog__gaussian-splatting-landing-page",
+  "lang": "en",
+  "title": "Gaussian Splatting Landing Pages: Scroll-Driven 3D Storytelling (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 42108
+ },
+ {
+  "slug": "blog/gaussian-splatting-vs-photogrammetry-nerf-lidar",
+  "id": "blog__gaussian-splatting-vs-photogrammetry-nerf-lidar",
+  "lang": "en",
+  "title": "Gaussian Splatting vs Photogrammetry vs NeRF vs LiDAR",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 49531
+ },
+ {
+  "slug": "blog/hokusai-interactive-installation",
+  "id": "blog__hokusai-interactive-installation",
+  "lang": "en",
+  "title": "Hokusai Interactive Installation Case Study: Expo 2025 Osaka (Tech + Outcomes)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 48130
+ },
+ {
+  "slug": "blog/hospital-interactive-installation-guide",
+  "id": "blog__hospital-interactive-installation-guide",
+  "lang": "en",
+  "title": "Interactive Installations for Hospitals | 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 81184
+ },
+ {
+  "slug": "blog/immersive-dining-interactive-restaurant-installations-guide",
+  "id": "blog__immersive-dining-interactive-restaurant-installations-guide",
+  "lang": "en",
+  "title": "Immersive Dining Installations | Costs, Technology & 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 64405
+ },
+ {
+  "slug": "blog/immersive-recruit-site-employer-branding",
+  "id": "blog__immersive-recruit-site-employer-branding",
+  "lang": "en",
+  "title": "Immersive Recruit Site Design: A 2026 Employer-Branding Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 48562
+ },
+ {
+  "slug": "blog/immersive-storytelling-websites-guide",
+  "id": "blog__immersive-storytelling-websites-guide",
+  "lang": "en",
+  "title": "Best Storytelling Websites: How They Work & What They Cost (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 56946
+ },
+ {
+  "slug": "blog/in-house-vs-agency-vs-freelance-web",
+  "id": "blog__in-house-vs-agency-vs-freelance-web",
+  "lang": "en",
+  "title": "In-House vs Agency vs Freelance Web Dev | 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 69774
+ },
+ {
+  "slug": "blog/installation-vs-projection-mapping-guide",
+  "id": "blog__installation-vs-projection-mapping-guide",
+  "lang": "en",
+  "title": "Installation vs Projection Mapping | Comparison Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 53239
+ },
+ {
+  "slug": "blog/interactive-art-guide",
+  "id": "blog__interactive-art-guide",
+  "lang": "en",
+  "title": "What Is Interactive Art? Definition, History & How to Create",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 49870
+ },
+ {
+  "slug": "blog/interactive-installation-cost-budget-guide",
+  "id": "blog__interactive-installation-cost-budget-guide",
+  "lang": "en",
+  "title": "Interactive Installation Cost Guide 2026 | Budget $15K to $500K+",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 51709
+ },
+ {
+  "slug": "blog/interactive-installation-ideas-museums",
+  "id": "blog__interactive-installation-ideas-museums",
+  "lang": "en",
+  "title": "38 Interactive Installation Ideas to Inspire Your Next Museum Project",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 68099
+ },
+ {
+  "slug": "blog/interactive-installation-revenue-models-guide",
+  "id": "blog__interactive-installation-revenue-models-guide",
+  "lang": "en",
+  "title": "Installation Revenue Models: Ticketing, Sponsorship & More",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 53290
+ },
+ {
+  "slug": "blog/interactive-installation-studios-japan",
+  "id": "blog__interactive-installation-studios-japan",
+  "lang": "en",
+  "title": "Best Interactive Installation Studios in Japan (2026): Pricing, Process & Shortlist",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 36859
+ },
+ {
+  "slug": "blog/interactive-installation-vs-permanent-art-commission",
+  "id": "blog__interactive-installation-vs-permanent-art-commission",
+  "lang": "en",
+  "title": "Interactive Installation vs Art Commission | When Painters Win",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 68911
+ },
+ {
+  "slug": "blog/interactive-installations-casinos-entertainment-venues-guide",
+  "id": "blog__interactive-installations-casinos-entertainment-venues-guide",
+  "lang": "en",
+  "title": "Interactive Installations for Casinos & Venues | 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 62692
+ },
+ {
+  "slug": "blog/interactive-installations-for-hotels-guide",
+  "id": "blog__interactive-installations-for-hotels-guide",
+  "lang": "en",
+  "title": "Interactive Installations for Hotel Lobbies: Design, ROI & 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 53609
+ },
+ {
+  "slug": "blog/interactive-museum-budget-calculator",
+  "id": "blog__interactive-museum-budget-calculator",
+  "lang": "en",
+  "title": "Interactive Museum Budget Calculator (2026) | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 39334
+ },
+ {
+  "slug": "blog/interactive-museum-installations-benefits-guide",
+  "id": "blog__interactive-museum-installations-benefits-guide",
+  "lang": "en",
+  "title": "Interactive Museum Installations: ROI, Costs & Real Examples (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 84793
+ },
+ {
+  "slug": "blog/interactive-point-cloud-installations-guide",
+  "id": "blog__interactive-point-cloud-installations-guide",
+  "lang": "en",
+  "title": "Interactive Point Clouds: Live Gaussian Splatting in Installations",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 50563
+ },
+ {
+  "slug": "blog/interactive-popup-design-japanese-consumers-guide",
+  "id": "blog__interactive-popup-design-japanese-consumers-guide",
+  "lang": "en",
+  "title": "Interactive Pop-up Design for Japanese Consumers | 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 60819
+ },
+ {
+  "slug": "blog/interactive-retail-web-experience-guide",
+  "id": "blog__interactive-retail-web-experience-guide",
+  "lang": "en",
+  "title": "Interactive Retail Experiences on the Web (2026) | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 51801
+ },
+ {
+  "slug": "blog/interactive-website-vs-video-launch-budget",
+  "id": "blog__interactive-website-vs-video-launch-budget",
+  "lang": "en",
+  "title": "Interactive Website vs Launch Video Budget | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 59665
+ },
+ {
+  "slug": "blog/japanese-web-design-style-guide",
+  "id": "blog__japanese-web-design-style-guide",
+  "lang": "en",
+  "title": "Japanese Web Design: Style, Aesthetics & Real Examples (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 53643
+ },
+ {
+  "slug": "blog/library-interactive-installation-guide",
+  "id": "blog__library-interactive-installation-guide",
+  "lang": "en",
+  "title": "Interactive Installations for Libraries | 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 77107
+ },
+ {
+  "slug": "blog/optimize-website-for-x-twitter",
+  "id": "blog__optimize-website-for-x-twitter",
+  "lang": "en",
+  "title": "Optimize Your Website for X (Twitter) | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 43443
+ },
+ {
+  "slug": "blog/personalized-avatar-installations-guide",
+  "id": "blog__personalized-avatar-installations-guide",
+  "lang": "en",
+  "title": "Personalized Avatar Installations: Scan Visitors Into 3D (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 51472
+ },
+ {
+  "slug": "blog/photorealistic-3d-web-product-visualization-guide",
+  "id": "blog__photorealistic-3d-web-product-visualization-guide",
+  "lang": "en",
+  "title": "Photorealistic 3D for the Web: 4 Production Routes & Costs (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 57330
+ },
+ {
+  "slug": "blog/popup-event-interactive-installation-guide",
+  "id": "blog__popup-event-interactive-installation-guide",
+  "lang": "en",
+  "title": "Pop-up & Event Interactive Installations: 2026 Guide to Temporary Brand Activations",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 65202
+ },
+ {
+  "slug": "blog/premium-website-cost-budget-guide",
+  "id": "blog__premium-website-cost-budget-guide",
+  "lang": "en",
+  "title": "Premium Website Cost Guide 2026 | Budget $5K to $200K",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 58436
+ },
+ {
+  "slug": "blog/projection-mapping-cost-equipment-guide",
+  "id": "blog__projection-mapping-cost-equipment-guide",
+  "lang": "en",
+  "title": "Projection Mapping Cost: Equipment & Budgets (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 50043
+ },
+ {
+  "slug": "blog/psychology-digital-awe-immersive-3d-guide",
+  "id": "blog__psychology-digital-awe-immersive-3d-guide",
+  "lang": "en",
+  "title": "Psychology of Digital Awe | Why Immersive 3D Feels Different",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 70149
+ },
+ {
+  "slug": "blog/real-estate-developer-website-guide",
+  "id": "blog__real-estate-developer-website-guide",
+  "lang": "en",
+  "title": "Real Estate Developer Websites: Showcase Projects That Sell (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 59612
+ },
+ {
+  "slug": "blog/real-time-3d-studios",
+  "id": "blog__real-time-3d-studios",
+  "lang": "en",
+  "title": "Top Real-Time 3D Creative Studios Transforming Brand Experiences | Selection Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 36195
+ },
+ {
+  "slug": "blog/rebrand-or-relaunch-ai-saas",
+  "id": "blog__rebrand-or-relaunch-ai-saas",
+  "lang": "en",
+  "title": "Rebrand or Relaunch: Fixing a Stalled AI-Built SaaS (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 46928
+ },
+ {
+  "slug": "blog/retail-interactive-installation-brand-experience-guide",
+  "id": "blog__retail-interactive-installation-brand-experience-guide",
+  "lang": "en",
+  "title": "Interactive Retail Experiences: 5 Design Rules, Examples & ROI (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 48205
+ },
+ {
+  "slug": "blog/saas-marketing-site-engineering",
+  "id": "blog__saas-marketing-site-engineering",
+  "lang": "en",
+  "title": "SaaS Marketing Site Engineering: Why AI Founders Hire Wrong",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 67322
+ },
+ {
+  "slug": "blog/saas-rebrand-roi-brand-equity-measurement",
+  "id": "blog__saas-rebrand-roi-brand-equity-measurement",
+  "lang": "en",
+  "title": "How to Measure SaaS Rebrand ROI (2026) | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 49782
+ },
+ {
+  "slug": "blog/series-a-website-refresh-npv-framework",
+  "id": "blog__series-a-website-refresh-npv-framework",
+  "lang": "en",
+  "title": "Series A Website Refresh: NPV Framework Guide (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 56050
+ },
+ {
+  "slug": "blog/sound-design-interactive-installations-guide",
+  "id": "blog__sound-design-interactive-installations-guide",
+  "lang": "en",
+  "title": "Sound Design for Interactive Installations | 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 65706
+ },
+ {
+  "slug": "blog/sports-stadium-interactive-installation-fan-experience-guide",
+  "id": "blog__sports-stadium-interactive-installation-fan-experience-guide",
+  "lang": "en",
+  "title": "Interactive Stadium Games for Fans: Design & Cost Guide (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 69352
+ },
+ {
+  "slug": "blog/theme-park-interactive-installation-guide",
+  "id": "blog__theme-park-interactive-installation-guide",
+  "lang": "en",
+  "title": "Theme Park Interactive Installations | Queue & Ride Guide 2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 75609
+ },
+ {
+  "slug": "blog/threejs-2026-what-changed",
+  "id": "blog__threejs-2026-what-changed",
+  "lang": "en",
+  "title": "What's New in Three.js (2026): WebGPU, New Workflows & Beyond",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45214
+ },
+ {
+  "slug": "blog/threejs-best-practices-100-tips",
+  "id": "blog__threejs-best-practices-100-tips",
+  "lang": "en",
+  "title": "100 Three.js Tips That Actually Improve Performance (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 94160
+ },
+ {
+  "slug": "blog/threejs-vs-babylonjs-vs-playcanvas-comparison",
+  "id": "blog__threejs-vs-babylonjs-vs-playcanvas-comparison",
+  "lang": "en",
+  "title": "Three.js Alternatives Compared: Babylon.js vs PlayCanvas (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 55107
+ },
+ {
+  "slug": "blog/threejs-vs-unity-web-comparison",
+  "id": "blog__threejs-vs-unity-web-comparison",
+  "lang": "en",
+  "title": "Three.js vs Unity for Web | Comparison Guide 2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 60631
+ },
+ {
+  "slug": "blog/top-creative-agencies-asia-2026",
+  "id": "blog__top-creative-agencies-asia-2026",
+  "lang": "en",
+  "title": "Top 30 Creative Agencies in Asia (2026) — Award-Winning Studios",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 56470
+ },
+ {
+  "slug": "blog/top-threejs-agencies",
+  "id": "blog__top-threejs-agencies",
+  "lang": "en",
+  "title": "10 Best Three.js Agencies (2026): Pricing, Strengths & How to Choose",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 41227
+ },
+ {
+  "slug": "blog/university-campus-interactive-installation-guide",
+  "id": "blog__university-campus-interactive-installation-guide",
+  "lang": "en",
+  "title": "University Interactive Installations | Campus Guide 2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 94445
+ },
+ {
+  "slug": "blog/vectr-ai-startup-branding-case-study",
+  "id": "blog__vectr-ai-startup-branding-case-study",
+  "lang": "en",
+  "title": "Vectr: Branding + WebGPU Site for an AI Startup | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 43210
+ },
+ {
+  "slug": "blog/web-design-trends-2026-decision-makers-guide",
+  "id": "blog__web-design-trends-2026-decision-makers-guide",
+  "lang": "en",
+  "title": "Web Design Trends 2026 | AI Killed the Brochure Website",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 66278
+ },
+ {
+  "slug": "blog/webar-brand-campaigns-guide",
+  "id": "blog__webar-brand-campaigns-guide",
+  "lang": "en",
+  "title": "Web AR Guide 2026: No-App Brand Campaigns | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 64748
+ },
+ {
+  "slug": "blog/webgl-three-js-site-seo-rankable-guide",
+  "id": "blog__webgl-three-js-site-seo-rankable-guide",
+  "lang": "en",
+  "title": "WebGL & Three.js Site SEO: Make 3D Sites Rankable (2026)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 49905
+ },
+ {
+  "slug": "blog/webgpu-threejs-migration-guide",
+  "id": "blog__webgpu-threejs-migration-guide",
+  "lang": "en",
+  "title": "Migrate Three.js to WebGPU (2026) — The Complete Checklist",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 60809
+ },
+ {
+  "slug": "blog/website-redesign-roi-measure-justify-investment",
+  "id": "blog__website-redesign-roi-measure-justify-investment",
+  "lang": "en",
+  "title": "Website Redesign ROI: Measure & Justify It | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 65679
+ },
+ {
+  "slug": "blog/worship-space-interactive-installation-guide",
+  "id": "blog__worship-space-interactive-installation-guide",
+  "lang": "en",
+  "title": "Interactive Installations for Worship Spaces | 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 68003
+ },
+ {
+  "slug": "blog/zoo-aquarium-interactive-installation-guide",
+  "id": "blog__zoo-aquarium-interactive-installation-guide",
+  "lang": "en",
+  "title": "Interactive Installations for Zoos & Aquariums | 2026 Guide",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 67125
+ },
+ {
+  "slug": "experience-economy-interactive-installations",
+  "id": "experience-economy-interactive-installations",
+  "lang": "en",
+  "title": "Moments people can't stop sharing. | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 30019
+ },
+ {
+  "slug": "fr/blog",
+  "id": "fr__blog",
+  "lang": "fr",
+  "title": "Blog | Installations Interactives & Web 3D | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 16105
+ },
+ {
+  "slug": "fr/blog/authors/default",
+  "id": "fr__blog__authors__default",
+  "lang": "fr",
+  "title": "Jocelyn Lecamus | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 15406
+ },
+ {
+  "slug": "fr/blog/etude-de-cas-site-webgpu-startup-ia",
+  "id": "fr__blog__etude-de-cas-site-webgpu-startup-ia",
+  "lang": "fr",
+  "title": "Vectr : branding + site WebGPU pour une startup IA | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45242
+ },
+ {
+  "slug": "fr/blog/guide-sites-storytelling-immersif",
+  "id": "fr__blog__guide-sites-storytelling-immersif",
+  "lang": "fr",
+  "title": "Sites Web Narratifs Immersifs : Le Guide 2026 des Expériences Interactives",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 61016
+ },
+ {
+  "slug": "fr/blog/installation-interactive-hokusai",
+  "id": "fr__blog__installation-interactive-hokusai",
+  "lang": "fr",
+  "title": "Etude de cas : Installation interactive Hokusai pour l'Expo 2025 Osaka (Technique + Resultats)",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 50000
+ },
+ {
+  "slug": "fr/blog/meilleures-agences-threejs",
+  "id": "fr__blog__meilleures-agences-threejs",
+  "lang": "fr",
+  "title": "Les 10 meilleures agences Three.js (2026) : tarifs, spécialités et guide de sélection",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 43128
+ },
+ {
+  "slug": "fr/blog/threejs-2026-quoi-de-neuf",
+  "id": "fr__blog__threejs-2026-quoi-de-neuf",
+  "lang": "fr",
+  "title": "Three.js en 2026 : Qu'est-ce qui a changé ?",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45832
+ },
+ {
+  "slug": "fr/privacy",
+  "id": "fr__privacy",
+  "lang": "fr",
+  "title": "Politique de confidentialité | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [],
+  "bytes": 16439
+ },
+ {
+  "slug": "interactive-installations-for-hotels",
+  "id": "interactive-installations-for-hotels",
+  "lang": "en",
+  "title": "Bring magic to your hotel. Interactive digital installations for hotels | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 29347
+ },
+ {
+  "slug": "interactive-installations-for-museums",
+  "id": "interactive-installations-for-museums",
+  "lang": "en",
+  "title": "Interactive Museum Installations & Immersive Exhibitions | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 34762
+ },
+ {
+  "slug": "ja/blog",
+  "id": "ja__blog",
+  "lang": "ja",
+  "title": "ブログ | インタラクティブ・インスタレーション＆3D Webガイド | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22586
+ },
+ {
+  "slug": "ja/blog/2",
+  "id": "ja__blog__2",
+  "lang": "ja",
+  "title": "ブログ | インタラクティブ・インスタレーション＆3D Webガイド | Kiasa - 2ページ",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22859
+ },
+ {
+  "slug": "ja/blog/3",
+  "id": "ja__blog__3",
+  "lang": "ja",
+  "title": "ブログ | インタラクティブ・インスタレーション＆3D Webガイド | Kiasa - 3ページ",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22995
+ },
+ {
+  "slug": "ja/blog/3d-elearning-game-development-guide",
+  "id": "ja__blog__3d-elearning-game-development-guide",
+  "lang": "ja",
+  "title": "3D eラーニングゲーム開発ガイド | 没入型企業研修（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 51734
+ },
+ {
+  "slug": "ja/blog/4",
+  "id": "ja__blog__4",
+  "lang": "ja",
+  "title": "ブログ | インタラクティブ・インスタレーション＆3D Webガイド | Kiasa - 4ページ",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22998
+ },
+ {
+  "slug": "ja/blog/5",
+  "id": "ja__blog__5",
+  "lang": "ja",
+  "title": "ブログ | インタラクティブ・インスタレーション＆3D Webガイド | Kiasa - 5ページ",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22935
+ },
+ {
+  "slug": "ja/blog/6",
+  "id": "ja__blog__6",
+  "lang": "ja",
+  "title": "ブログ | インタラクティブ・インスタレーション＆3D Webガイド | Kiasa - 6ページ",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22750
+ },
+ {
+  "slug": "ja/blog/7",
+  "id": "ja__blog__7",
+  "lang": "ja",
+  "title": "ブログ | インタラクティブ・インスタレーション＆3D Webガイド | Kiasa - 7ページ",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22770
+ },
+ {
+  "slug": "ja/blog/8",
+  "id": "ja__blog__8",
+  "lang": "ja",
+  "title": "ブログ | インタラクティブ・インスタレーション＆3D Webガイド | Kiasa - 8ページ",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 22805
+ },
+ {
+  "slug": "ja/blog/9",
+  "id": "ja__blog__9",
+  "lang": "ja",
+  "title": "ブログ | インタラクティブ・インスタレーション＆3D Webガイド | Kiasa - 9ページ",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 21952
+ },
+ {
+  "slug": "ja/blog/accessible-museum-interactive-installations",
+  "id": "ja__blog__accessible-museum-interactive-installations",
+  "lang": "ja",
+  "title": "ミュージアム向けアクセシブル展示設計ガイド｜JIS X 8341-3対応（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 42107
+ },
+ {
+  "slug": "ja/blog/ai-website-vs-custom-design",
+  "id": "ja__blog__ai-website-vs-custom-design",
+  "lang": "ja",
+  "title": "AIサイト vs カスタムデザイン：データで見る判断基準 | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 42679
+ },
+ {
+  "slug": "ja/blog/airport-transit-interactive-installation-guide",
+  "id": "ja__blog__airport-transit-interactive-installation-guide",
+  "lang": "ja",
+  "title": "空港・駅のインタラクティブ・インスタレーション｜導入ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 51758
+ },
+ {
+  "slug": "ja/blog/anime-ip-interactive-exhibition-guide",
+  "id": "ja__blog__anime-ip-interactive-exhibition-guide",
+  "lang": "ja",
+  "title": "アニメ・IP体感型展示 企画ガイド2026｜原画展から没入型展覧会へ",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 55580
+ },
+ {
+  "slug": "ja/blog/authors/default",
+  "id": "ja__blog__authors__default",
+  "lang": "ja",
+  "title": "ルカム・ジョスラン | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [],
+  "bytes": 15647
+ },
+ {
+  "slug": "ja/blog/award-winning-website-design-guide",
+  "id": "ja__blog__award-winning-website-design-guide",
+  "lang": "ja",
+  "title": "受賞するWebデザインとは？審査基準を徹底解説｜Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 49138
+ },
+ {
+  "slug": "ja/blog/b2b-overseas-client-website-strategy-japan",
+  "id": "ja__blog__b2b-overseas-client-website-strategy-japan",
+  "lang": "ja",
+  "title": "BtoB製造業Webサイトの海外顧客訴求｜7つの設計原則と予算ガイド | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 46939
+ },
+ {
+  "slug": "ja/blog/best-japanese-web-design-studios-2026",
+  "id": "ja__blog__best-japanese-web-design-studios-2026",
+  "lang": "ja",
+  "title": "日本のWebデザインスタジオ厳選14社｜実績・予算・選定基準（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45288
+ },
+ {
+  "slug": "ja/blog/best-threejs-websites-2026",
+  "id": "ja__blog__best-threejs-websites-2026",
+  "lang": "ja",
+  "title": "Three.js制作サイト8選（2026年版）｜技術で解説 | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 39565
+ },
+ {
+  "slug": "ja/blog/branding-design-agency-asia-guide",
+  "id": "ja__blog__branding-design-agency-asia-guide",
+  "lang": "ja",
+  "title": "アジアのブランディング・デザイン会社の選び方（2026）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 35476
+ },
+ {
+  "slug": "ja/blog/brief-interactive-installation-studio-guide",
+  "id": "ja__blog__brief-interactive-installation-studio-guide",
+  "lang": "ja",
+  "title": "インタラクティブインスタレーション制作依頼の書き方｜RFPガイド",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 38201
+ },
+ {
+  "slug": "ja/blog/build-saas-with-ai-founder-kickoff-guide",
+  "id": "ja__blog__build-saas-with-ai-founder-kickoff-guide",
+  "lang": "ja",
+  "title": "AIでSaaSを立ち上げる｜非エンジニア創業者のキックオフガイド【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45608
+ },
+ {
+  "slug": "ja/blog/built-with-ai-trust-signals-2026",
+  "id": "ja__blog__built-with-ai-trust-signals-2026",
+  "lang": "ja",
+  "title": "AI製サイトの見分け方：信頼を落とす12の兆候（2026）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 36271
+ },
+ {
+  "slug": "ja/blog/childrens-museum-interactive-installation-guide",
+  "id": "ja__blog__childrens-museum-interactive-installation-guide",
+  "lang": "ja",
+  "title": "こどもミュージアム向けインタラクティブ展示｜導入ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45392
+ },
+ {
+  "slug": "ja/blog/choose-interactive-installation-studio-guide",
+  "id": "ja__blog__choose-interactive-installation-studio-guide",
+  "lang": "ja",
+  "title": "失敗しないインタラクティブ・インスタレーション制作会社の選び方（2025年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 31413
+ },
+ {
+  "slug": "ja/blog/choose-web-design-agency-guide",
+  "id": "ja__blog__choose-web-design-agency-guide",
+  "lang": "ja",
+  "title": "Web制作会社の選び方｜2026年版 選定基準ガイド",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 38108
+ },
+ {
+  "slug": "ja/blog/collecting-interactive-art-private-guide",
+  "id": "ja__blog__collecting-interactive-art-private-guide",
+  "lang": "ja",
+  "title": "インタラクティブアート収集ガイド | 個人コレクター向け2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 47185
+ },
+ {
+  "slug": "ja/blog/corporate-office-lobby-interactive-installation-guide",
+  "id": "ja__blog__corporate-office-lobby-interactive-installation-guide",
+  "lang": "ja",
+  "title": "企業オフィス・ロビーのインタラクティブインスタレーションガイド | 採用ブランディング・来客対応",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 46349
+ },
+ {
+  "slug": "ja/blog/creative-web-studios-kyoto",
+  "id": "ja__blog__creative-web-studios-kyoto",
+  "lang": "ja",
+  "title": "京都のクリエイティブWebスタジオ厳選9社（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 34166
+ },
+ {
+  "slug": "ja/blog/creative-web-studios-osaka",
+  "id": "ja__blog__creative-web-studios-osaka",
+  "lang": "ja",
+  "title": "大阪のクリエイティブWebスタジオ厳選（2025年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 34773
+ },
+ {
+  "slug": "ja/blog/creative-web-studios-tokyo",
+  "id": "ja__blog__creative-web-studios-tokyo",
+  "lang": "ja",
+  "title": "東京のクリエイティブWeb制作会社 厳選10社（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 35836
+ },
+ {
+  "slug": "ja/blog/custom-web-app-cost-budget-guide",
+  "id": "ja__blog__custom-web-app-cost-budget-guide",
+  "lang": "ja",
+  "title": "Webアプリ開発費用ガイド2026｜225万〜4,500万円超",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 46420
+ },
+ {
+  "slug": "ja/blog/department-stores-interactive-installations-japan-guide",
+  "id": "ja__blog__department-stores-interactive-installations-japan-guide",
+  "lang": "ja",
+  "title": "百貨店の再発明｜インタラクティブ・インスタレーションで勝つ4つの戦略【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 41967
+ },
+ {
+  "slug": "ja/blog/digital-signage-vs-interactive-installations",
+  "id": "ja__blog__digital-signage-vs-interactive-installations",
+  "lang": "ja",
+  "title": "デジタルサイネージ vs インタラクティブ・インスタレーション | 2026年ガイド",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 44971
+ },
+ {
+  "slug": "ja/blog/digital-twin-brand-showroom-guide",
+  "id": "ja__blog__digital-twin-brand-showroom-guide",
+  "lang": "ja",
+  "title": "バーチャルショールーム／ブランド向けデジタルツイン制作ガイド（2026）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 39139
+ },
+ {
+  "slug": "ja/blog/digital-vs-physical-experience-guide",
+  "id": "ja__blog__digital-vs-physical-experience-guide",
+  "lang": "ja",
+  "title": "デジタル体験 vs フィジカル体験｜予算配分・ROIガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 43361
+ },
+ {
+  "slug": "ja/blog/evaluate-web-agency-checklist-startups",
+  "id": "ja__blog__evaluate-web-agency-checklist-startups",
+  "lang": "ja",
+  "title": "Web制作会社の選び方｜創業者向け30項目チェックリスト＋RFPテンプレート【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 42091
+ },
+ {
+  "slug": "ja/blog/experience-economy-guide",
+  "id": "ja__blog__experience-economy-guide",
+  "lang": "ja",
+  "title": "体験経済入門：モノより「思い出」が選ばれる時代に、あなたの施設はどう変わるべきか",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 37932
+ },
+ {
+  "slug": "ja/blog/fintech-website-trust-design-patterns",
+  "id": "ja__blog__fintech-website-trust-design-patterns",
+  "lang": "ja",
+  "title": "フィンテックWebサイトの信頼設計｜慎重なユーザーをコンバートする12のパターン【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 44232
+ },
+ {
+  "slug": "ja/blog/foreign-digital-communication-mistakes-japan",
+  "id": "ja__blog__foreign-digital-communication-mistakes-japan",
+  "lang": "ja",
+  "title": "外国人向けデジタル発信の落とし穴7選｜改善チェックリスト付き | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 42651
+ },
+ {
+  "slug": "ja/blog/foreign-facing-website-guide-japan",
+  "id": "ja__blog__foreign-facing-website-guide-japan",
+  "lang": "ja",
+  "title": "外国人に選ばれるWebサイトの作り方｜設計・多言語・集客の実践ガイド | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 46973
+ },
+ {
+  "slug": "ja/blog/foreign-talent-recruitment-site-design",
+  "id": "ja__blog__foreign-talent-recruitment-site-design",
+  "lang": "ja",
+  "title": "外国人採用サイトのデザイン｜応募率を上げる設計7つの鉄則 | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 39844
+ },
+ {
+  "slug": "ja/blog/forward-deployed-designer-ai-startups",
+  "id": "ja__blog__forward-deployed-designer-ai-startups",
+  "lang": "ja",
+  "title": "Forward Deployed Designer｜AIスタートアップ向け伴走型ブランドパートナー【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 48290
+ },
+ {
+  "slug": "ja/blog/forward-deployed-engineer-studio",
+  "id": "ja__blog__forward-deployed-engineer-studio",
+  "lang": "ja",
+  "title": "Forward Deployed Engineerスタジオ｜伴走型エンジニアリングの空白【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 44621
+ },
+ {
+  "slug": "ja/blog/frontier-web-apis-2026-production-ready",
+  "id": "ja__blog__frontier-web-apis-2026-production-ready",
+  "lang": "ja",
+  "title": "フロンティアWeb API 2026｜WebGPU・WebTransportは本番投入できるか",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 52238
+ },
+ {
+  "slug": "ja/blog/game-studio-immersive-website-guide",
+  "id": "ja__blog__game-studio-immersive-website-guide",
+  "lang": "ja",
+  "title": "ゲームスタジオ向け没入型Webサイト制作ガイド（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 43954
+ },
+ {
+  "slug": "ja/blog/gaussian-splatting-commercial-real-estate",
+  "id": "ja__blog__gaussian-splatting-commercial-real-estate",
+  "lang": "ja",
+  "title": "商業不動産向けGaussian Splatting：プレリース・投資家向けツアー・開発マーケティング（2026年）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 41994
+ },
+ {
+  "slug": "ja/blog/gaussian-splatting-guide",
+  "id": "ja__blog__gaussian-splatting-guide",
+  "lang": "ja",
+  "title": "ガウシアンスプラッティングのソフト・サービス比較｜活用事例と費用（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 50586
+ },
+ {
+  "slug": "ja/blog/gaussian-splatting-landing-page",
+  "id": "ja__blog__gaussian-splatting-landing-page",
+  "lang": "ja",
+  "title": "ガウシアンスプラッティング×LP：スクロール演出の3Dストーリーテリング | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 34804
+ },
+ {
+  "slug": "ja/blog/gaussian-splatting-vs-photogrammetry-nerf-lidar",
+  "id": "ja__blog__gaussian-splatting-vs-photogrammetry-nerf-lidar",
+  "lang": "ja",
+  "title": "3Dキャプチャ比較：スプラッティング/フォトグラメトリ/NeRF/LiDAR",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 38002
+ },
+ {
+  "slug": "ja/blog/global-digital-readiness-checklist-japan",
+  "id": "ja__blog__global-digital-readiness-checklist-japan",
+  "lang": "ja",
+  "title": "海外展開デジタル成熟度チェックリスト｜30項目で自社診断 | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 52668
+ },
+ {
+  "slug": "ja/blog/global-expansion-strategies",
+  "id": "ja__blog__global-expansion-strategies",
+  "lang": "ja",
+  "title": "日本発スタートアップのための海外展開に向けた8つの戦略",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 35433
+ },
+ {
+  "slug": "ja/blog/green-expo-2027-pavilion-experience-guide",
+  "id": "ja__blog__green-expo-2027-pavilion-experience-guide",
+  "lang": "ja",
+  "title": "GREEN×EXPO 2027 出展体験ガイド｜Village・Web資産化",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 46164
+ },
+ {
+  "slug": "ja/blog/hokusai-interactive-installation",
+  "id": "ja__blog__hokusai-interactive-installation",
+  "lang": "ja",
+  "title": "北斎《神奈川沖浪裏》を体で遊ぶインタラクティブインスタレーション　大阪・関西万博 2025 事例",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 39128
+ },
+ {
+  "slug": "ja/blog/hospital-interactive-installation-guide",
+  "id": "ja__blog__hospital-interactive-installation-guide",
+  "lang": "ja",
+  "title": "病院のインタラクティブ・インスタレーション｜導入ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 45899
+ },
+ {
+  "slug": "ja/blog/hospitality-foreign-facing-website-guide-japan",
+  "id": "ja__blog__hospitality-foreign-facing-website-guide-japan",
+  "lang": "ja",
+  "title": "海外旅行者向けホテル予約サイトの作り方｜明確な料金表示・多言語UX完全ガイド | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 45192
+ },
+ {
+  "slug": "ja/blog/immersive-dining-interactive-restaurant-installations-guide",
+  "id": "ja__blog__immersive-dining-interactive-restaurant-installations-guide",
+  "lang": "ja",
+  "title": "没入型ダイニング｜レストランのインタラクティブ・インスタレーション導入ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45810
+ },
+ {
+  "slug": "ja/blog/immersive-recruit-site-employer-branding",
+  "id": "ja__blog__immersive-recruit-site-employer-branding",
+  "lang": "ja",
+  "title": "没入型採用サイトの作り方｜採用ブランディングとエンジニア採用 | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 39079
+ },
+ {
+  "slug": "ja/blog/immersive-storytelling-websites-guide",
+  "id": "ja__blog__immersive-storytelling-websites-guide",
+  "lang": "ja",
+  "title": "没入型ストーリーテリングWebサイト：インタラクティブな物語体験の2026年版ガイド",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 44695
+ },
+ {
+  "slug": "ja/blog/in-house-vs-agency-vs-freelance-web",
+  "id": "ja__blog__in-house-vs-agency-vs-freelance-web",
+  "lang": "ja",
+  "title": "社内開発・制作会社・フリーランス｜Web制作の最適体制ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 47492
+ },
+ {
+  "slug": "ja/blog/inbound-multilingual-sns-google-maps-guide",
+  "id": "ja__blog__inbound-multilingual-sns-google-maps-guide",
+  "lang": "ja",
+  "title": "訪日インバウンド 多言語SNS運用ガイド 2026｜Googleマップ・Instagram・LINE OA | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 44064
+ },
+ {
+  "slug": "ja/blog/installation-vs-projection-mapping-guide",
+  "id": "ja__blog__installation-vs-projection-mapping-guide",
+  "lang": "ja",
+  "title": "インスタレーション vs プロジェクションマッピング | 比較ガイド",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 42359
+ },
+ {
+  "slug": "ja/blog/interactive-art-guide",
+  "id": "ja__blog__interactive-art-guide",
+  "lang": "ja",
+  "title": "インタラクティブアートとは？定義・歴史・作り方【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 42811
+ },
+ {
+  "slug": "ja/blog/interactive-installation-cost-budget-guide",
+  "id": "ja__blog__interactive-installation-cost-budget-guide",
+  "lang": "ja",
+  "title": "インタラクティブインスタレーション費用ガイド | 予算別完全解説",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 40818
+ },
+ {
+  "slug": "ja/blog/interactive-installation-ideas-museums",
+  "id": "ja__blog__interactive-installation-ideas-museums",
+  "lang": "ja",
+  "title": "ミュージアム向けインタラクティブ・インスタレーション38選",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 54980
+ },
+ {
+  "slug": "ja/blog/interactive-installation-revenue-models-guide",
+  "id": "ja__blog__interactive-installation-revenue-models-guide",
+  "lang": "ja",
+  "title": "インスタレーションの収益モデル｜チケット・スポンサー・ライセンス",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 41514
+ },
+ {
+  "slug": "ja/blog/interactive-installation-studios-japan",
+  "id": "ja__blog__interactive-installation-studios-japan",
+  "lang": "ja",
+  "title": "日本のインタラクティブ・インスタレーション制作会社10選【2026年版】選び方・費用・事例",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 31857
+ },
+ {
+  "slug": "ja/blog/interactive-installation-subsidy-grant-guide-japan",
+  "id": "ja__blog__interactive-installation-subsidy-grant-guide-japan",
+  "lang": "ja",
+  "title": "インタラクティブ・インスタレーション補助金・助成金ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 46539
+ },
+ {
+  "slug": "ja/blog/interactive-installation-vs-permanent-art-commission",
+  "id": "ja__blog__interactive-installation-vs-permanent-art-commission",
+  "lang": "ja",
+  "title": "インタラクティブ vs 恒久アート委嘱｜画家が勝つとき",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 50314
+ },
+ {
+  "slug": "ja/blog/interactive-installations-casinos-entertainment-venues-guide",
+  "id": "ja__blog__interactive-installations-casinos-entertainment-venues-guide",
+  "lang": "ja",
+  "title": "カジノ・エンターテインメント施設のインタラクティブ導入ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 44698
+ },
+ {
+  "slug": "ja/blog/interactive-installations-for-hotels-guide",
+  "id": "ja__blog__interactive-installations-for-hotels-guide",
+  "lang": "ja",
+  "title": "ホテルロビーのインタラクティブ・インスタレーション導入ガイド（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 42171
+ },
+ {
+  "slug": "ja/blog/interactive-museum-budget-calculator",
+  "id": "ja__blog__interactive-museum-budget-calculator",
+  "lang": "ja",
+  "title": "ミュージアム展示の予算計算ガイド | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 32876
+ },
+ {
+  "slug": "ja/blog/interactive-museum-installations-benefits-guide",
+  "id": "ja__blog__interactive-museum-installations-benefits-guide",
+  "lang": "ja",
+  "title": "体験型ミュージアム展示：費用・スケジュール・事例・ROI（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 59007
+ },
+ {
+  "slug": "ja/blog/interactive-point-cloud-installations-guide",
+  "id": "ja__blog__interactive-point-cloud-installations-guide",
+  "lang": "ja",
+  "title": "インタラクティブ点群：ライブインスタレーションのリアルタイム・ガウシアンスプラッティング（2026）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 40238
+ },
+ {
+  "slug": "ja/blog/interactive-popup-design-japanese-consumers-guide",
+  "id": "ja__blog__interactive-popup-design-japanese-consumers-guide",
+  "lang": "ja",
+  "title": "日本市場向けインタラクティブ・ポップアップ設計ガイド（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45756
+ },
+ {
+  "slug": "ja/blog/interactive-retail-web-experience-guide",
+  "id": "ja__blog__interactive-retail-web-experience-guide",
+  "lang": "ja",
+  "title": "Web上のインタラクティブなリテール体験（2026年版）｜Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 39735
+ },
+ {
+  "slug": "ja/blog/interactive-website-vs-video-launch-budget",
+  "id": "ja__blog__interactive-website-vs-video-launch-budget",
+  "lang": "ja",
+  "title": "インタラクティブWebサイト vs ローンチ動画予算｜Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 43097
+ },
+ {
+  "slug": "ja/blog/japanese-web-design-style-guide",
+  "id": "ja__blog__japanese-web-design-style-guide",
+  "lang": "ja",
+  "title": "日本のWebデザイン：余白・情報密度・和文タイポグラフィの実例（2026）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 39433
+ },
+ {
+  "slug": "ja/blog/library-interactive-installation-guide",
+  "id": "ja__blog__library-interactive-installation-guide",
+  "lang": "ja",
+  "title": "図書館のインタラクティブ・インスタレーション｜導入ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 53305
+ },
+ {
+  "slug": "ja/blog/museum-foreign-visitors-digital-experience-guide",
+  "id": "ja__blog__museum-foreign-visitors-digital-experience-guide",
+  "lang": "ja",
+  "title": "訪日外国人に届くミュージアム体験とWebサイトの作り方（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 37508
+ },
+ {
+  "slug": "ja/blog/optimize-website-for-x-twitter",
+  "id": "ja__blog__optimize-website-for-x-twitter",
+  "lang": "ja",
+  "title": "Xのバズを活かすWebサイト最適化｜Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 34845
+ },
+ {
+  "slug": "ja/blog/overseas-facing-website-development-guide-japan",
+  "id": "ja__blog__overseas-facing-website-development-guide-japan",
+  "lang": "ja",
+  "title": "海外向けサイト制作の費用・発注ガイド｜制作会社の選び方2026 | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 42257
+ },
+ {
+  "slug": "ja/blog/personalized-avatar-installations-guide",
+  "id": "ja__blog__personalized-avatar-installations-guide",
+  "lang": "ja",
+  "title": "来場者を1分で3D化するパーソナルアバター・インスタレーション（2026）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 40065
+ },
+ {
+  "slug": "ja/blog/photorealistic-3d-web-product-visualization-guide",
+  "id": "ja__blog__photorealistic-3d-web-product-visualization-guide",
+  "lang": "ja",
+  "title": "Web向けフォトリアル3D｜プロダクトビジュアライゼーション（2026）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 43323
+ },
+ {
+  "slug": "ja/blog/popup-event-interactive-installation-guide",
+  "id": "ja__blog__popup-event-interactive-installation-guide",
+  "lang": "ja",
+  "title": "ポップアップ・イベント向けインタラクティブ・インスタレーション完全ガイド：ブランド体験を「期間限定」で最大化する方法（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 46472
+ },
+ {
+  "slug": "ja/blog/premium-website-cost-budget-guide",
+  "id": "ja__blog__premium-website-cost-budget-guide",
+  "lang": "ja",
+  "title": "プレミアムWebサイト費用ガイド2026｜75万〜3,000万円",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45859
+ },
+ {
+  "slug": "ja/blog/projection-mapping-cost-equipment-guide",
+  "id": "ja__blog__projection-mapping-cost-equipment-guide",
+  "lang": "ja",
+  "title": "プロジェクションマッピング費用：機材と予算（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 40075
+ },
+ {
+  "slug": "ja/blog/psychology-digital-awe-immersive-3d-guide",
+  "id": "ja__blog__psychology-digital-awe-immersive-3d-guide",
+  "lang": "ja",
+  "title": "デジタル畏怖の心理学｜没入型3Dが「別物」に感じる神経科学的理由",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 44076
+ },
+ {
+  "slug": "ja/blog/real-estate-developer-website-guide",
+  "id": "ja__blog__real-estate-developer-website-guide",
+  "lang": "ja",
+  "title": "不動産デベロッパー向けWebサイト｜分譲・販売を加速する公式サイトの作り方【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 44828
+ },
+ {
+  "slug": "ja/blog/real-time-3d-studios",
+  "id": "ja__blog__real-time-3d-studios",
+  "lang": "ja",
+  "title": "ブランド体験を変えるリアルタイム3Dスタジオとは？日本企業のための選び方ガイド",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 34419
+ },
+ {
+  "slug": "ja/blog/rebrand-or-relaunch-ai-saas",
+  "id": "ja__blog__rebrand-or-relaunch-ai-saas",
+  "lang": "ja",
+  "title": "リブランドか再立ち上げか｜AI製SaaSがコンバージョンしないときの修正パス【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 37453
+ },
+ {
+  "slug": "ja/blog/retail-interactive-installation-brand-experience-guide",
+  "id": "ja__blog__retail-interactive-installation-brand-experience-guide",
+  "lang": "ja",
+  "title": "リテールブランドのためのインタラクティブ・インスタレーション活用ガイド：日本人と訪日客を動かす「体験型ストア」のつくり方（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 39200
+ },
+ {
+  "slug": "ja/blog/saas-marketing-site-engineering",
+  "id": "ja__blog__saas-marketing-site-engineering",
+  "lang": "ja",
+  "title": "SaaSマーケティングサイトのエンジニアリング｜AIスタートアップ創業者が外注で失敗する理由【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 51053
+ },
+ {
+  "slug": "ja/blog/saas-rebrand-roi-brand-equity-measurement",
+  "id": "ja__blog__saas-rebrand-roi-brand-equity-measurement",
+  "lang": "ja",
+  "title": "SaaSリブランディングのROI測定｜ブランドエクイティで効果を証明する方法【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 38135
+ },
+ {
+  "slug": "ja/blog/sake-brewery-web-interactive-experience-inbound-guide",
+  "id": "ja__blog__sake-brewery-web-interactive-experience-inbound-guide",
+  "lang": "ja",
+  "title": "酒蔵インバウンド×Web＆インスタレーション実践ガイド | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 44978
+ },
+ {
+  "slug": "ja/blog/series-a-website-refresh-npv-framework",
+  "id": "ja__blog__series-a-website-refresh-npv-framework",
+  "lang": "ja",
+  "title": "シリーズAサイトリニューアルのNPVフレームワーク｜取締役会向け稟議の作り方【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 42916
+ },
+ {
+  "slug": "ja/blog/ski-resort-web-interactive-experience-inbound-guide",
+  "id": "ja__blog__ski-resort-web-interactive-experience-inbound-guide",
+  "lang": "ja",
+  "title": "スキーリゾートのインバウンドDX｜Web＆インスタレーション実践ガイド | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 49519
+ },
+ {
+  "slug": "ja/blog/sound-design-interactive-installations-guide",
+  "id": "ja__blog__sound-design-interactive-installations-guide",
+  "lang": "ja",
+  "title": "インタラクティブ・インスタレーションのサウンドデザイン｜導入者向けガイド",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 45126
+ },
+ {
+  "slug": "ja/blog/sports-stadium-interactive-installation-fan-experience-guide",
+  "id": "ja__blog__sports-stadium-interactive-installation-fan-experience-guide",
+  "lang": "ja",
+  "title": "スポーツスタジアムのインタラクティブ・インスタレーション｜2026ガイド",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45395
+ },
+ {
+  "slug": "ja/blog/theme-park-interactive-installation-guide",
+  "id": "ja__blog__theme-park-interactive-installation-guide",
+  "lang": "ja",
+  "title": "テーマパークのインタラクティブ・インスタレーション｜導入ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 46453
+ },
+ {
+  "slug": "ja/blog/threejs-2026-what-changed",
+  "id": "ja__blog__threejs-2026-what-changed",
+  "lang": "ja",
+  "title": "Three.js 2026年：何が変わったのか？",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 39241
+ },
+ {
+  "slug": "ja/blog/threejs-best-practices-100-tips",
+  "id": "ja__blog__threejs-best-practices-100-tips",
+  "lang": "ja",
+  "title": "Three.jsベストプラクティス100選（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 76367
+ },
+ {
+  "slug": "ja/blog/threejs-vs-babylonjs-vs-playcanvas-comparison",
+  "id": "ja__blog__threejs-vs-babylonjs-vs-playcanvas-comparison",
+  "lang": "ja",
+  "title": "Three.js vs Babylon.js vs PlayCanvas 徹底比較 | 2026年版",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45816
+ },
+ {
+  "slug": "ja/blog/threejs-vs-unity-web-comparison",
+  "id": "ja__blog__threejs-vs-unity-web-comparison",
+  "lang": "ja",
+  "title": "Three.js vs Unity WebGL徹底比較 | 2026年版ガイド",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 47682
+ },
+ {
+  "slug": "ja/blog/top-creative-agencies-asia-2026",
+  "id": "ja__blog__top-creative-agencies-asia-2026",
+  "lang": "ja",
+  "title": "アジアのクリエイティブエージェンシー30選（2026） — 受賞スタジオ",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 49378
+ },
+ {
+  "slug": "ja/blog/top-threejs-agencies",
+  "id": "ja__blog__top-threejs-agencies",
+  "lang": "ja",
+  "title": "Three.jsエージェンシー10選（2025年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 36088
+ },
+ {
+  "slug": "ja/blog/tourism-dx-interactive-experience-city-promotion-guide",
+  "id": "ja__blog__tourism-dx-interactive-experience-city-promotion-guide",
+  "lang": "ja",
+  "title": "自治体・観光DMOのための観光DX実践ガイド：インタラクティブ体験とストーリーテリングWebサイトで「行きたくなる地域」をつくる方法（2026年版）",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 43745
+ },
+ {
+  "slug": "ja/blog/university-campus-interactive-installation-guide",
+  "id": "ja__blog__university-campus-interactive-installation-guide",
+  "lang": "ja",
+  "title": "大学のインタラクティブ・インスタレーション｜導入ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 59306
+ },
+ {
+  "slug": "ja/blog/vectr-ai-startup-branding-case-study",
+  "id": "ja__blog__vectr-ai-startup-branding-case-study",
+  "lang": "ja",
+  "title": "AIスタートアップのブランディングとWebGPUサイト制作事例｜Vectr",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 36603
+ },
+ {
+  "slug": "ja/blog/web-design-trends-2026-decision-makers-guide",
+  "id": "ja__blog__web-design-trends-2026-decision-makers-guide",
+  "lang": "ja",
+  "title": "Webデザイントレンド2026｜AIがパンフレット型サイトを終わらせた",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 44467
+ },
+ {
+  "slug": "ja/blog/webar-brand-campaigns-guide",
+  "id": "ja__blog__webar-brand-campaigns-guide",
+  "lang": "ja",
+  "title": "WebAR完全ガイド2026｜アプリ不要のARキャンペーン制作",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 46101
+ },
+ {
+  "slug": "ja/blog/webgl-three-js-site-seo-rankable-guide",
+  "id": "ja__blog__webgl-three-js-site-seo-rankable-guide",
+  "lang": "ja",
+  "title": "WebGL・Three.js サイトの SEO 完全ガイド｜3Dサイトを検索上位に【2026年版】",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 41059
+ },
+ {
+  "slug": "ja/blog/webgpu-threejs-migration-guide",
+  "id": "ja__blog__webgpu-threejs-migration-guide",
+  "lang": "ja",
+  "title": "WebGPU Three.js移行ガイド 2026 | WebGLからWebGPUへ",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 45973
+ },
+ {
+  "slug": "ja/blog/website-redesign-roi-measure-justify-investment",
+  "id": "ja__blog__website-redesign-roi-measure-justify-investment",
+  "lang": "ja",
+  "title": "Webサイトリニューアル ROI：測定と投資対効果の証明 | Kiasa",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 43155
+ },
+ {
+  "slug": "ja/blog/wedding-interactive-experience-technology-guide",
+  "id": "ja__blog__wedding-interactive-experience-technology-guide",
+  "lang": "ja",
+  "title": "結婚式のテクノロジー演出｜完全ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 42534
+ },
+ {
+  "slug": "ja/blog/worship-space-interactive-installation-guide",
+  "id": "ja__blog__worship-space-interactive-installation-guide",
+  "lang": "ja",
+  "title": "礼拝空間のインタラクティブ・インスタレーション導入ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form"
+  ],
+  "bytes": 48627
+ },
+ {
+  "slug": "ja/blog/zoo-aquarium-interactive-installation-guide",
+  "id": "ja__blog__zoo-aquarium-interactive-installation-guide",
+  "lang": "ja",
+  "title": "動物園・水族館のインタラクティブ展示｜導入ガイド2026",
+  "stylesheets": [
+   "/_astro/3d-elearning-game-development-guide.BVEiNnew.css"
+  ],
+  "features": [
+   "contact-form",
+   "copy-blocks"
+  ],
+  "bytes": 54068
+ },
+ {
+  "slug": "ja/company",
+  "id": "ja__company",
+  "lang": "ja",
+  "title": "会社概要 | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [],
+  "bytes": 14132
+ },
+ {
+  "slug": "ja/experience-economy-interactive-installations",
+  "id": "ja__experience-economy-interactive-installations",
+  "lang": "ja",
+  "title": "思わずシェアしたくなる瞬間を。 | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 29661
+ },
+ {
+  "slug": "ja/interactive-content-seisaku",
+  "id": "ja__interactive-content-seisaku",
+  "lang": "ja",
+  "title": "インタラクティブコンテンツ制作会社｜体験型コンテンツの企画・開発 | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 30133
+ },
+ {
+  "slug": "ja/interactive-installations-for-hotels",
+  "id": "ja__interactive-installations-for-hotels",
+  "lang": "ja",
+  "title": "ホテル向けインタラクティブ・デジタルインスタレーション｜ロビー体験を収益へ | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 28542
+ },
+ {
+  "slug": "ja/interactive-installations-for-museums",
+  "id": "ja__interactive-installations-for-museums",
+  "lang": "ja",
+  "title": "美術館・博物館向けインタラクティブ展示／デジタルインスタレーション | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 32639
+ },
+ {
+  "slug": "ja/kaigai-muke-web-seisaku",
+  "id": "ja__kaigai-muke-web-seisaku",
+  "lang": "ja",
+  "title": "英語対応のWeb制作会社｜海外向けWebサイト・多言語サイト制作 | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 30539
+ },
+ {
+  "slug": "ja/osaka-interactive-installation-studio",
+  "id": "ja__osaka-interactive-installation-studio",
+  "lang": "ja",
+  "title": "大阪のインタラクティブ・インスタレーション制作スタジオ | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 34685
+ },
+ {
+  "slug": "ja/osaka-web-seisaku",
+  "id": "ja__osaka-web-seisaku",
+  "lang": "ja",
+  "title": "大阪のホームページ制作・Web制作会社（大阪市/大阪府対応） | Kiasa",
+  "stylesheets": [
+   "/_astro/osaka-web-seisaku.BILTlRzV.css",
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq",
+   "x-posts"
+  ],
+  "bytes": 38887
+ },
+ {
+  "slug": "ja/privacy",
+  "id": "ja__privacy",
+  "lang": "ja",
+  "title": "プライバシーポリシー | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [],
+  "bytes": 15623
+ },
+ {
+  "slug": "ja/projection-mapping-seisaku",
+  "id": "ja__projection-mapping-seisaku",
+  "lang": "ja",
+  "title": "プロジェクションマッピング制作会社｜映像演出・インタラクティブ演出 | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 30187
+ },
+ {
+  "slug": "ja/tenjikai-pavilion-enshutsu",
+  "id": "ja__tenjikai-pavilion-enshutsu",
+  "lang": "ja",
+  "title": "パビリオン・展示会ブースの体験演出制作会社｜イベント空間演出 | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 30156
+ },
+ {
+  "slug": "ja/tokusho",
+  "id": "ja__tokusho",
+  "lang": "ja",
+  "title": "特定商取引法に基づく表記 | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [],
+  "bytes": 14648
+ },
+ {
+  "slug": "ja/webgl-threejs-development",
+  "id": "ja__webgl-threejs-development",
+  "lang": "ja",
+  "title": "WebGL・Three.js開発会社｜リアルタイム3DのWebサイト開発 | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 30518
+ },
+ {
+  "slug": "links",
+  "id": "links",
+  "lang": "en",
+  "title": "Kiasa - Links",
+  "stylesheets": [
+   "/_astro/about.DmsAZD90.css"
+  ],
+  "features": [],
+  "bytes": 11008
+ },
+ {
+  "slug": "osaka-interactive-installation-studio",
+  "id": "osaka-interactive-installation-studio",
+  "lang": "en",
+  "title": "Interactive Installation Studio in Osaka | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 37565
+ },
+ {
+  "slug": "osaka-web-agency",
+  "id": "osaka-web-agency",
+  "lang": "en",
+  "title": "Osaka Web Agency (Design & Development) | Kiasa",
+  "stylesheets": [
+   "/_astro/osaka-web-seisaku.BILTlRzV.css",
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq",
+   "x-posts"
+  ],
+  "bytes": 40275
+ },
+ {
+  "slug": "privacy",
+  "id": "privacy",
+  "lang": "en",
+  "title": "Privacy Policy | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [],
+  "bytes": 16028
+ },
+ {
+  "slug": "webgl-threejs-development",
+  "id": "webgl-threejs-development",
+  "lang": "en",
+  "title": "WebGL & Three.js Development Studio | Real-Time 3D Websites | Kiasa",
+  "stylesheets": [
+   "/_astro/experience-economy-interactive-installations.DDcZrwwE.css"
+  ],
+  "features": [
+   "contact-form",
+   "faq"
+  ],
+  "bytes": 32351
+ }
+]

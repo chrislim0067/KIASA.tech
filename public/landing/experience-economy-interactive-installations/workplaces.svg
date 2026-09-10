@@ -1,0 +1,13 @@
+<svg width="96" height="107" viewBox="0 0 96 107" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M75 61.5H59" stroke="#404040"/>
+<path d="M9 61.5H17" stroke="#404040"/>
+<path d="M13 59V45.5L23.5 40.5" stroke="#404040"/>
+<rect x="17.5" y="73" width="11" height="23" stroke="#404040"/>
+<path d="M96 65H85.5V106.5H84.5V65H13.5V106.5H12.5V65H0V64H96V65ZM85.5 59H48.5V34H85.5V59ZM49.5 58H84.5V35H49.5V58ZM25 38C26.3807 38 27.5 39.1193 27.5 40.5C27.5 41.8807 26.3807 43 25 43C23.6193 43 22.5 41.8807 22.5 40.5C22.5 39.1193 23.6193 38 25 38ZM25 39C24.1716 39 23.5 39.6716 23.5 40.5C23.5 41.3284 24.1716 42 25 42C25.8284 42 26.5 41.3284 26.5 40.5C26.5 39.6716 25.8284 39 25 39Z" fill="url(#paint0_linear_17150_31240)"/>
+<defs>
+<linearGradient id="paint0_linear_17150_31240" x1="96" y1="-1.919e-06" x2="57.7097" y2="115.184" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#BABABA"/>
+</linearGradient>
+</defs>
+</svg>
