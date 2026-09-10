@@ -80,22 +80,45 @@ section('1. openrouter_only routes backend reasoning to OpenRouter');
 
 section('2. claude_max_assisted routes model work to the candidate paste console');
 
+/*
+ * CHANGED IN MILESTONE 2B, DELIBERATELY, AND RECORDED RATHER THAN DELETED.
+ *
+ * Milestone 2A routed EVERY model capability in assisted mode to the paste
+ * console, and asserted the mode used no server-held credential at all. 2B
+ * splits the work: OpenRouter does the mechanical reading, and the candidate's
+ * own Claude does the writing whose output is submitted in their name. So the
+ * old assertion is now false BY DESIGN.
+ *
+ * It is replaced with assertions about the property that actually still has to
+ * hold — no backend Claude credential, ever — plus the new split. Silently
+ * dropping the old check would have left the strongest claim in the file
+ * untested. The full routing matrix lives in scripts/test-local-claude.mjs.
+ */
 {
-  const table = MODE.routingTable('claude_max_assisted');
-  const modelCapabilities = MODE.AI_CAPABILITIES.filter((c) => c !== 'eligibility_evaluation');
+  const supported = {
+    status: 'supported', adapter: 'claude_code_cli', version: '2.1.267', model: 'sonnet',
+  };
+  const table = MODE.routingTable('claude_max_assisted', supported);
 
-  for (const capability of modelCapabilities) {
-    check(`${capability} routes to the candidate paste console`,
-      table[capability].destination === 'candidate_claude_max_paste');
+  for (const capability of MODE.LOCAL_CLAUDE_CAPABILITIES) {
+    check(`${capability} routes to the candidate's own Claude`,
+      table[capability].destination === 'local_claude');
+    check(`  their own session holds the credential`,
+      table[capability].credential_holder === 'candidate_own_session');
   }
-  check('the candidate holds their own session; the backend holds nothing',
-    modelCapabilities.every((r) => table[r].credential_holder === 'candidate_own_session'));
-  check('the mode uses NO server-held credential',
-    MODE.usesServerHeldCredential('claude_max_assisted') === false,
-    'the backend never holds a Claude credential');
-  check('nothing in this mode reaches a backend provider at all',
-    Object.values(table).every((r) => r.destination !== 'openrouter'),
-    'openrouter is the only backend provider destination, and this mode uses none of it');
+  check('the mechanical half runs on the server (a 2B change from 2A)',
+    table.job_analysis.destination === 'openrouter' &&
+      MODE.usesServerHeldCredential('claude_max_assisted', supported) === true,
+    'reading a posting has no personal character; writing an answer does');
+  check('NO destination lets the backend call Claude',
+    Object.values(MODE.routingTable('claude_max_assisted', supported)).every((r) =>
+      ['openrouter', 'local_claude', 'candidate_claude_max_paste', 'deterministic_rules']
+        .includes(r.destination)),
+    'the property that did not change');
+  check('without a proven local capability the three fall back to a person',
+    MODE.LOCAL_CLAUDE_CAPABILITIES.every((c) =>
+      MODE.routingTable('claude_max_assisted', { status: 'unsupported', reason: 'cli_not_installed' })[c]
+        .destination === 'candidate_claude_max_paste'));
 }
 
 section('3. Eligibility is never decided by a model, in either mode');
@@ -710,22 +733,32 @@ section('23. No backend Anthropic path, and the extension point stays closed');
   check('  a third mode cannot be parsed',
     C.AutomationMode.safeParse('claude_max_local').success === false,
     'the extension point cannot become real by accident');
-  check('the local Claude capability is marked not implemented',
-    MODE.CLAUDE_MAX_LOCAL_CAPABILITY.status === 'not_implemented');
-  check('  it is blocked on an account-terms review',
-    MODE.CLAUDE_MAX_LOCAL_CAPABILITY.blocked_on.includes('account_terms_review'),
-    'the blocking question is not a technical one');
-  check('  session extraction is permanently out of scope',
-    MODE.CLAUDE_MAX_LOCAL_CAPABILITY.permanently_out_of_scope
-      .includes('session_token_extraction'));
-  check('  so is disguising automated traffic',
-    MODE.CLAUDE_MAX_LOCAL_CAPABILITY.permanently_out_of_scope.includes('automation_disguise'));
+  /*
+   * Milestone 2A recorded a local capability as a closed extension point.
+   * Milestone 2B proved a supported one exists and built it, so the gate is
+   * gone — but the BOUNDARY it guarded is not, and this is where that is held
+   * to. A supported path being found is not a reason any of these became
+   * acceptable; they are the alternatives it exists to avoid.
+   */
+  for (const forbidden of ['browser_storage_access', 'session_token_extraction',
+    'credential_replay', 'private_endpoint_calls', 'undocumented_api_calls',
+    'automation_disguise', 'captcha_bypass', 'mfa_bypass']) {
+    check(`  ${forbidden} is permanently out of scope`,
+      MODE.PERMANENTLY_OUT_OF_SCOPE.includes(forbidden));
+  }
+  check('the account-terms question is still open',
+    MODE.LOCAL_INTEGRATION_REQUIREMENTS.account_terms_reviewed_by_candidate === 'open',
+    'a working probe did not answer a licensing question');
+  check('the server holds no Claude credential',
+    MODE.LOCAL_INTEGRATION_REQUIREMENTS.server_holds_no_claude_credential === 'met');
 
   check('no destination lets the backend call Claude directly',
     ['openrouter_only', 'claude_max_assisted'].every((m) =>
       Object.values(MODE.routingTable(m)).every((r) =>
-        ['openrouter', 'candidate_claude_max_paste', 'deterministic_rules'].includes(r.destination)
-      )));
+        ['openrouter', 'local_claude', 'candidate_claude_max_paste', 'deterministic_rules']
+          .includes(r.destination)
+      )),
+    'local_claude runs on the candidate machine, under their own login');
 }
 
 /* ---------------------------------------------------------------- report */

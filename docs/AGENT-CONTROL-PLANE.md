@@ -185,23 +185,35 @@ KIASA does not claim it can apply to every website, and the design assumes some
 applications will always stop for a person. No supported-site adapter exists
 yet, so no site is supported yet.
 
-## 10. Open: two job-URL layers that overlap
+## 10. Resolved in Milestone 2B: one normalizer, one state machine
 
 `lib/jobs/` on `main` is an existing, tested job-intake layer — `submitJob`,
 `fetchJob`, `extractJob`, four tables, and the SSRF-safe fetcher in §8. Nothing
 currently calls it from a route.
 
-`lib/agent/job-url.ts` (Milestone 1) overlaps `lib/jobs/url.ts` and
-canonicalises **differently**: it lowercases the host, sorts query parameters
-and strips a trailing slash, where the existing one deliberately preserves the
-path exactly as given. The unique dedupe constraint is built from the existing
-one, so two canonicalisers feeding one key would store the same posting twice —
-which in this system means applying to the same job twice.
+**The URL divergence is fixed.** `lib/agent/job-url.ts` had its own
+canonicaliser and its own tracking-parameter list; both are **deleted**, not
+moved. It now decides only WHETHER a destination is allowed — HTTPS, public,
+port 443, no credentials — and delegates WHAT THE URL IS to
+`canonicaliseUrl()` in `lib/jobs/url.ts`, which is the one the database's
+`md5(canonical_url)` uniqueness constraint is built on.
 
-Likewise `lib/agent/state-machine.ts` (15 states) overlaps `lib/jobs/state.ts`
-(8) and `lib/applications/state.ts` (10), both of which mirror database
-triggers that are the authority and are held to it by parity tests. The agent
-machine mirrors nothing and is enforced nowhere.
+Both questions still need answering, and they are different questions:
+`lib/jobs/url.ts` answers "which posting is this" and accepts plenty the agent
+layer must refuse. `npm run test:dedupe` asserts every equivalence through
+**both** entry points — a test that checked only one is how the divergence
+survived two milestones.
 
-**This must be reconciled before either branch merges.** It is recorded here
-rather than fixed in Milestone 2A, whose scope is the worker contracts.
+**The state machines are now reconciled too.** There are still three, because
+each answers a different question about a different row — a job (has it been
+fetched?), a task (how far has this work got?), an application (what happened
+with the employer?). What was missing was a stated relationship, and
+`lib/agent/state-translation.ts` supplies it: total over every agent state,
+returning `null` for "no corresponding row yet" rather than a nearest guess.
+Nothing maps to `confirmed` — an employer confirms an application; the system
+does not confirm its own work.
+
+`automation_tasks.status` in migration 22 mirrors `lib/agent/state-machine.ts`,
+and `npm run test:state-parity` parses the SQL and asserts the two are
+identical in both directions. That is one state machine expressed twice, with a
+test welding them together — not a second one.

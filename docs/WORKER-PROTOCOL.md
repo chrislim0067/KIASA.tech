@@ -259,15 +259,20 @@ tasks. RLS is the enforcement; schema validation is not authorization.
 
 ## 10. Implemented now, and not
 
+Updated at Milestone 2B.
+
 | | Status |
 |---|---|
 | Contracts, state vocabularies, lease and fencing rules, routing table | **implemented** (types and pure functions) |
-| Offline test suite, 202 checks | **implemented** |
-| Supervisor process, slot runtime, browser adapter | not implemented |
-| Task queue, worker transport, registration endpoints | not implemented |
-| Database tables for supervisors, slots, leases | not implemented — no migration in this milestone |
-| Ten concurrent slots | not implemented; a capacity target |
-| Live browser automation, real submissions | not implemented |
+| Offline test suites | **implemented** — 209 worker, 142 local-Claude, 88 slice |
+| **Database tables** for supervisors, slots, tasks, leases, events | **implemented** — migration 22, with RLS, partial unique indexes and transition triggers |
+| **Local Claude adapter** (official interface) | **implemented and proven working** — see `docs/LOCAL-CLAUDE.md` |
+| **One-slot flow** against a local fixture | **implemented** — `npm run demo:slice` |
+| Supervisor process, long-running slot runtime | not implemented |
+| Pairing code, scoped worker token, HTTP transport, registration endpoints | not implemented |
+| Browser adapter and live browser automation | not implemented — the fixture is read, no browser is driven |
+| Ten concurrent slots | not implemented; a capacity target. The runtime uses slot 1 only |
+| Real submissions | not implemented — the flow reaches the submit gate and stops |
 
 No supported-site adapter exists yet, so **no site is supported yet**. KIASA
 does not claim it can apply to every website, and the design assumes some

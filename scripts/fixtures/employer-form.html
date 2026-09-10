@@ -1,0 +1,105 @@
+<!doctype html>
+<!--
+  A LOCAL DEVELOPMENT FIXTURE. Not a real employer, not a real ATS, not hosted.
+
+  It exists so the one-slot flow can be exercised end to end without any real
+  application being sent anywhere. Every state the worker must recognise is
+  present as a separate page, selected by the `page` query in the reader, so a
+  test can assert that each one produces the RIGHT pause rather than being
+  typed into.
+
+  The five hazard pages are the point of the file. A login wall, a challenge,
+  an MFA prompt and a request for a passport number all render inputs, labels
+  and a submit button — they look exactly like the ordinary form below, which
+  is why a worker that only checks "are there fields" will fill them in.
+-->
+<html lang="en">
+<head><meta charset="utf-8"><title>KIASA local fixture</title></head>
+<body>
+
+<!-- ===================================================== page: ordinary -->
+<section data-page="ordinary" data-kind="application_form">
+  <h1>Senior TypeScript Engineer — Application</h1>
+  <form data-form="application">
+    <!-- Routine fields: answerable from verified candidate facts alone. -->
+    <label for="full_name">Full name</label>
+    <input id="full_name" name="full_name" type="text" data-fact="full_name">
+
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" data-fact="email">
+
+    <label for="years_experience">Years of experience</label>
+    <input id="years_experience" name="years_experience" type="number" data-fact="years_experience">
+
+    <!-- A résumé attachment. -->
+    <label for="resume">Résumé (PDF)</label>
+    <input id="resume" name="resume" type="file" data-fact="resume">
+
+    <!-- The free-text question. This is the one that needs writing, and the
+         only thing on this page that goes to the local model. -->
+    <label for="why_you">Briefly describe your experience with TypeScript.</label>
+    <textarea id="why_you" name="why_you" data-requires="drafted_answer"></textarea>
+
+    <button type="submit" data-action="submit">Submit application</button>
+  </form>
+</section>
+
+<!-- ======================================================= page: login -->
+<!-- Renders inputs and a submit button, exactly like the form above. -->
+<section data-page="login" data-kind="login_wall">
+  <h1>Sign in to continue your application</h1>
+  <form data-form="login">
+    <label for="u">Email</label><input id="u" name="username" type="email">
+    <label for="p">Password</label><input id="p" name="password" type="password">
+    <button type="submit" data-action="submit">Sign in</button>
+  </form>
+</section>
+
+<!-- ===================================================== page: captcha -->
+<section data-page="captcha" data-kind="challenge">
+  <h1>Verify you are human</h1>
+  <div data-challenge="captcha">Select every image containing a bus.</div>
+  <button type="submit" data-action="submit">Verify</button>
+</section>
+
+<!-- ========================================================= page: mfa -->
+<section data-page="mfa" data-kind="mfa_prompt">
+  <h1>Two-factor authentication</h1>
+  <form data-form="mfa">
+    <label for="otp">Enter the 6-digit code we sent you</label>
+    <input id="otp" name="otp" type="text" inputmode="numeric" data-sensitive="otp">
+    <button type="submit" data-action="submit">Verify</button>
+  </form>
+</section>
+
+<!-- =================================================== page: sensitive -->
+<!-- Looks entirely routine. It is not. -->
+<section data-page="sensitive" data-kind="application_form">
+  <h1>Right to work — document details</h1>
+  <form data-form="application">
+    <label for="full_name2">Full name</label>
+    <input id="full_name2" name="full_name" type="text" data-fact="full_name">
+
+    <label for="passport">Passport number</label>
+    <input id="passport" name="passport_number" type="text" data-sensitive="government_id">
+
+    <label for="dob">Date of birth</label>
+    <input id="dob" name="date_of_birth" type="date" data-sensitive="date_of_birth">
+
+    <label for="bank">Bank account for payroll</label>
+    <input id="bank" name="bank_account" type="text" data-sensitive="bank_account">
+
+    <button type="submit" data-action="submit">Submit</button>
+  </form>
+</section>
+
+<!-- ===================================================== page: unknown -->
+<!-- No recognisable application form. A worker must not improvise here. -->
+<section data-page="unknown" data-kind="unknown">
+  <h1>Something went wrong</h1>
+  <p>We could not load this page. Please try again later.</p>
+  <button data-action="retry">Retry</button>
+</section>
+
+</body>
+</html>

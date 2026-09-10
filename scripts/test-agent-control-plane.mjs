@@ -440,7 +440,10 @@ for (const [input, expected] of [
   ['https://jobs.example.com/role#apply', 'https://jobs.example.com/role'],
   ['https://jobs.example.com/role?utm_source=x&id=7', 'https://jobs.example.com/role?id=7'],
   ['https://jobs.example.com/role?b=2&a=1', 'https://jobs.example.com/role?a=1&b=2'],
-  ['https://jobs.example.com', 'https://jobs.example.com'],
+  // A bare origin keeps its root slash. This module used to strip it; the one
+  // canonical normalizer in lib/jobs/url.ts does not, and it is the one the
+  // database's uniqueness constraint is built on. See scripts/test-job-dedupe.mjs.
+  ['https://jobs.example.com', 'https://jobs.example.com/'],
 ]) {
   const r = URLS.validateJobUrl(input);
   check(`canonicalises ${input.slice(0, 46)}`, r.ok && r.canonical === expected,
