@@ -15,13 +15,18 @@
  * typed on stdin becomes a credential, that a credential produces an accepted
  * heartbeat, that revocation reaches the worker and stops it.
  *
- * It does NOT prove the Supabase store — that is a property of Postgres and is
- * tested against a real database by scripts/test-worker-pairing-db.mjs in CI.
- * Saying so matters: a green run here is not a green deployment.
+ * BY DEFAULT it does NOT prove the Supabase store: the control plane holds its
+ * state in a Map, and a green run here is not a green deployment. Set
+ * KIASA_PROBE_STORE=database and the same lifecycle runs through
+ * createPairingStore() against the disposable local Postgres — real grants,
+ * forced RLS, real triggers, and the security-definer boundary from migration
+ * 26. CI runs both: the offline one in static checks, the database one in the
+ * database job.
  *
- * NOTHING PRODUCTION IS INVOLVED. The server is bound to loopback, holds its
- * state in a Map, and is torn down at the end. No Supabase of any kind, hosted
- * or local. No employer site, no browser, no cookie, no OpenRouter request.
+ * NOTHING PRODUCTION IS INVOLVED. The server is bound to loopback and is torn
+ * down at the end; in database mode the throwaway candidate it creates is
+ * deleted with it. No hosted Supabase. No employer site, no browser, no
+ * cookie, no OpenRouter request.
  */
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
@@ -54,8 +59,6 @@ function check(label, ok, detail = '') {
 const E = await import('../lib/worker/endpoints.ts');
 const P = await import('../lib/worker/pairing.ts');
 
-const CANDIDATE = '00000000-0000-4000-8000-0000000000aa';
-
 /* ------------------------------------------- the disposable control plane */
 
 function makeStore() {
@@ -80,37 +83,59 @@ function makeStore() {
       for (const [, p] of pairings) if (p.secret_hash === h) return p;
       return null;
     },
-    async claimPairing(id, supervisorId) {
-      const p = pairings.get(id);
-      if (!p || p.redeemed_at !== null) return false;
-      p.redeemed_at = new Date().toISOString();
-      p.redeemed_supervisor_id = supervisorId;
-      return true;
-    },
     // The trigger's semantics, in miniature: computed from the previous value,
     // clamped, and never taken from the caller.
     async recordFailedAttempt(id) {
       const p = pairings.get(id);
       if (p) p.attempts = Math.min(p.attempts + 1, 10);
     },
-    async createSupervisor(row) {
-      const id = randomUUID();
-      supervisors.set(id, { id, last_heartbeat_at: null, ...row });
-      return { id };
-    },
-    async createSlot(row) {
-      const id = randomUUID();
-      slots.set(id, { id, slot_index: 1, readiness: 'initializing', ...row });
-      return { id };
-    },
-    async createCredential(row) {
-      for (const [, c] of credentials) {
-        if (c.supervisor_id === row.supervisor_id && c.revoked_at === null) return null;
-      }
-      credentials.set(row.id, {
-        audience: 'kiasa-worker', scope: 'slot:heartbeat', revoked_at: null, ...row,
+    /*
+     * ONE OPERATION, THE WAY worker_redeem_pairing IS ONE OPERATION.
+     *
+     * The claim is decided before anything is created, so a loser leaves no
+     * supervisor, slot or credential behind — and no candidate, supervisor or
+     * slot id is an argument. The invitation the hash matches says who this is
+     * for.
+     */
+    async completeRedemption(input) {
+      let pairing = null;
+      for (const [, p] of pairings) if (p.secret_hash === input.secretHash) pairing = p;
+      if (!pairing) return { ok: false, reason: 'not_found' };
+      if (pairing.revoked_at !== null) return { ok: false, reason: 'revoked' };
+      if (pairing.redeemed_at !== null) return { ok: false, reason: 'already_redeemed' };
+      if (pairing.attempts >= 10) return { ok: false, reason: 'too_many_attempts' };
+
+      const supervisorId = randomUUID();
+      supervisors.set(supervisorId, {
+        id: supervisorId,
+        user_id: pairing.user_id,
+        platform: input.platform,
+        agent_version: input.agentVersion,
+        last_heartbeat_at: null,
+        revoked_at: null,
       });
-      return { id: row.id };
+      const slotId = randomUUID();
+      slots.set(slotId, {
+        id: slotId,
+        user_id: pairing.user_id,
+        supervisor_id: supervisorId,
+        slot_index: 1,
+        readiness: 'initializing',
+      });
+      credentials.set(input.credentialId, {
+        id: input.credentialId,
+        user_id: pairing.user_id,
+        supervisor_id: supervisorId,
+        slot_id: slotId,
+        token_hash: input.tokenHash,
+        expires_at: input.credentialExpiresAt,
+        audience: 'kiasa-worker',
+        scope: 'slot:heartbeat',
+        revoked_at: null,
+      });
+      pairing.redeemed_at = new Date().toISOString();
+      pairing.redeemed_supervisor_id = supervisorId;
+      return { ok: true, supervisorId, slotId };
     },
     async findCredentialById(id) { return credentials.get(id) ?? null; },
     async touchCredential(id, at) {
@@ -118,19 +143,150 @@ function makeStore() {
       if (c) c.last_used_at = at;
     },
     async recordHeartbeat(input) {
-      const last = beats.filter((b) => b.supervisorId === input.supervisorId).pop();
+      // Resolved from the credential the id AND hash match, exactly as
+      // worker_record_heartbeat resolves it.
+      const c = credentials.get(input.credentialId);
+      if (!c || c.token_hash !== input.tokenHash || c.revoked_at !== null) {
+        return { applied: false };
+      }
+      const last = beats.filter((b) => b.supervisorId === c.supervisor_id).pop();
       if (last && input.sequence <= last.sequence) return { applied: false };
-      beats.push(input);
-      const s = supervisors.get(input.supervisorId);
-      if (s) s.last_heartbeat_at = input.at;
-      const slot = input.slotId ? slots.get(input.slotId) : null;
+      const at = new Date().toISOString();
+      beats.push({ ...input, supervisorId: c.supervisor_id, slotId: c.slot_id, at });
+      const s = supervisors.get(c.supervisor_id);
+      if (s) s.last_heartbeat_at = at;
+      const slot = c.slot_id ? slots.get(c.slot_id) : null;
       if (slot) slot.readiness = input.readiness;
       return { applied: true };
     },
   };
 }
 
-const store = makeStore();
+/* --------------------------------------------- which store is under test */
+
+/*
+ * TWO BACKINGS, ONE PROBE.
+ *
+ * By default the control plane keeps its state in a Map. No database is
+ * needed, the run is entirely offline, and what it proves is that the two
+ * halves speak the same protocol.
+ *
+ * With KIASA_PROBE_STORE=database it uses `createPairingStore()` — the very
+ * object the route handlers construct — against the disposable local
+ * Postgres. The same lifecycle then runs through real grants, forced RLS, real
+ * triggers and the `security definer` boundary from migration 26, driven by
+ * the real worker process over real HTTP. CI runs it that way in the database
+ * job, and THAT is the run that says something about a deployment.
+ *
+ * Every assertion below reads through `inspect`, so neither backing gets an
+ * easier question than the other.
+ */
+const DATABASE_MODE = process.env.KIASA_PROBE_STORE === 'database';
+
+function memoryBacking() {
+  const s = makeStore();
+  const one = (m) => [...m.values()][0];
+  return {
+    store: s,
+    candidate: '00000000-0000-4000-8000-0000000000aa',
+    pairingSecretHash: () => one(s.pairings).secret_hash,
+    pairingRowsText: () => JSON.stringify([...s.pairings.values()]),
+    pairingAttempts: () => one(s.pairings).attempts,
+    credentialCount: () => s.credentials.size,
+    credentialOwner: () => one(s.credentials).user_id,
+    credentialIds: () => [...s.credentials.keys()],
+    credentialRevokedAt: () => one(s.credentials).revoked_at ?? null,
+    credentialExpiresAt: () => one(s.credentials).expires_at,
+    slotCount: () => s.slots.size,
+    appliedBeats: () => s.beats.length,
+    supervisorLastBeat: () => one(s.supervisors).last_heartbeat_at,
+    revokeCredential: () => {
+      one(s.credentials).revoked_at = new Date().toISOString();
+    },
+    cleanup: async () => {},
+  };
+}
+
+async function databaseBacking() {
+  const { execFileSync } = await import('node:child_process');
+  const { statusEnvRaw } = await import('./lib/supabase-cli.mjs');
+  const { createClient } = await import('@supabase/supabase-js');
+
+  const env = {};
+  for (const line of statusEnvRaw().split(/\r?\n/)) {
+    const m = line.match(/^([A-Z_]+)="?([^"]*)"?$/);
+    if (m) env[m[1]] = m[2];
+  }
+  // The real store reads its connection from the environment, exactly as a
+  // server does. Constructing it any other way would not be testing it.
+  process.env.NEXT_PUBLIC_SUPABASE_URL = env.API_URL;
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = env.PUBLISHABLE_KEY || env.ANON_KEY;
+  process.env.SUPABASE_SECRET_KEY = env.SECRET_KEY || env.SERVICE_ROLE_KEY;
+
+  const container = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_kiasa';
+  const q = (statement) =>
+    execFileSync(
+      'docker',
+      ['exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '-qtAc', statement],
+      { encoding: 'utf8' }
+    ).trim();
+
+  const admin = createClient(env.API_URL, process.env.SUPABASE_SECRET_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await admin.auth.admin.createUser({
+    email: `probe-${randomUUID()}@example.test`,
+    password: randomUUID(),
+    email_confirm: true,
+  });
+  if (error) throw new Error(`probe candidate: ${error.message}`);
+  const candidate = data.user.id;
+
+  const { createPairingStore } = await import('../lib/worker/store.ts');
+  const mine = (table) => `from public.${table} where user_id = '${candidate}'`;
+  const blank = (value) => (value === '' ? null : value);
+
+  return {
+    store: createPairingStore(),
+    candidate,
+    pairingSecretHash: () =>
+      q(`select secret_hash ${mine('worker_pairings')} order by created_at desc limit 1`),
+    // to_jsonb of the row: every column the table holds, so the plaintext
+    // assertion is looking at everything rather than at a chosen projection.
+    pairingRowsText: () =>
+      q(`select coalesce(string_agg(to_jsonb(p)::text, ','), '')
+         from public.worker_pairings p where p.user_id = '${candidate}'`),
+    pairingAttempts: () =>
+      Number(q(`select attempts ${mine('worker_pairings')} order by created_at desc limit 1`)),
+    credentialCount: () => Number(q(`select count(*) ${mine('worker_credentials')}`)),
+    credentialOwner: () => q(`select user_id ${mine('worker_credentials')} limit 1`),
+    credentialIds: () =>
+      q(`select coalesce(string_agg(id::text, ','), '') ${mine('worker_credentials')}`)
+        .split(',')
+        .filter(Boolean),
+    credentialRevokedAt: () =>
+      blank(q(`select coalesce(revoked_at::text, '') ${mine('worker_credentials')} limit 1`)),
+    credentialExpiresAt: () => q(`select expires_at ${mine('worker_credentials')} limit 1`),
+    slotCount: () => Number(q(`select count(*) ${mine('worker_slots')}`)),
+    // A supervisor's sequence only advances when a heartbeat is APPLIED, so it
+    // counts the same thing the in-memory list of beats counts.
+    appliedBeats: () =>
+      Number(q(`select coalesce(max(heartbeat_sequence), 0) ${mine('worker_supervisors')}`)),
+    supervisorLastBeat: () =>
+      blank(q(`select coalesce(last_heartbeat_at::text, '') ${mine('worker_supervisors')} limit 1`)),
+    revokeCredential: () =>
+      q(`update public.worker_credentials
+         set revoked_at = now(), revoked_reason = 'candidate_requested'
+         where user_id = '${candidate}'`),
+    cleanup: async () => {
+      await admin.auth.admin.deleteUser(candidate).catch(() => {});
+    },
+  };
+}
+
+const inspect = DATABASE_MODE ? await databaseBacking() : memoryBacking();
+const store = inspect.store;
+const CANDIDATE = inspect.candidate;
 const seen = { redeem: 0, heartbeat: 0, unauthorised: 0 };
 
 const readBody = (req) =>
@@ -172,7 +328,7 @@ const server = createServer(async (req, res) => {
     }
     const result = await E.heartbeat(
       store,
-      { supervisorId: auth.supervisorId, slotId: auth.slotId, credentialId: auth.credentialId },
+      { credentialId: auth.credentialId, tokenHash: auth.tokenHash },
       await readBody(req),
       now
     );
@@ -220,10 +376,9 @@ try {
 
   const started = await E.startPairing(store, CANDIDATE, new Date());
   check('a code was issued', started.ok === true);
-  const row = [...store.pairings.values()][0];
-  check('  only a hash is stored', /^[0-9a-f]{64}$/.test(row.secret_hash));
-  check('  the plaintext is not in the store',
-    !JSON.stringify([...store.pairings.values()]).includes(P.normalisePairingSecret(started.secret)));
+  check('  only a hash is stored', /^[0-9a-f]{64}$/.test(inspect.pairingSecretHash()));
+  check('  the plaintext is nowhere in the row',
+    !inspect.pairingRowsText().includes(P.normalisePairingSecret(started.secret)));
 
   section('2. A real worker redeems it and heartbeats');
 
@@ -232,22 +387,23 @@ try {
 
   check('the worker paired', /paired\./.test(log), log.split('\n').find((l) => /paired|refused/.test(l)) ?? '');
   check('  exactly one redemption request reached the server', seen.redeem === 1, String(seen.redeem));
-  check('  a credential was issued', store.credentials.size === 1);
-  check('  scoped to one candidate', [...store.credentials.values()][0].user_id === CANDIDATE);
-  check('  and one slot', store.slots.size === 1);
-  check('the worker sent an authenticated heartbeat', store.beats.length >= 1,
-    `${store.beats.length} beat(s)`);
+  check('  a credential was issued', inspect.credentialCount() === 1,
+    String(inspect.credentialCount()));
+  check('  scoped to one candidate', inspect.credentialOwner() === CANDIDATE);
+  check('  and one slot', inspect.slotCount() === 1, String(inspect.slotCount()));
+  check('the worker sent an authenticated heartbeat', inspect.appliedBeats() >= 1,
+    `${inspect.appliedBeats()} applied`);
   check('  none was rejected', seen.unauthorised === 0, `${seen.unauthorised} rejected`);
   check('  the supervisor now has a check-in time',
-    typeof [...store.supervisors.values()][0].last_heartbeat_at === 'string');
+    typeof inspect.supervisorLastBeat() === 'string');
 
   section('3. Status transitions as the candidate would see it');
 
-  const supervisor = [...store.supervisors.values()][0];
-  const credential = [...store.credentials.values()][0];
   const view = (at) => P.visibleStatus({
-    hasCredential: true, revokedAt: credential.revoked_at,
-    expiresAt: credential.expires_at, lastHeartbeatAt: supervisor.last_heartbeat_at,
+    hasCredential: true,
+    revokedAt: inspect.credentialRevokedAt(),
+    expiresAt: inspect.credentialExpiresAt(),
+    lastHeartbeatAt: inspect.supervisorLastBeat(),
   }, at);
 
   check('right after a beat: online', view(new Date()) === 'online');
@@ -266,7 +422,7 @@ try {
 
   section('5. Revocation reaches the worker, and it stops');
 
-  credential.revoked_at = new Date().toISOString();
+  inspect.revokeCredential();
   const after = await runWorker(['--once'], 'WRONGCODEWRONGCODEWRONGCOD');
   check('a revoked worker cannot re-pair with a wrong code',
     /pairing refused/.test(after.out), after.out.split('\n').find((l) => /refused/.test(l)) ?? '');
@@ -279,14 +435,14 @@ try {
    * attempt — otherwise anyone could exhaust a stranger's invitation by
    * guessing at it.
    */
-  check('a guess matching no invitation charges nobody', row.attempts === 0,
-    `attempts ${row.attempts}`);
+  check('a guess matching no invitation charges nobody', inspect.pairingAttempts() === 0,
+    `attempts ${inspect.pairingAttempts()}`);
   const stranger = await E.redeemPairing(store,
     { pairing_secret: 'NOSUCHCODENOSUCHCODENOSUCH', platform: 'linux', agent_version: '0.1.0' },
     new Date());
   check('  and it is refused without revealing whether anything exists',
     stranger.ok === false && stranger.reason === 'not_found', stranger.reason);
-  check('  the real invitation is still at zero attempts', row.attempts === 0);
+  check('  the real invitation is still at zero attempts', inspect.pairingAttempts() === 0);
 
   const revoked = await E.authenticateWorker(store, `Bearer ${'x'.repeat(10)}`, new Date());
   check('a malformed credential is refused', revoked.ok === false);
@@ -297,20 +453,31 @@ try {
   check('no employer site was contacted', !/https?:\/\/(?!127\.0\.0\.1)/.test(log));
   check('no application was submitted', !/submit/i.test(log));
   check('the worker printed no token',
-    ![...store.credentials.keys()].some((id) => log.includes(id)) || !/\.[A-Za-z0-9_-]{43}/.test(log),
+    !inspect.credentialIds().some((id) => log.includes(id)) || !/\.[A-Za-z0-9_-]{43}/.test(log),
     'the credential is held in memory and never logged');
   check('the control plane was loopback only', server.address().address === HOST,
     `${server.address().address}:${server.address().port}`);
 } finally {
   await new Promise((resolve) => server.close(resolve));
-  console.log('\ndisposable control plane torn down; nothing persisted.');
+  await inspect.cleanup();
+  console.log(
+    DATABASE_MODE
+      ? '\ndisposable control plane torn down; the throwaway candidate was deleted.'
+      : '\ndisposable control plane torn down; nothing persisted.'
+  );
 }
 
 console.log('========================================================');
 if (failed === 0) {
   console.log(`ALL ${passed} WORKER END-TO-END CHECKS PASSED`);
-  console.log('This proves the two halves speak the same protocol.');
-  console.log('It does NOT prove the Supabase store — CI does that against real Postgres.');
+  console.log(
+    DATABASE_MODE
+      ? 'Driven through the REAL store against real Postgres: grants, RLS and triggers included.'
+      : 'This proves the two halves speak the same protocol, over an in-memory store.'
+  );
+  if (!DATABASE_MODE) {
+    console.log('Run it with KIASA_PROBE_STORE=database to drive the same lifecycle through Postgres.');
+  }
   process.exit(0);
 }
 console.error(`${failed} FAILED of ${passed + failed}`);
