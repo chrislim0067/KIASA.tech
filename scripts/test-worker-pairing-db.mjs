@@ -88,6 +88,27 @@ try {
   const svc = svcClient();
 
   const newPairing = async (userId, secret) => {
+    /*
+     * Supersede any live invitation first.
+     *
+     * `worker_pairings_one_live_per_user` is a PARTIAL UNIQUE INDEX: at most
+     * one row per candidate with `redeemed_at is null and revoked_at is null`.
+     * A second insert for the same person is therefore REFUSED, not accepted —
+     * which is what this test hit on its first CI run. `createPairing` in
+     * lib/worker/store.ts revokes before inserting for exactly this reason, so
+     * a test that skipped the revoke would not be testing the production shape.
+     *
+     * Revoking touches `revoked_at` only. The immutable guard leaves it alone,
+     * and because `attempts` is absent from the payload the trigger sees
+     * `new.attempts` equal to `old.attempts` and counts nothing.
+     */
+    await svc
+      .from('worker_pairings')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .is('redeemed_at', null)
+      .is('revoked_at', null);
+
     const { data, error } = await svc
       .from('worker_pairings')
       .insert({
@@ -124,6 +145,27 @@ try {
     check('sending 0 cannot reset the counter', attemptsOf(id) === 3, String(attemptsOf(id)));
     await svc.from('worker_pairings').update({ attempts: 99 }).eq('id', id);
     check('sending 99 cannot jump the counter', attemptsOf(id) === 4, String(attemptsOf(id)));
+  }
+
+  section('1b. One live invitation per candidate; superseding counts nothing');
+
+  {
+    const first = await newPairing(alice, 'GOODSECRETFIRST');
+    await svc.from('worker_pairings').update({ attempts: 0 }).eq('id', first);
+    check('the first invitation counted one attempt', attemptsOf(first) === 1);
+
+    const second = await newPairing(alice, 'GOODSECRETSECOND');
+    const live = Number(
+      sql(`select count(*) from public.worker_pairings
+           where user_id = '${alice}' and redeemed_at is null and revoked_at is null`)
+    );
+    check('asking again leaves exactly one live invitation', live === 1, `${live} live`);
+    check('  the new one', second !== first);
+
+    // Revocation writes `revoked_at` and nothing else. If the guard treated any
+    // update as a failed guess, superseding would burn an attempt.
+    check('superseding did not count an attempt against the old row',
+      attemptsOf(first) === 1, String(attemptsOf(first)));
   }
 
   /* ============================================= 2. CONCURRENCY, FOR REAL */
@@ -187,15 +229,26 @@ try {
   {
     const secret = 'GOODSECRETFOUR';
     const id = await newPairing(alice, secret);
-    const supervisor = await svc
-      .from('worker_supervisors')
-      .insert({ user_id: alice, platform: 'linux', agent_version: '0.1.0', declared_slots: 1 })
-      .select('id').maybeSingle();
+    /*
+     * The supervisor row is created through psql, NOT through the service-role
+     * client, because service_role holds no grant of any kind on
+     * `worker_supervisors` — migration 22 revokes it and then asserts it is
+     * absent. Section 6 checks that this is still true.
+     *
+     * That is not a quirk of this test. `createPairingStore().createSupervisor`
+     * uses the same elevated client and would be refused the same way, which
+     * means the redeem path cannot register a supervisor against a real
+     * database at all. See the milestone report: it needs a decision, not a
+     * quiet grant.
+     */
+    const supervisorId = sql(`insert into public.worker_supervisors
+      (user_id, platform, agent_version, declared_slots, lifecycle)
+      values ('${alice}', 'linux', '0.1.0', 1, 'starting') returning id`);
 
     const claim = async () => {
       const { data } = await svcClient()
         .from('worker_pairings')
-        .update({ redeemed_at: new Date().toISOString(), redeemed_supervisor_id: supervisor.data.id })
+        .update({ redeemed_at: new Date().toISOString(), redeemed_supervisor_id: supervisorId })
         .eq('id', id)
         .is('redeemed_at', null)
         .select('id');
@@ -254,6 +307,28 @@ try {
       where table_schema='public' and table_name='worker_pairings'
         and grantee='authenticated' and privilege_type='UPDATE'`);
     check('authenticated may still update ONLY revoked_at', grants === 'revoked_at', grants);
+
+    /*
+     * NO SERVICE-ROLE GRANT WAS ADDED, ANYWHERE.
+     *
+     * The atomic counter was deliberately built as a trigger rather than a
+     * SECURITY DEFINER RPC precisely so that this would stay true: the trigger
+     * rides along on the UPDATE service_role already held from migration 24,
+     * and nothing gained access to anything.
+     *
+     * The migration-22 tables are checked here as well, and they matter for a
+     * second reason — `lib/worker/store.ts` writes to `worker_supervisors` and
+     * `worker_slots` through the elevated client, and this proves it cannot.
+     * If a later milestone decides to grant that access, this check must be
+     * changed deliberately rather than discovered by accident.
+     */
+    const svcGrants = sql(`select coalesce(string_agg(distinct table_name, ','), 'none')
+      from information_schema.role_table_grants
+      where table_schema='public'
+        and table_name in ('worker_supervisors', 'worker_slots')
+        and grantee='service_role'`);
+    check('service_role still holds nothing on the migration-22 worker tables',
+      svcGrants === 'none', svcGrants);
   }
 } finally {
   const admin = svcClient();
