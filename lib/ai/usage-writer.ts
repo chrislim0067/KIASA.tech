@@ -3,7 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { createAdminClient, isAdminConfigured } from '@/lib/supabase/admin';
-import { ProviderUsageRecord } from '@/lib/ai/usage';
+import { ProviderUsageRecord, isPersistableOperation } from '@/lib/ai/usage';
 
 /**
  * Persisting what a provider call cost and how it went.
@@ -40,7 +40,12 @@ export type UsageWriteResult =
   | {
       ok: false;
       /** Why it did not persist. Never a provider payload or a database row. */
-      reason: 'not_configured' | 'invalid_record' | 'rejected_by_database' | 'unexpected';
+      reason:
+        | 'not_configured'
+        | 'invalid_record'
+        | 'operation_not_persistable'
+        | 'rejected_by_database'
+        | 'unexpected';
       /** Short, safe, and free of candidate data. */
       detail: string;
     };
@@ -138,6 +143,26 @@ export async function recordProviderUsage(
         .map((i) => i.path.join('.') || '(root)')
         .slice(0, 8)
         .join(', '),
+    };
+  }
+
+  /*
+   * Refuse operations the database's CHECK constraint does not yet list.
+   *
+   * `PROVIDER_OPERATIONS` gained `job_scoring` in Milestone 2C, which was not
+   * permitted to change migrations, so the constraint still allows
+   * `resume_extraction` only. Without this guard the insert would fail at the
+   * database with a constraint violation — a runtime surprise that appears
+   * only once something real is being recorded.
+   *
+   * Refusing here turns that into a named, testable outcome, and keeps the
+   * writer's promise that it never throws.
+   */
+  if (!isPersistableOperation(parsed.data.operation)) {
+    return {
+      ok: false,
+      reason: 'operation_not_persistable',
+      detail: parsed.data.operation,
     };
   }
 

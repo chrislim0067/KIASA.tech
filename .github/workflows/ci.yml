@@ -114,6 +114,16 @@ jobs:
       - name: Résumé provider (offline, mocked)
         run: npm run test:resume:provider
 
+      # The OpenRouter gateway and the job-scoring capability, fully mocked.
+      #
+      # NO LIVE REQUEST IS EVER MADE HERE, and no key is needed: every fetch is
+      # injected and the base URL is pinned at a closed loopback port, so an
+      # un-mocked call fails locally rather than reaching a provider and
+      # spending money. The one live request lives in `npm run smoke:openrouter`,
+      # which has no step in this workflow and refuses to run when CI is set.
+      - name: OpenRouter gateway (offline, mocked)
+        run: npm run test:gateway
+
       # The agent control plane: contracts, state machine, safety policy and
       # candidate-URL validation. Pure — no network, no database, no browser,
       # no worker, no provider.

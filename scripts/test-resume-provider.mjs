@@ -706,7 +706,14 @@ section('10. Usage metadata is metadata only');
   check('negative latency is rejected', !ProviderUsageRecord.safeParse({ ...valid, latency_ms: -1 }).success);
   check('fractional tokens are rejected', !ProviderUsageRecord.safeParse({ ...valid, total_tokens: 1.5 }).success);
   check('an unknown provider is rejected', !ProviderUsageRecord.safeParse({ ...valid, provider: 'anthropic' }).success);
-  check('an unknown operation is rejected', !ProviderUsageRecord.safeParse({ ...valid, operation: 'job_scoring' }).success);
+  /*
+   * `job_scoring` was this file's example of an UNKNOWN operation until
+   * Milestone 2C added it to the vocabulary. The EXAMPLE moved; the assertion
+   * did not weaken — an operation outside the enum is still rejected, and the
+   * two lines below pin down what changed.
+   */
+  check('an unknown operation is rejected', !ProviderUsageRecord.safeParse({ ...valid, operation: 'send_email' }).success);
+  check('  job_scoring is now a known operation', ProviderUsageRecord.safeParse({ ...valid, operation: 'job_scoring' }).success);
   check('a bad correlation id is rejected', !ProviderUsageRecord.safeParse({ ...valid, correlation_id: 'nope' }).success);
   check('parseUsageRecord returns null rather than throwing', parseUsageRecord({ nonsense: true }) === null);
 
