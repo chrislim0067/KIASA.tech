@@ -1,7 +1,11 @@
 /**
  * The pairing attempt counter, against a REAL database, under real concurrency.
  *
- *   npm run db:start && node scripts/test-worker-pairing-db.mjs
+ *   npm run db:start && node --import ./scripts/lib/register-hooks.mjs scripts/test-worker-pairing-db.mjs
+ *
+ * The hooks loader is required, not decorative: this suite imports
+ * lib/worker/pairing.ts, which imports `@/lib/agent/contracts`, and plain
+ * node strips the types but does not know the `@/` alias.
  *
  * This one cannot be faked. The property being tested — that concurrent
  * updates serialise on a row lock and each adds exactly one — is a property of
