@@ -316,7 +316,8 @@ export type Database = {
           finished_at: string | null
           id: string
           idempotency_key: string
-          job_id: string
+          job_id: string | null
+          kind: string
           max_attempts: number
           mode: string
           outcome: string | null
@@ -333,7 +334,8 @@ export type Database = {
           finished_at?: string | null
           id?: string
           idempotency_key: string
-          job_id: string
+          job_id?: string | null
+          kind?: string
           max_attempts?: number
           mode: string
           outcome?: string | null
@@ -350,7 +352,8 @@ export type Database = {
           finished_at?: string | null
           id?: string
           idempotency_key?: string
-          job_id?: string
+          job_id?: string | null
+          kind?: string
           max_attempts?: number
           mode?: string
           outcome?: string | null
@@ -865,6 +868,73 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "languages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      profile_drafts: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          input: Json
+          profile_version: string
+          result: Json | null
+          resume_import_id: string | null
+          reviewed_at: string | null
+          status: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          input: Json
+          profile_version: string
+          result?: Json | null
+          resume_import_id?: string | null
+          reviewed_at?: string | null
+          status?: string
+          task_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          input?: Json
+          profile_version?: string
+          result?: Json | null
+          resume_import_id?: string | null
+          reviewed_at?: string | null
+          status?: string
+          task_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_drafts_resume_import_id_fkey"
+            columns: ["resume_import_id"]
+            isOneToOne: false
+            referencedRelation: "resume_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_drafts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "automation_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_drafts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "admin_user_directory"
@@ -1960,6 +2030,8 @@ export type Database = {
         Args: { p_credential_id: string; p_token_hash: string }
         Returns: {
           claimed_fence: number
+          claimed_input: Json
+          claimed_kind: string
           claimed_lease_expires_at: string
           claimed_lease_id: string
           claimed_task_id: string
@@ -2039,6 +2111,18 @@ export type Database = {
           ok: boolean
           reason: string
           revoked_count: number
+        }[]
+      }
+      worker_submit_profile_draft: {
+        Args: {
+          p_credential_id: string
+          p_draft: Json
+          p_fence_token: number
+          p_token_hash: string
+        }
+        Returns: {
+          ok: boolean
+          reason: string
         }[]
       }
     }
