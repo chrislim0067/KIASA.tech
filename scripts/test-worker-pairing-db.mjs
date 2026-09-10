@@ -404,6 +404,48 @@ try {
     check('service_role still holds nothing on the migration-22 worker tables',
       svcGrants === 'none', svcGrants);
   }
+  section('7. A paired account can still be deleted');
+
+  {
+    /*
+     * `redeemed_supervisor_id` is ON DELETE SET NULL, and
+     * `worker_pairings_redemption_complete` requires
+     * `(redeemed_at is null) = (redeemed_supervisor_id is null)`.
+     *
+     * Deleting the account cascades to `worker_supervisors` as well as to
+     * `worker_pairings`, and those two cascades have no guaranteed order. If
+     * the supervisor goes first, the detach rewrites a redeemed pairing to
+     * `redeemed_supervisor_id = null` while `redeemed_at` is still set, the
+     * constraint refuses the row, and the whole account deletion fails with
+     * it. The same shape was found and fixed in migration 22 for
+     * `worker_events`.
+     *
+     * Account deletion is not optional, so this is asserted rather than
+     * assumed. scripts/test-profile-cascade.mjs covers the profile tables and
+     * touches none of the worker ones.
+     */
+    const carol = await makeUser('carol');
+    const id = await newPairing(carol, 'GOODSECRETSEVEN');
+    const supervisorId = sql(`insert into public.worker_supervisors
+      (user_id, platform, agent_version, declared_slots, lifecycle)
+      values ('${carol}', 'linux', '0.1.0', 1, 'starting') returning id`);
+    await svc
+      .from('worker_pairings')
+      .update({ redeemed_at: new Date().toISOString(), redeemed_supervisor_id: supervisorId })
+      .eq('id', id);
+    check(
+      'the invitation is redeemed and names its supervisor',
+      sql(`select redeemed_supervisor_id from public.worker_pairings where id = '${id}'`) ===
+        supervisorId
+    );
+
+    const { error: deleteError } = await svcClient().auth.admin.deleteUser(carol);
+    check('the account deletes cleanly', !deleteError, deleteError?.message ?? 'deleted');
+    const left = Number(
+      sql(`select count(*) from public.worker_pairings where user_id = '${carol}'`)
+    );
+    check('  and takes its invitation with it', left === 0, `${left} row(s) left`);
+  }
 } catch (err) {
   // A throw here is a setup failure, not an assertion failure — a refused
   // insert, a missing grant, a constraint nobody expected. Without this the
