@@ -1,18 +1,37 @@
+import { canonicaliseUrl } from '@/lib/jobs/url';
+
 /**
- * Validating a job URL a candidate pasted.
+ * DESTINATION POLICY for a job URL a candidate pasted.
  *
- * NOTHING HERE FETCHES ANYTHING. This milestone defines and tests the rules;
- * the fetcher is a later, separately reviewed piece. That order is deliberate:
- * a fetcher written first would have its safety rules discovered afterwards,
- * by which point something has already made the request.
+ * NOTHING HERE FETCHES ANYTHING, and — since Milestone 2B — nothing here
+ * CANONICALISES anything either. Read that second part carefully, because it
+ * is the whole point of this file's shape:
  *
- * THE THREAT THIS EXISTS FOR
+ *   THERE IS EXACTLY ONE CANONICAL URL NORMALIZER, AND IT IS
+ *   `canonicaliseUrl()` IN `lib/jobs/url.ts`.
+ *
+ * This module used to have its own. The two agreed on most inputs and
+ * disagreed on some — this one stripped a trailing slash from a bare origin,
+ * sorted parameters by name only, and removed a slightly different tracking
+ * list. That divergence was not cosmetic. The database's uniqueness constraint
+ * is built on `md5(canonical_url)` from `lib/jobs/url.ts`, so a second
+ * normalizer producing a second spelling of the same posting would defeat
+ * deduplication entirely — and in THIS system, a duplicate job row means a
+ * second real application, to the same employer, in the candidate's name.
+ *
+ * So `validateJobUrl()` now decides only WHETHER a destination is allowed, and
+ * delegates WHAT THE URL IS to the one normalizer.
+ *
+ * THE THREAT THIS STILL EXISTS FOR
  *
  * A candidate-supplied URL is attacker-controlled input that our SERVER will
  * later request. That is server-side request forgery in its textbook form. A
  * URL pointing at `169.254.169.254`, `127.0.0.1:54322` or `10.0.0.5` is not a
  * job posting — it is an attempt to make our infrastructure fetch something on
- * the attacker's behalf and hand back the result.
+ * the attacker's behalf and hand back the result. `lib/jobs/url.ts` does not
+ * check any of that, by design: it answers "which posting is this", not "may
+ * we go there". Both questions need an answer, and they are different
+ * questions.
  *
  * So the rules below are allow-list shaped and fail closed: HTTPS only, public
  * destinations only, no credentials, no redirect to anywhere the original URL
@@ -20,13 +39,12 @@
  *
  * WHAT THIS CANNOT DO, STATED PLAINLY
  *
- * A hostname is not an address. `evil.example.com` may resolve to
- * `127.0.0.1` today and something else tomorrow, and a check performed here is
- * a check performed before DNS. Literal private addresses are rejected here;
- * DNS-based rebinding must ALSO be defended at fetch time, by resolving first
- * and validating the resolved address immediately before connecting. That is
- * recorded in docs/AGENT-CONTROL-PLANE.md as a requirement of the fetcher, not
- * an optional extra.
+ * A hostname is not an address. `evil.example.com` may resolve to `127.0.0.1`
+ * today and something else tomorrow, and a check performed here is a check
+ * performed before DNS. Literal private addresses are rejected here; DNS-based
+ * rebinding is defended at fetch time by `lib/jobs/fetcher.ts`, which resolves
+ * the hostname and validates EVERY resolved address immediately before
+ * connecting, and re-checks each redirect hop.
  */
 
 export const MAX_URL_LENGTH = 2048;
@@ -48,7 +66,14 @@ export type UrlRejectReason =
   | 'port_not_allowed';
 
 export type UrlValidation =
-  | { ok: true; canonical: string; host: string }
+  | {
+      ok: true;
+      /** Produced by `canonicaliseUrl()` in lib/jobs/url.ts. The only spelling. */
+      canonical: string;
+      host: string;
+      atsVendor: string | null;
+      externalJobId: string | null;
+    }
   | { ok: false; reason: UrlRejectReason; detail: string };
 
 /** Only 443. A job posting on an unusual port is not worth the SSRF surface. */
@@ -60,18 +85,11 @@ const ALLOWED_PORTS = new Set(['', '443']);
  */
 const RESERVED_TLDS = ['localhost', 'local', 'internal', 'invalid', 'test', 'example', 'home.arpa'];
 
-/** Tracking parameters, removed so the same posting canonicalises identically. */
-const STRIPPED_PARAMS = [
-  /^utm_/i,
-  /^gclid$/i,
-  /^fbclid$/i,
-  /^mc_[ce]id$/i,
-  /^ref$/i,
-  /^referrer$/i,
-  /^source$/i,
-  /^trk$/i,
-  /^trackingId$/i,
-];
+/*
+ * The tracking-parameter list that used to live here has been DELETED, not
+ * moved. It is `TRACKING_PARAMS` in `lib/jobs/url.ts` and there is one of it.
+ * Two lists would drift, and a drifted list is a duplicate job row.
+ */
 
 const isIpv4 = (h: string) => /^\d{1,3}(\.\d{1,3}){3}$/.test(h);
 
@@ -185,26 +203,57 @@ export function validateJobUrl(input: unknown): UrlValidation {
     return { ok: false, reason: 'hostname_not_public', detail: host };
   }
 
-  const canonical = new URL(url.toString());
-  canonical.hostname = host;
-  canonical.hash = '';
-  canonical.username = '';
-  canonical.password = '';
-  if (canonical.port === '443') canonical.port = '';
-
-  const keep: [string, string][] = [];
-  for (const [k, v] of canonical.searchParams.entries()) {
-    if (!STRIPPED_PARAMS.some((re) => re.test(k))) keep.push([k, v]);
+  /*
+   * The destination is allowed. WHAT the URL is, is not this module's
+   * question — hand it to the one normalizer.
+   *
+   * Its rejections are re-mapped rather than passed through, so a caller sees
+   * this module's vocabulary throughout. In practice they cannot fire: every
+   * rejection it can produce (scheme, host, credentials, length) has already
+   * been checked above, and the fallback exists so that a future change to
+   * either module fails closed instead of returning an un-canonicalised URL.
+   */
+  const normalised = canonicaliseUrl(raw);
+  if (!normalised.ok) {
+    const mapped: Record<string, UrlRejectReason> = {
+      not_a_url: 'not_a_url',
+      unsupported_scheme: 'scheme_not_https',
+      missing_host: 'no_hostname',
+      too_long: 'too_long',
+      credentials_in_url: 'credentials_in_url',
+    };
+    return {
+      ok: false,
+      reason: mapped[normalised.reason] ?? 'not_a_url',
+      detail: `canonicaliser: ${normalised.reason}`,
+    };
   }
-  keep.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-  canonical.search = '';
-  for (const [k, v] of keep) canonical.searchParams.append(k, v);
 
-  // A trailing slash on a bare origin only; deeper paths keep their shape.
-  let out = canonical.toString();
-  if (canonical.pathname === '/' && keep.length === 0) out = out.replace(/\/$/, '');
+  return {
+    ok: true,
+    canonical: normalised.value.canonical,
+    host,
+    atsVendor: normalised.value.atsVendor,
+    externalJobId: normalised.value.externalJobId,
+  };
+}
 
-  return { ok: true, canonical: out, host };
+/**
+ * The deduplication key for a canonical URL.
+ *
+ * ONE FUNCTION, used by every ingestion path, so that two routes to the same
+ * posting cannot produce two keys. It mirrors the database's
+ * `md5(canonical_url)` uniqueness constraint — the database is the authority,
+ * and this exists so a caller can check before writing rather than discovering
+ * the collision from an error code.
+ *
+ * Takes a CANONICAL url. Passing a raw one is the mistake this whole
+ * reconciliation exists to prevent, so it canonicalises defensively and
+ * returns null rather than hashing something that was never normalised.
+ */
+export function jobDedupeKey(canonicalOrRaw: string): string | null {
+  const r = canonicaliseUrl(canonicalOrRaw);
+  return r.ok ? r.value.canonical : null;
 }
 
 /**

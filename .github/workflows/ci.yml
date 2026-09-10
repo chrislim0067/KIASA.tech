@@ -136,6 +136,40 @@ jobs:
       - name: Worker protocol (offline)
         run: npm run test:worker
 
+      # ONE canonical URL normalizer, proven through both ingestion paths.
+      # There were two, and they disagreed; in this system a duplicate job row
+      # becomes a second real application to the same employer.
+      - name: Job URL deduplication
+        run: npm run test:dedupe
+
+      # The task state machine exists in TypeScript AND as a trigger in
+      # migration 22. This parses the SQL and asserts they are identical in
+      # both directions, so the database cannot refuse a transition the code
+      # believes is legal — mid-application, on a real submission.
+      - name: Task state parity (TypeScript vs migration)
+        run: npm run test:state-parity
+
+      # Local Claude routing, capability detection and output validation.
+      #
+      # The real adapter is NOT exercised here and must not be: a CI runner is
+      # not the candidate's machine and has no subscription, so a green check
+      # would say nothing true. What runs here is the logic — that an
+      # unavailable capability reports `unsupported` rather than falling back
+      # silently, and that model output is validated before anything uses it.
+      - name: Local Claude mode (offline, mocked)
+        run: npm run test:local
+
+      # The one-slot vertical slice against the local fixture, plus structural
+      # assertions on migration 22. Five of the six fixture pages must stop
+      # with nothing typed.
+      - name: Worker slice and schema (offline)
+        run: npm run test:slice
+
+      # The slice end to end, with the deterministic transport. It exits
+      # non-zero if any hazard page fails to stop.
+      - name: One-slot demo against the local fixture
+        run: npm run demo:slice
+
       # Same reasoning as the scanner: the manifest checker is tested before it
       # is trusted. It previously reported an unrecorded migration and exited 0,
       # which no assertion anywhere would have caught.
