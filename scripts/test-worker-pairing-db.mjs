@@ -20,9 +20,21 @@
  * Migration 25 moved the arithmetic into a BEFORE UPDATE trigger. The tests
  * below fire many simultaneous updates and check the arithmetic came out
  * right — and that nothing else about the invitation was weakened to get there.
+ *
+ * WHAT THIS SUITE THEN FOUND, WHICH NO MOCK COULD HAVE
+ *
+ * The trigger counts an attempt when the submitted value DIFFERS from the
+ * stored one, because that is how it tells a guess apart from a revocation.
+ * `recordFailedAttempt` submitted 0 — equal to the stored 0 on every first
+ * guess, and equal to the stored 0 for every member of a concurrent burst. The
+ * limit was inert. The in-memory store the endpoint tests use increments
+ * unconditionally, so 118 offline assertions passed over it. A real Postgres
+ * did not. The signal is now -1, which the column's own 0..10 constraint
+ * guarantees can never equal a stored value.
  */
 import { execFileSync } from 'node:child_process';
 import { randomUUID, createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 import { statusEnvRaw } from './lib/supabase-cli.mjs';
 import { createClient } from '@supabase/supabase-js';
@@ -54,7 +66,39 @@ const svcClient = () => createClient(API_URL, SECRET_KEY, opts);
 
 let failed = 0;
 let passed = 0;
-const section = (s) => console.log(`\n=== ${s} ===`);
+let lastSection = 'before the first section';
+const section = (s) => {
+  lastSection = s;
+  console.log(`\n=== ${s} ===`);
+};
+/*
+ * A FAILURE HERE MUST BE READABLE WITHOUT THE JOB LOG.
+ *
+ * The workflow publishes the failing suite's NAME as an annotation and nothing
+ * else, deliberately: the database suites print local credentials and
+ * throwaway user emails, and this repository is public. That rule is right,
+ * but it left this suite diagnosable only by guessing, which cost two CI
+ * cycles.
+ *
+ * So the suite publishes its own annotations, and only what it controls: the
+ * static label of the check that failed, plus its short detail. Both are
+ * written in this file. Nothing read from the database, the environment or the
+ * Supabase client is annotated, and the scrub below is a second line of
+ * defence rather than the first.
+ */
+const scrub = (value) =>
+  String(value)
+    .replace(/eyJ[A-Za-z0-9_.-]{10,}/g, '[redacted-token]')
+    .replace(/https?:\/\/\S+/g, '[redacted-url]')
+    .replace(/[\r\n]+/g, ' ')
+    .slice(0, 300);
+
+const annotate = (line) => {
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    console.log(`::error title=pairing-db::${scrub(line)}`);
+  }
+};
+
 function check(label, ok, detail = '') {
   if (ok) {
     passed++;
@@ -62,6 +106,7 @@ function check(label, ok, detail = '') {
   } else {
     failed++;
     console.log(`  FAIL  ${label}${detail ? `  — ${detail}` : ''}`);
+    annotate(`FAIL: ${label}${detail ? ` — ${detail}` : ''}`);
   }
 }
 
@@ -122,6 +167,16 @@ try {
     return data.id;
   };
 
+  /*
+   * EXACTLY WHAT recordFailedAttempt SENDS.
+   *
+   * Mirrored rather than described, because the value is the whole subtlety:
+   * the trigger counts an attempt only when the submitted value DIFFERS from
+   * the stored one, so a signal of 0 counted nothing against a stored 0 — and
+   * a burst of concurrent guesses all seeing 0 counted nothing at all.
+   */
+  const countOne = (id) => svc.from('worker_pairings').update({ attempts: -1 }).eq('id', id);
+
   const attemptsOf = (id) =>
     Number(sql(`select attempts from public.worker_pairings where id = '${id}'`));
 
@@ -133,25 +188,44 @@ try {
     const id = await newPairing(alice, 'GOODSECRETONE');
     check('a fresh invitation starts at zero', attemptsOf(id) === 0);
 
-    await svc.from('worker_pairings').update({ attempts: 0 }).eq('id', id);
-    check('an update counts one', attemptsOf(id) === 1, String(attemptsOf(id)));
+    await countOne(id);
+    check('one failed guess counts one', attemptsOf(id) === 1, String(attemptsOf(id)));
 
-    await svc.from('worker_pairings').update({ attempts: 0 }).eq('id', id);
+    await countOne(id);
     check('  and again', attemptsOf(id) === 2, String(attemptsOf(id)));
 
     // The submitted value is a SIGNAL, not data. Under the old code, anything
     // holding UPDATE could write a lower number and reset the counter.
     await svc.from('worker_pairings').update({ attempts: 0 }).eq('id', id);
-    check('sending 0 cannot reset the counter', attemptsOf(id) === 3, String(attemptsOf(id)));
+    check('sending 0 against a stored 2 counts one, it does not reset',
+      attemptsOf(id) === 3, String(attemptsOf(id)));
     await svc.from('worker_pairings').update({ attempts: 99 }).eq('id', id);
     check('sending 99 cannot jump the counter', attemptsOf(id) === 4, String(attemptsOf(id)));
+
+    /*
+     * THE TRAP THE PRODUCTION CODE FELL INTO.
+     *
+     * A BEFORE trigger cannot see which columns an UPDATE named, only what the
+     * row now holds. Submitting the value already stored is indistinguishable
+     * from not touching the column, so it counts nothing — which is correct
+     * for a revocation and fatal for a guess. recordFailedAttempt sent 0, and
+     * every first guess meets a stored 0.
+     */
+    await svc.from('worker_pairings').update({ attempts: 4 }).eq('id', id);
+    check('submitting the value already stored counts NOTHING',
+      attemptsOf(id) === 4, String(attemptsOf(id)));
+    // Not asserted as a sentence: read the value production actually sends.
+    const sent = readFileSync('lib/worker/store.ts', 'utf8')
+      .match(/update\(\{ attempts: (-?\d+) \}\)/);
+    check('  which is why the signal production sends lies outside 0..10',
+      sent !== null && Number(sent[1]) < 0, sent ? sent[0] : 'no signal found');
   }
 
   section('1b. One live invitation per candidate; superseding counts nothing');
 
   {
     const first = await newPairing(alice, 'GOODSECRETFIRST');
-    await svc.from('worker_pairings').update({ attempts: 0 }).eq('id', first);
+    await countOne(first);
     check('the first invitation counted one attempt', attemptsOf(first) === 1);
 
     const second = await newPairing(alice, 'GOODSECRETSECOND');
@@ -180,7 +254,7 @@ try {
     // read-then-write this reliably lost updates; under a row lock it cannot.
     const results = await Promise.all(
       Array.from({ length: BURST }, () =>
-        svcClient().from('worker_pairings').update({ attempts: 0 }).eq('id', id)
+        svcClient().from('worker_pairings').update({ attempts: -1 }).eq('id', id)
       )
     );
     const rejected = results.filter((r) => r.error).length;
@@ -200,7 +274,7 @@ try {
     const secret = 'GOODSECRETTHREE';
     const id = await newPairing(alice, secret);
     for (let i = 0; i < MAX; i++) {
-      await svc.from('worker_pairings').update({ attempts: 0 }).eq('id', id);
+      await countOne(id);
     }
     check('the counter sits at the ceiling', attemptsOf(id) === MAX, String(attemptsOf(id)));
 
@@ -330,6 +404,14 @@ try {
     check('service_role still holds nothing on the migration-22 worker tables',
       svcGrants === 'none', svcGrants);
   }
+} catch (err) {
+  // A throw here is a setup failure, not an assertion failure — a refused
+  // insert, a missing grant, a constraint nobody expected. Without this the
+  // process died on an unhandled rejection and published nothing but the
+  // script's name.
+  failed++;
+  console.error(err);
+  annotate(`THREW during "${lastSection}": ${err?.message ?? err}`);
 } finally {
   const admin = svcClient();
   for (const id of created) {

@@ -30,6 +30,7 @@
 -- Because the client's value is discarded rather than trusted, nobody can
 -- write `attempts = 0` to reset the counter. Under the old code that was
 -- possible for anything holding UPDATE; now it is arithmetically impossible.
+-- Submitting 0 against a stored 3 counts an attempt and yields 4.
 --
 -- SCOPE: one trigger function on one table. No schema change, no new grant, no
 -- other migration touched.
@@ -57,9 +58,21 @@ begin
   /*
    * THE ATOMIC COUNTER.
    *
-   * Any update that touches `attempts` is treated as "count one failed
+   * An update that CHANGES `attempts` is treated as "count one failed
    * attempt". The submitted value is DISCARDED — it is a signal, not data —
    * and the new value is computed from the locked previous row.
+   *
+   * "Changes" rather than "touches" is the whole subtlety, and it is why
+   * `recordFailedAttempt` sends -1 rather than 0. A BEFORE trigger cannot see
+   * which columns an UPDATE listed, only what the row now holds, so a guess
+   * that submitted the value already stored would count nothing — and every
+   * first guess submits 0 against a stored 0. -1 is outside
+   * `worker_pairings_attempts_bounded` (0..10) and so can never equal a
+   * stored value; it is also why a dropped trigger fails the write loudly
+   * instead of writing a negative count.
+   *
+   * Revocation and redemption write other columns and leave this one alone,
+   * so they still count nothing.
    *
    * At the ceiling the counter stops rather than the statement failing. An
    * exception here would turn a refused guess into a 500 and hand an attacker

@@ -110,12 +110,45 @@ export function createPairingStore(): PairingStore {
        * Concurrent updates serialise on that row lock, so every attempt counts
        * exactly once and none can be lost.
        *
-       * Sending 0 is deliberate and safe — it cannot reset the counter, which
-       * is a property the old code did not have.
+       * WHY THE SIGNAL IS -1 AND NOT 0.
+       *
+       * The trigger counts an attempt when `new.attempts is distinct from
+       * old.attempts` — that is how it tells a failed guess apart from a
+       * revocation, which writes `revoked_at` and leaves this column alone.
+       * Sending 0 therefore counted NOTHING while the stored value was still
+       * 0, which is every first wrong guess; and under a burst of concurrent
+       * guesses that all see 0 it counted nothing at all, leaving the limit
+       * inert. The endpoint tests missed it because their in-memory store
+       * increments unconditionally. scripts/test-worker-pairing-db.mjs, run
+       * against a real Postgres, did not.
+       *
+       * -1 cannot equal a stored value: `worker_pairings_attempts_bounded`
+       * confines the column to 0..10. Every call is therefore distinct and
+       * counts exactly once, and the choice is self-enforcing — if the trigger
+       * were ever dropped, -1 would violate that constraint and this write
+       * would fail loudly rather than silently record a negative count.
+       *
+       * The value still cannot be chosen by a caller: the trigger discards it
+       * either way, so nothing can reset the counter or jump it.
        */
-      await db.from('worker_pairings').update({ attempts: 0 }).eq('id', id);
+      await db.from('worker_pairings').update({ attempts: -1 }).eq('id', id);
     },
 
+    /*
+     * KNOWN BLOCKER, PROVEN BY scripts/test-worker-pairing-db.mjs.
+     *
+     * service_role holds NO grant on `worker_supervisors` or `worker_slots`.
+     * Migration 22 revokes every privilege from it and then asserts the
+     * absence, so this insert — and `createSlot` and `recordHeartbeat` below —
+     * are refused by a real database. Redemption fails closed with
+     * `registration_failed` (a 500, no disclosure), but it fails.
+     *
+     * The two ways out are a service-role grant on those two tables, or moving
+     * supervisor registration to the candidate's own session, which already
+     * holds SELECT and INSERT there. Both are privilege decisions, so neither
+     * was taken here. Until one is, one-worker pairing works only against the
+     * in-memory store used by scripts/probe-worker-e2e.mjs.
+     */
     async createSupervisor(row) {
       const { data, error } = await db
         .from('worker_supervisors')

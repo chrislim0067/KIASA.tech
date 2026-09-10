@@ -86,6 +86,19 @@ function makeStore() {
       p.redeemed_supervisor_id = supervisorId;
       return true;
     },
+    /*
+     * THIS FAKE IS MORE CAPABLE THAN THE REAL THING, AND THAT MATTERS.
+     *
+     * It increments unconditionally. The database increments only when the
+     * submitted value differs from the stored one, and the interface
+     * `recordFailedAttempt(id)` hides that value inside the implementation, so no
+     * assertion written against this store can reach it. Every counter
+     * assertion here passed while the real counter was inert.
+     *
+     * The value is therefore checked two ways instead: by reading the source
+     * in section 14, and against a real Postgres in
+     * scripts/test-worker-pairing-db.mjs.
+     */
     async recordFailedAttempt(id) {
       const p = pairings.get(id);
       if (p) p.attempts += 1;
@@ -257,7 +270,13 @@ section('5. Wrong secrets cost an attempt; dead invitations cost nothing');
   // Force a hash collision on lookup by presenting the right hash, wrong value.
   const originalFind = store2.findPairingByHash.bind(store2);
   store2.findPairingByHash = async () => real;
-  const near = await E.redeemPairing(store2, redeemBody(normalised.slice(0, -1) + 'X'), now);
+  // The replacement character must DIFFER from the one it replaces. Hard-coding
+  // 'X' made this a one-in-thirty flake: the alphabet contains X, so roughly
+  // every thirtieth run the "near miss" WAS the real secret, redeemed cleanly,
+  // and took the two assertions after it down with it. Caught locally on 7cf8aaf
+  // after the same code had passed CI twice.
+  const different = normalised.endsWith('X') ? 'Y' : 'X';
+  const near = await E.redeemPairing(store2, redeemBody(normalised.slice(0, -1) + different), now);
   check('a near miss against a real invitation is refused',
     near.ok === false && near.reason === 'secret_mismatch', near.ok ? 'REDEEMED' : near.reason);
   check('  and IS charged an attempt', real.attempts === 1, String(real.attempts));
@@ -582,10 +601,35 @@ section('14. The attempt counter is atomic, and the read-then-write is gone');
     /is not a BEFORE UPDATE trigger/.test(migration),
     'an AFTER trigger cannot rewrite the value');
 
+  /*
+   * THE SIGNAL MUST BE A VALUE THE ROW CANNOT ALREADY HOLD.
+   *
+   * The trigger counts an attempt only when `new.attempts` DIFFERS from
+   * `old.attempts`, because that is how it tells a failed guess apart from
+   * a revocation. Sending 0 therefore counted nothing against a stored 0 —
+   * every first guess — and nothing at all under a burst that all saw 0. A
+   * real database found that; an in-memory store that increments
+   * unconditionally never could, which is why this check reads the SOURCE.
+   */
+  const signal = body.match(/update\(\{ attempts: (-?\d+) \}\)/);
+  check('the failed-attempt signal is a literal, sent unconditionally', signal !== null,
+    signal ? signal[0] : 'no update({ attempts: n }) found');
+  check('  and lies outside the stored range, so it always counts',
+    signal !== null && Number(signal[1]) < 0,
+    signal ? 'attempts: ' + signal[1] : 'none');
+  check('  which worker_pairings_attempts_bounded enforces',
+    /attempts between 0 and 10/.test(
+      readFileSync(
+        path.join(ROOT, 'supabase', 'migrations', '20260910000024_worker_pairing_and_credentials.sql'),
+        'utf8'
+      )
+    ),
+    'a dropped trigger makes the write fail, not record a negative count');
+
   check('the client value cannot reset the counter',
-    /update\(\{ attempts: 0 \}\)/.test(body) &&
-      /new\.attempts := least/.test(migration),
-    'sending 0 is a signal; the trigger discards it');
+    /new\.attempts := least/.test(migration) &&
+      !/new\.attempts := new\.attempts/.test(migration),
+    'the submitted value is discarded, whatever it is');
 
   /* Everything the fix must not have weakened. */
   const pairing = readFileSync(path.join(ROOT, 'lib', 'worker', 'pairing.ts'), 'utf8');
