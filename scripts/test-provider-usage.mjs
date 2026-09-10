@@ -270,8 +270,21 @@ async function main() {
 
   refuses('an unknown provider is refused',
     base({ cols: '', vals: `'anthropic', 'm', 'resume_extraction', 'succeeded', 1, 1` }));
+  /*
+   * `job_scoring` was this file's example of an UNKNOWN operation until
+   * migration 23 widened the constraint to the nine OpenRouter-servable
+   * capabilities. The EXAMPLE moved; the assertion did not weaken — and the
+   * near-misses below prove the vocabulary is still CLOSED rather than having
+   * quietly become free text.
+   */
   refuses('an unknown operation is refused',
-    base({ cols: '', vals: `'openrouter', 'm', 'job_scoring', 'succeeded', 1, 1` }));
+    base({ cols: '', vals: `'openrouter', 'm', 'send_email', 'succeeded', 1, 1` }));
+  refuses('  eligibility is refused — it never reaches a provider',
+    base({ cols: '', vals: `'openrouter', 'm', 'eligibility_evaluation', 'succeeded', 1, 1` }));
+  refuses('  a wrong-case operation is refused',
+    base({ cols: '', vals: `'openrouter', 'm', 'JOB_SCORING', 'succeeded', 1, 1` }));
+  refuses('  an operation with a space is refused',
+    base({ cols: '', vals: `'openrouter', 'm', 'job scoring', 'succeeded', 1, 1` }));
   refuses('an unknown status is refused',
     base({ cols: '', vals: `'openrouter', 'm', 'resume_extraction', 'maybe', 1, 1` }));
   refuses('negative latency is refused',
@@ -288,6 +301,44 @@ async function main() {
     base({ cols: ', total_tokens', vals: `'openrouter', 'm', 'resume_extraction', 'not_attempted', 1, 0, 500` }));
   refuses('an unattempted call with attempts > 0 is refused',
     base({ cols: '', vals: `'openrouter', 'm', 'resume_extraction', 'not_attempted', 1, 3` }));
+
+  /*
+   * The POSITIVE half, which the refusals above cannot give.
+   *
+   * A constraint that rejects everything would pass every `refuses` check in
+   * this file. Migration 23 exists to make nine specific values ACCEPTABLE, so
+   * each is inserted for real, against the live constraint, as service_role.
+   *
+   * The list is read from lib/ai/usage.ts rather than retyped, so adding an
+   * operation in TypeScript without a matching migration fails HERE, at the
+   * database — which is the failure that matters. Node 24 strips the types
+   * natively and that module imports only zod, so this needs no loader.
+   */
+  {
+    const { PROVIDER_OPERATIONS } = await import('../lib/ai/usage.ts');
+    let accepted = 0;
+    for (const operation of PROVIDER_OPERATIONS) {
+      try {
+        sql(base({ cols: '', vals: `'openrouter', 'm', '${operation}', 'succeeded', 1, 1` }));
+        accepted++;
+      } catch {
+        check(`the constraint accepts ${operation}`, false, 'rejected by the database');
+      }
+    }
+    check(`the constraint accepts all ${PROVIDER_OPERATIONS.length} provider operations`,
+      accepted === PROVIDER_OPERATIONS.length,
+      `${accepted}/${PROVIDER_OPERATIONS.length}`);
+    check('  and the vocabulary is exactly nine values',
+      PROVIDER_OPERATIONS.length === 9, String(PROVIDER_OPERATIONS.length));
+    /*
+     * These rows are NOT cleaned up, deliberately. Section 3 above proves that
+     * even service_role cannot delete from this table — that is the whole
+     * point of the immutability trigger — so a tidy-up here would throw.
+     *
+     * They are harmless: the later counts are scoped to Bob, or to rows with a
+     * null user and a request id, and these belong to Alice with neither.
+     */
+  }
 
   // And the shapes that must be accepted.
   const failedRow = sql(
