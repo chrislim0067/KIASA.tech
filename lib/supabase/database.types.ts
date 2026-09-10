@@ -1170,6 +1170,7 @@ export type Database = {
           id: string
           model: string | null
           parsed_at: string | null
+          provider_failure_code: string | null
           source_kind: string
           status: string
           storage_path: string | null
@@ -1187,6 +1188,7 @@ export type Database = {
           id?: string
           model?: string | null
           parsed_at?: string | null
+          provider_failure_code?: string | null
           source_kind?: string
           status?: string
           storage_path?: string | null
@@ -1204,6 +1206,7 @@ export type Database = {
           id?: string
           model?: string | null
           parsed_at?: string | null
+          provider_failure_code?: string | null
           source_kind?: string
           status?: string
           storage_path?: string | null
