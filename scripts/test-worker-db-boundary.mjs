@@ -391,16 +391,36 @@ try {
   section('9. No API role can read a hash, and service_role gained nothing');
 
   {
-    for (const [table, column] of [
-      ['worker_pairings', 'secret_hash'],
-      ['worker_credentials', 'token_hash'],
-    ]) {
-      for (const role of ['authenticated', 'anon']) {
-        check(`${role} cannot read ${table}.${column}`,
-          refused(`set local role ${role}; select coalesce(${column}, 'x') from public.${table} limit 1`),
-          'a column privilege, not a policy — RLS cannot hide a column');
-      }
-    }
+    /*
+     * CHECKED IN THE CATALOGUE, NOT BY TRYING IT.
+     *
+     * "SELECT the column as `authenticated` and see it fail" looks stronger and is
+     * in fact vacuous: with no JWT, `auth.uid()` is null, RLS matches no row, and
+     * the query returns nothing whether or not the privilege exists. It would
+     * have passed with the grant wide open.
+     *
+     * The privilege itself is the property. A column-level grant is what makes
+     * a hash unreadable even to its owner's own browser, because row security
+     * cannot hide a column.
+     */
+    const hashGrants = sql(`select coalesce(string_agg(grantee || ':' || table_name || '.' || column_name, ', '), 'none')
+      from information_schema.column_privileges
+      where table_schema = 'public'
+        and table_name in ('worker_pairings', 'worker_credentials')
+        and column_name in ('secret_hash', 'token_hash')
+        and grantee in ('anon', 'authenticated', 'PUBLIC')`);
+    check('NO BROWSER ROLE HOLDS ANY PRIVILEGE ON A HASH COLUMN', hashGrants === 'none',
+      hashGrants);
+
+    // And the columns a browser MAY read are still only the status ones.
+    const readable = sql(`select string_agg(column_name, ',' order by column_name)
+      from information_schema.column_privileges
+      where table_schema = 'public' and table_name = 'worker_pairings'
+        and grantee = 'authenticated' and privilege_type = 'SELECT'`);
+    check('  the candidate sees status, never material',
+      readable === 'attempts,created_at,expires_at,id,redeemed_at,redeemed_supervisor_id,' +
+        'revoked_at,user_id',
+      readable);
 
     const tableGrants = sql(`select coalesce(string_agg(distinct table_name, ','), 'none')
       from information_schema.role_table_grants

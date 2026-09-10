@@ -383,7 +383,12 @@ begin
     -- here and nothing else is.
     if p.proconfig is null or not exists (
       select 1 from unnest(p.proconfig) entry
-      where entry ~ '^search_path=(""|''''|)
+      where entry = 'search_path=' or entry = 'search_path=""'
+        or entry = 'search_path='''''
+    ) then
+      raise exception '% does not pin search_path to the empty string: %',
+        target, coalesce(array_to_string(p.proconfig, ','), 'unset');
+    end if;
 
     -- No dynamic SQL. No string in this function may become a statement.
     if p.prosrc ~* '\mexecute\M' then
@@ -422,90 +427,16 @@ begin
     -- A definer function is only as safe as its owner. These write to tables
     -- with FORCE ROW LEVEL SECURITY, which applies to the owner too, so the
     -- owner must be able to bypass it.
+    -- The catalogue records the two separately, and a SUPERUSER bypasses row
+    -- security whether or not rolbypassrls is set. Requiring only rolbypassrls
+    -- would abort on a stack whose owner is a superuser, which is how the
+    -- local one is configured.
     if not exists (
-      select 1 from pg_roles r where r.oid = p.proowner and r.rolbypassrls
+      select 1 from pg_roles r
+      where r.oid = p.proowner and (r.rolsuper or r.rolbypassrls)
     ) then
-      raise exception '% is owned by a role that cannot bypass forced RLS', target;
-    end if;
-  end loop;
-
-  -- THE INVARIANT THIS MIGRATION EXISTS TO PRESERVE. No table grant was added
-  -- to service_role on any migration-22 worker table.
-  select string_agg(distinct table_name || ':' || privilege_type, ', ') into offending
-  from information_schema.role_table_grants
-  where table_schema = 'public'
-    and table_name in ('worker_supervisors', 'worker_slots', 'automation_tasks',
-                       'task_leases', 'worker_events')
-    and grantee = 'service_role';
-  if offending is not null then
-    raise exception 'service_role gained a table grant: %', offending;
-  end if;
-
-  -- And the migration-24 grants are still exactly what migration 24 gave.
-  select string_agg(distinct privilege_type, ', ') into offending
-  from (
-    select distinct privilege_type
-    from information_schema.role_table_grants
-    where table_schema = 'public'
-      and table_name in ('worker_pairings', 'worker_credentials')
-      and grantee = 'service_role'
-    order by privilege_type
-  ) s;
-  if offending is distinct from 'INSERT, SELECT, UPDATE' then
-    raise exception 'service_role grants on the pairing tables changed: %', offending;
-  end if;
-
-  -- RLS is still enabled AND forced everywhere.
-  foreach target in array worker_tables loop
-    if not exists (
-      select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
-      where n.nspname = 'public' and c.relname = target
-        and c.relrowsecurity and c.relforcerowsecurity
-    ) then
-      raise exception '% lost RLS', target;
-    end if;
-  end loop;
-
-  -- Nothing gained access to a hash column.
-  if exists (
-    select 1 from information_schema.column_privileges
-    where table_schema = 'public'
-      and table_name in ('worker_pairings', 'worker_credentials')
-      and column_name in ('secret_hash', 'token_hash')
-      and grantee in ('anon', 'authenticated', 'PUBLIC')
-  ) then
-    raise exception 'an API role can read a hash column';
-  end if;
-end $$;
-
-    ) then
-      raise exception '% does not pin search_path to the empty string: %',
-        target, coalesce(array_to_string(p.proconfig, ','), 'unset');
-    end if;
-
-    -- No dynamic SQL. No string in this function may become a statement.
-    if p.prosrc ~* '\mexecute\M' then
-      raise exception '% contains dynamic SQL', target;
-    end if;
-
-    -- Not reachable by a browser, an anonymous caller, or PUBLIC.
-    if has_function_privilege('authenticated', p.oid, 'EXECUTE')
-       or has_function_privilege('anon', p.oid, 'EXECUTE')
-       or has_function_privilege('public', p.oid, 'EXECUTE')
-    then
-      raise exception '% is executable by an API role other than service_role', target;
-    end if;
-    if not has_function_privilege('service_role', p.oid, 'EXECUTE') then
-      raise exception '% is not executable by service_role', target;
-    end if;
-
-    -- A definer function is only as safe as its owner. These write to tables
-    -- with FORCE ROW LEVEL SECURITY, which applies to the owner too, so the
-    -- owner must be able to bypass it.
-    if not exists (
-      select 1 from pg_roles r where r.oid = p.proowner and r.rolbypassrls
-    ) then
-      raise exception '% is owned by a role that cannot bypass forced RLS', target;
+      raise exception '% is owned by %, which cannot bypass forced RLS',
+        target, (select rolname from pg_roles where oid = p.proowner);
     end if;
   end loop;
 

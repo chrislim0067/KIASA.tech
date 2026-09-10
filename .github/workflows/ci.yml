@@ -237,8 +237,26 @@ jobs:
       # `supabase start` applies every migration in supabase/migrations to a
       # database created moments earlier — migrations-from-empty, proven on
       # every run rather than asserted in a report.
+      # A MIGRATION THAT ABORTS MUST SAY SO OUT LOUD.
+      #
+      # These two steps apply every migration, and a migration self-verifying
+      # and aborting looks identical from outside to the stack failing to
+      # boot: "Process completed with exit code 1", no annotation, and a job
+      # log that needs admin rights to read. Two CI cycles were spent guessing
+      # at one.
+      #
+      # So the output is captured and, ON FAILURE ONLY, the error lines are
+      # published as an annotation. Never the whole log: db:start prints the
+      # local anon and service-role keys on success and this repository is
+      # public, so only error-shaped lines survive, anything JWT-shaped is
+      # dropped, and the rest is truncated.
       - name: Start local Supabase
-        run: npm run db:start
+        run: |
+          set -uo pipefail
+          if ! npm run db:start > /tmp/db-start.log 2>&1; then
+            echo "::error title=Local Supabase failed to start::$(grep -aiE 'error|exception|fatal' /tmp/db-start.log | grep -av eyJ | tail -6 | awk '{printf "%s ", $0}' | cut -c1-600)"
+            exit 1
+          fi
 
       - name: Confirm the stack is local before anything touches it
         run: |
@@ -252,7 +270,12 @@ jobs:
           esac
 
       - name: Reset the database from empty and re-apply all migrations
-        run: npm run db:reset
+        run: |
+          set -uo pipefail
+          if ! npm run db:reset > /tmp/db-reset.log 2>&1; then
+            echo "::error title=Migrations failed to re-apply from empty::$(grep -aiE 'error|exception|fatal' /tmp/db-reset.log | grep -av eyJ | tail -6 | awk '{printf "%s ", $0}' | cut -c1-600)"
+            exit 1
+          fi
 
       # `test:db` chains seventeen scripts with `&&`. When one fails, the only
       # thing visible outside the log is "Database suites: failure" — which
