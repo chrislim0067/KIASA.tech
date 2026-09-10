@@ -229,8 +229,13 @@ try {
     auth.ok && auth.userId === alice.id);
 
   const identity = auth.ok ? { credentialId: auth.credentialId, tokenHash: auth.tokenHash } : null;
-  const beat = (sequence, readiness = 'ready', lifecycle = 'running') =>
-    E.heartbeat(store, identity, { sequence, lifecycle, slot_readiness: readiness }, new Date());
+  const beat = (sequence, readiness = 'ready', lifecycle = 'running', reason = undefined) =>
+    E.heartbeat(
+      store,
+      identity,
+      { sequence, lifecycle, slot_readiness: readiness, ...(reason ? { reason } : {}) },
+      new Date()
+    );
 
   const first = await beat(1);
   check('THE HEARTBEAT IS APPLIED BY THE DATABASE', first.ok === true && first.applied === true,
@@ -267,11 +272,18 @@ try {
    * constraint. Both directions are checked because only the second one fails
    * quietly.
    */
-  const stopped = await beat(3, 'stopped', 'stopping');
-  check('a stopped slot is accepted', stopped.ok === true && stopped.applied === true);
-  check('  with the reason the constraint requires',
+  const noReason = await beat(3, 'stopped', 'stopping');
+  check('a stopped slot with NO reason is refused',
+    noReason.ok === false && noReason.reason === 'stop_reason_required',
+    noReason.ok ? 'ACCEPTED' : noReason.reason);
+
+  const stopped = await beat(3, 'stopped', 'stopping', 'supervisor_shutdown');
+  check('a stopped slot that names its reason is accepted',
+    stopped.ok === true && stopped.applied === true, stopped.ok ? '' : stopped.reason);
+  check('  and the reason stored is the one the WORKER sent',
     sql(`select readiness || '/' || coalesce(stop_reason, 'none') from public.worker_slots
-         where id = '${issued.slotId}'`) === 'stopped/supervisor_shutdown');
+         where id = '${issued.slotId}'`) === 'stopped/supervisor_shutdown',
+    'migration 26 invented this value; migration 27 requires it to be sent');
   const restarted = await beat(4, 'ready');
   check('and a slot that reports ready again clears it', restarted.applied === true);
   check('  leaving no stale reason behind',
@@ -484,9 +496,10 @@ try {
       sequence: 99,
       lifecycle: 'running',
       readiness: 'ready',
+      reason: null,
     });
     check('  and the boundary refuses the write even with a valid token hash',
-      afterBeat.applied === false);
+      afterBeat.applied === false && afterBeat.reason === 'revoked', afterBeat.reason);
     check('  the sequence did not move',
       Number(sql(`select heartbeat_sequence from public.worker_supervisors
                   where id = '${issued.supervisorId}'`)) === 4);
@@ -572,6 +585,7 @@ try {
       sequence: 100,
       lifecycle: 'running',
       readiness: 'ready',
+      reason: null,
     });
     check('  AND A REVOKED SUPERVISOR ACCEPTS NO HEARTBEAT', zombie.applied === false,
       'the credential was never revoked; the machine was disowned');
@@ -693,12 +707,19 @@ try {
     await refuse('  and a hash matching no invitation is refused',
       base, 'not_found');
 
+    /*
+     * SIX ARGUMENTS, NOT FIVE. Migration 27 dropped the old overload, so a
+     * call missing `p_reason` matches no function and PostgREST answers with
+     * nothing at all — which is how this check failed while the behaviour it
+     * describes was perfectly correct.
+     */
     const { data: hb } = await svcClient().rpc('worker_record_heartbeat', {
       p_credential_id: randomUUID(),
       p_token_hash: 'c'.repeat(64),
       p_sequence: 1,
       p_lifecycle: 'running',
       p_readiness: 'paused',
+      p_reason: null,
     });
     check('a paused slot is refused rather than given an invented reason',
       Array.isArray(hb) && hb[0]?.reason === 'pause_reason_required',
@@ -839,9 +860,15 @@ try {
   {
     const kinds = sql(`select coalesce(string_agg(distinct kind, ','), 'none')
                        from public.worker_events where user_id = '${hank.id}'`);
-    check('the cycle recorded its events',
+    /*
+     * FIVE KINDS, NOT SIX. There is no `slot_heartbeat` here because this
+     * candidate's slot never changed readiness — it was claimed, renewed and
+     * reported without a single readiness transition. That absence is the
+     * transition-only rule working; section 21 exercises the other direction.
+     */
+    check('the cycle recorded exactly the events it caused',
       kinds.split(',').sort().join(',') ===
-        'lease_acquired,lease_released,lease_renewed,slot_heartbeat,task_completed,task_started',
+        'lease_acquired,lease_released,lease_renewed,task_completed,task_started',
       kinds);
 
     const bad = sql(`select coalesce(string_agg(distinct kind, ','), 'none')
