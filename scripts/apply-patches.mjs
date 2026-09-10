@@ -27,6 +27,37 @@ function replaceOnce(src, anchor, replacement, label) {
   return src.slice(0, first) + replacement + src.slice(first + anchor.length);
 }
 
+/* ------------------------------------------ hero video: keep faces in frame */
+/*
+ * The About hero is min-height 75vh and the homepage reel is a wide band, and
+ * both fill with `object-fit: cover` — on a laptop that is a ~2.7:1 box holding
+ * a 16:9 film, so a third of every frame is cropped, half of it off the TOP.
+ * The launch film's keynote shots put the founder's head in that top band;
+ * the site was cropping his face off. Favouring the top of the frame keeps
+ * the head, and everything the film puts near the top edge; what goes
+ * instead is the bottom, which the film keeps quiet on purpose.
+ */
+for (const [file, anchor, label] of [
+  [
+    path.join(ROOT, 'public', 'generated', 'about', 'page.css'),
+    'object-fit: cover; opacity: 0.22; z-index: 1; pointer-events: none;',
+    'about hero video: object-position',
+  ],
+  [
+    path.join(ROOT, 'public', 'generated', 'home', 'page.css'),
+    '.reel-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.38; }',
+    'home reel video: object-position',
+  ],
+]) {
+  let css = fs.readFileSync(file, 'utf8');
+  if (css.includes('object-position: 50% 22%')) {
+    console.log(`${label}: already patched, skipping`);
+    continue;
+  }
+  css = replaceOnce(css, anchor, anchor.replace('object-fit: cover;', 'object-fit: cover; object-position: 50% 22%;'), label);
+  fs.writeFileSync(file, css);
+}
+
 /* ------------------------------------------------- hero wordmark: W -> KIASA */
 
 let hero = fs.readFileSync(HERO, 'utf8');
