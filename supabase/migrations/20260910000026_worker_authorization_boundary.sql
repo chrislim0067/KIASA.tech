@@ -228,7 +228,7 @@ begin
      or p_sequence is null or p_sequence < 0
      or p_lifecycle is null or p_lifecycle not in ('offline', 'starting', 'running', 'stopping')
      or p_readiness is null or p_readiness not in (
-       'initializing', 'ready', 'working', 'stopping', 'stopped', 'crashed'
+       'initializing', 'ready', 'working', 'paused', 'stopping', 'stopped', 'crashed'
      )
   then
     return query select false, 'malformed_request'::text, false;
@@ -237,6 +237,13 @@ begin
 
   /*
    * A PAUSED SLOT HAS A REASON, AND THE HEARTBEAT CANNOT CARRY ONE.
+   *
+   * 'paused' is admitted by the shape check above and refused here, which is
+   * the point: it is a legitimate member of the slot vocabulary, so calling it
+   * malformed would be a lie about WHY it was rejected. The first version left
+   * it out of the shape list and made this branch unreachable — every paused
+   * heartbeat came back `malformed_request`, and the real database is what
+   * noticed.
    *
    * `worker_slots_pause_reason_iff_paused` requires the two to move together,
    * and inventing a reason here would put a fiction in the audit trail. The

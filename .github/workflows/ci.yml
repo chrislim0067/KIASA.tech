@@ -327,6 +327,26 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      # AND SAY WHAT DRIFTED, NOT ONLY THAT SOMETHING DID.
+      #
+      # An artifact needs an authenticated download, so from outside the run
+      # "types drifted" carries no information at all — and the artifact is
+      # useless to anyone who cannot fetch it. The generator leaves the
+      # regenerated file in place, so the working tree diff IS the drift.
+      #
+      # Publishing it discloses nothing the artifact does not, and nothing the
+      # migrations in this repository do not: these types describe schema
+      # structure, with no data and no credentials. Truncated, because a large
+      # drift is a signal to fetch the artifact rather than read an annotation.
+      - name: Say what drifted
+        if: failure()
+        run: |
+          set -uo pipefail
+          drift=$(git --no-pager diff --unified=2 -- lib/supabase/database.types.ts | head -c 4000 | awk '{printf "%s%%0A", $0}')
+          if [ -n "$drift" ]; then
+            echo "::error title=Generated types drifted::$drift"
+          fi
+
       # The HTTP suites start the real server and drive real @supabase/ssr
       # sessions, so they need a production build first. They prove the route
       # and API gates in front of RLS, which the database suites cannot see.
