@@ -71,8 +71,22 @@ export type JobScore = z.infer<typeof JobScore>;
 /** Bounded because they become request bytes, and bytes are billed. */
 export const MAX_JOB_TEXT_CHARS = 8_000;
 export const MAX_RESUME_SUMMARY_CHARS = 4_000;
-/** Enough for the schema above and little else. A cost ceiling, not a hope. */
-export const MAX_OUTPUT_TOKENS = 400;
+/**
+ * The output ceiling. A cost control, not a hope.
+ *
+ * RAISED FROM 400 AFTER MEASUREMENT. The first live call returned 397
+ * completion tokens against a 400 ceiling — 99.25% of the budget — and no
+ * content. A four-field object needs perhaps a hundred tokens; the rest went
+ * somewhere before the answer, which is exactly what a reasoning-capable model
+ * does. A ceiling that a model can exhaust before it starts answering is not a
+ * cost control, it is a guaranteed failure that bills anyway.
+ *
+ * 2000 leaves room for a model to think and still answer, while keeping a hard
+ * stop: at the observed rate that is well under a hundredth of a cent. The
+ * `output_truncated` classification exists so that hitting even this is
+ * reported as truncation rather than as an unreadable document.
+ */
+export const MAX_OUTPUT_TOKENS = 2000;
 
 export type ScoreInputProblem = 'job_text_empty' | 'job_text_too_long' | 'resume_summary_too_long';
 

@@ -214,6 +214,134 @@ for (const [why, body, expected] of BAD_BODIES) {
     r.ok ? r.result.code : r.code);
 }
 
+section('5b. Structured-output compatibility, and why an empty answer was empty');
+
+/*
+ * ADDED AFTER A LIVE FAILURE. The 2C.2 smoke test returned HTTP 200 with 397
+ * completion tokens against a 400 ceiling and no content, and the gateway
+ * could only say `no_content` — because `finish_reason` was being read by
+ * nobody. Every case below is one the previous code could not tell apart.
+ */
+{
+  const sent = [];
+  await score({ fetchImpl: mockFetch(jsonResponse(envelope(VALID_SCORE)), sent) });
+  const body = JSON.parse(sent[0].init.body);
+
+  check('the request filters to endpoints that honour its parameters',
+    body.provider?.require_parameters === true,
+    'without it, response_format and strict are advisory and can be silently ignored');
+  check('  response_format is json_schema', body.response_format?.type === 'json_schema');
+  check('  strict is enabled', body.response_format?.json_schema?.strict === true);
+  check('  the output ceiling is sent', typeof body.max_tokens === 'number', String(body.max_tokens));
+  check('  the ceiling leaves room to think AND answer', body.max_tokens >= 1000,
+    'a ceiling a model exhausts before answering is a guaranteed failure that bills anyway');
+
+  /* The wire schema must survive sanitisation with its meaning intact. */
+  const wire = body.response_format.json_schema.schema;
+  check('the wire schema keeps its properties',
+    Object.keys(wire.properties ?? {}).sort().join(',') ===
+      'claude_instruction,rationale,safety,score',
+    Object.keys(wire.properties ?? {}).join(','));
+  check('  and its required list', Array.isArray(wire.required) && wire.required.length === 4);
+  check('  and forbids extra fields', wire.additionalProperties === false);
+  check('  and keeps the safety enum', Array.isArray(wire.properties.safety.enum) &&
+    wire.properties.safety.enum.length === 3);
+  check('  and carries no provider-unsupported keyword',
+    !JSON.stringify(wire).match(/"(maxLength|minLength|pattern|minimum|maximum|maxItems|\$schema)"/),
+    'those are rejected outright by strict mode; Zod still enforces them locally');
+}
+
+{
+  /* Each shape the previous code collapsed into one unhelpful code. */
+  const truncated = {
+    id: 'gen-1', usage: { prompt_tokens: 625, completion_tokens: 397, total_tokens: 1022 },
+    choices: [{ finish_reason: 'length', message: { content: '' } }],
+  };
+  const r1 = await score({ fetchImpl: mockFetch(jsonResponse(truncated)) });
+  check('empty content with finish_reason=length -> output_truncated',
+    r1.result.code === 'output_truncated', r1.result.code);
+  check('  and is NOT retried', r1.result.retryable === false);
+
+  const partial = {
+    id: 'gen-2', choices: [{ finish_reason: 'length', message: { content: '{"score":72,"rat' } }],
+  };
+  const r2 = await score({ fetchImpl: mockFetch(jsonResponse(partial)) });
+  check('truncated JSON is truncation, not malformed_json',
+    r2.result.code === 'output_truncated', r2.result.code);
+  check('  because the fix is a bigger budget, not a better parser', true);
+
+  const reasoningOnly = {
+    id: 'gen-3',
+    choices: [{ finish_reason: 'stop', message: { content: '', reasoning: 'Let me think: the score should be 72 because...' } }],
+  };
+  const r3 = await score({ fetchImpl: mockFetch(jsonResponse(reasoningOnly)) });
+  check('reasoning with no answer -> reasoning_only', r3.result.code === 'reasoning_only',
+    r3.result.code);
+  check('  and the reasoning is NEVER used as the answer',
+    r3.result.ok === false && !JSON.stringify(r3.result).includes('score should be 72'),
+    'a model thinking aloud is not the object we asked for');
+
+  const refusal = {
+    id: 'gen-4', choices: [{ finish_reason: 'stop', message: { content: '', refusal: 'I cannot help with that.' } }],
+  };
+  const r4 = await score({ fetchImpl: mockFetch(jsonResponse(refusal)) });
+  check('an explicit refusal -> refused', r4.result.code === 'refused', r4.result.code);
+  check('  and the refusal text is not surfaced',
+    !JSON.stringify(r4.result).includes('cannot help'));
+
+  const filtered = {
+    id: 'gen-5', choices: [{ finish_reason: 'content_filter', message: { content: '' } }],
+  };
+  check('a content filter -> refused',
+    (await score({ fetchImpl: mockFetch(jsonResponse(filtered)) })).result.code === 'refused');
+
+  const genuinelyEmpty = {
+    id: 'gen-6', choices: [{ finish_reason: 'stop', message: { content: '' } }],
+  };
+  check('stop with nothing at all is still no_content',
+    (await score({ fetchImpl: mockFetch(jsonResponse(genuinelyEmpty)) })).result.code ===
+      'no_content',
+    'the original code said this for all six of these');
+
+  /* Content in the wrong field must not rescue a missing answer. */
+  const wrongField = {
+    id: 'gen-7',
+    choices: [{ finish_reason: 'stop', message: { text: JSON.stringify(VALID_SCORE) } }],
+  };
+  check('a valid object in the WRONG field is not accepted',
+    (await score({ fetchImpl: mockFetch(jsonResponse(wrongField)) })).result.code === 'no_content',
+    'only message.content is parsed');
+
+  /* And a complete answer still works. */
+  const good = {
+    id: 'gen-8', usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+    choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(VALID_SCORE) } }],
+  };
+  const ok = await score({ fetchImpl: mockFetch(jsonResponse(good)) });
+  check('a complete, schema-valid answer is accepted', ok.result.ok === true);
+  check('  and passes LOCAL Zod validation, not the provider’s word',
+    ok.result.ok && ok.result.data.score === 72 && ok.result.data.safety === 'allow');
+  check('  and still cannot authorise a submission',
+    SCORING.assertModelCannotAuthorise(ok.result.data).mayAutoSubmit === false);
+
+  /* A model returning a bound-violating value is caught by Zod, not the wire. */
+  const overLong = {
+    id: 'gen-9',
+    choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({
+      ...VALID_SCORE, rationale: 'x'.repeat(SCORING.MAX_RATIONALE_CHARS + 1) }) } }],
+  };
+  check('a bound the wire schema no longer carries is still enforced locally',
+    (await score({ fetchImpl: mockFetch(jsonResponse(overLong)) })).result.code ===
+      'invalid_structure',
+    'stripping maxLength from the request did not weaken the guarantee');
+
+  /* No retry after any of these. */
+  const counted = [];
+  await score({ fetchImpl: mockFetch(jsonResponse(truncated), counted), maxAttempts: 2 });
+  check('no retry after a no-content class failure, even when two are allowed',
+    counted.length === 1, `${counted.length} request(s)`);
+}
+
 section('6. Provider HTTP failures map to the existing taxonomy');
 
 for (const [status, expected, retryable] of [

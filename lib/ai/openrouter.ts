@@ -50,6 +50,26 @@ export type ProviderFailureCode =
   | 'server_error'
   | 'connection_failed'
   | 'no_content'
+  /**
+   * The model hit the output ceiling before finishing. `finish_reason:
+   * "length"`.
+   *
+   * Separated from `no_content` because they need different answers from a
+   * human: truncation means the budget was too small (or the model spent it on
+   * reasoning tokens), while `no_content` means it produced nothing at all.
+   * Collapsing them is why Milestone 2C.2 could only offer a hypothesis — the
+   * one field that would have settled it was being discarded.
+   */
+  | 'output_truncated'
+  /**
+   * The model produced reasoning and no answer.
+   *
+   * Reported so the diagnosis is visible, NEVER so the reasoning can be used.
+   * Reasoning text is not a structured answer and is never parsed as one.
+   */
+  | 'reasoning_only'
+  /** The model explicitly declined. `refusal`, or `finish_reason` says so. */
+  | 'refused'
   | 'malformed_json'
   | 'invalid_structure';
 
@@ -92,6 +112,9 @@ function failureClassFor(code: ProviderFailureCode): string {
     case 'timeout':
       return 'timeout';
     case 'no_content':
+    case 'output_truncated':
+    case 'reasoning_only':
+    case 'refused':
     case 'malformed_json':
     case 'invalid_structure':
       return 'unreadable';
@@ -240,6 +263,20 @@ export async function completeStructured<T>(
       type: 'json_schema',
       json_schema: { name: schemaName, strict: true, schema: jsonSchema },
     },
+    /*
+     * ROUTE ONLY TO ENDPOINTS THAT HONOUR THE PARAMETERS ABOVE.
+     *
+     * OpenRouter fronts many providers for the same model, and they do not all
+     * support structured outputs. Without this, `response_format` and
+     * `strict: true` are advisory: the request can be routed to an endpoint
+     * that ignores them and replies with whatever it likes — which is
+     * indistinguishable, from here, from a model that simply misbehaved.
+     *
+     * `require_parameters` narrows routing to endpoints that actually support
+     * every parameter sent. Preferring a clean failure over a silent
+     * downgrade is the same posture as the rest of this file.
+     */
+    provider: { require_parameters: true },
     // Transcription, not composition: no room for invention.
     temperature: 0,
     usage: { include: true },
@@ -364,10 +401,61 @@ export async function completeStructured<T>(
       provider_request_id: requestId,
     };
 
-    const content = (payload as { choices?: { message?: { content?: unknown } }[] })?.choices?.[0]
-      ?.message?.content;
-    if (typeof content !== 'string' || content.trim() === '') {
+    /*
+     * WHY THE SHAPE IS READ BEFORE THE CONTENT.
+     *
+     * An empty `content` has several causes that need different answers from a
+     * person, and reporting them all as `no_content` is what left Milestone
+     * 2C.2 with a hypothesis instead of a root cause. `finish_reason` was
+     * present in that response and thrown away.
+     *
+     * NOTHING HERE PARSES REASONING. `reasoning` is inspected only for its
+     * PRESENCE, to explain an empty answer. It is never read as the structured
+     * result: reasoning is a model thinking aloud, not the object we asked for,
+     * and accepting it would defeat the schema entirely.
+     */
+    const choice = (payload as {
+      choices?: {
+        finish_reason?: unknown;
+        native_finish_reason?: unknown;
+        message?: { content?: unknown; reasoning?: unknown; refusal?: unknown };
+      }[];
+    })?.choices?.[0];
+
+    const finishReason =
+      typeof choice?.finish_reason === 'string' ? choice.finish_reason : null;
+    const content = choice?.message?.content;
+    const hasContent = typeof content === 'string' && content.trim() !== '';
+
+    // An explicit refusal is its own outcome, and never retried.
+    if (typeof choice?.message?.refusal === 'string' && choice.message.refusal.trim() !== '') {
+      return fail('refused', false, response.status, observed);
+    }
+
+    if (!hasContent) {
+      // Truncation first: it is the one an operator can act on immediately by
+      // raising the ceiling, and 397 of a 400-token budget is what it looks
+      // like from the outside.
+      if (finishReason === 'length') {
+        return fail('output_truncated', false, response.status, observed);
+      }
+      if (finishReason === 'content_filter') {
+        return fail('refused', false, response.status, observed);
+      }
+      const reasoning = choice?.message?.reasoning;
+      if (typeof reasoning === 'string' && reasoning.trim() !== '') {
+        return fail('reasoning_only', false, response.status, observed);
+      }
       return fail('no_content', false, response.status, observed);
+    }
+
+    /*
+     * Content is present but the model was cut off, so the JSON is very likely
+     * incomplete. Reported as truncation rather than as malformed JSON,
+     * because the fix is a bigger budget, not a better parser.
+     */
+    if (finishReason === 'length') {
+      return fail('output_truncated', false, response.status, observed);
     }
 
     let parsedJson: unknown;
