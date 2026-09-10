@@ -125,9 +125,22 @@ export function describeSchemaFailure(issues: readonly { path: PropertyKey[] }[]
     if (seen.size >= MAX_FAILURE_DETAIL_PATHS) break;
   }
 
-  // An empty result is honest: it means Zod reported no usable path, which is
-  // itself worth seeing rather than papering over.
-  return [...seen].join(',').slice(0, MAX_FAILURE_DETAIL_CHARS);
+  /*
+   * TRUNCATE AT A SEPARATOR, NEVER MID-PATH.
+   *
+   * A plain `.slice()` at the character limit can cut a path in half or leave a
+   * trailing comma, and either produces a string the database column refuses —
+   * `^[A-Za-z0-9_.]+(,[A-Za-z0-9_.]+)*$` has no room for a dangling separator.
+   * Paths are added whole or not at all, so whatever comes back is always
+   * something the column will accept.
+   */
+  let out = '';
+  for (const path of seen) {
+    const next = out === '' ? path : `${out},${path}`;
+    if (next.length > MAX_FAILURE_DETAIL_CHARS) break;
+    out = next;
+  }
+  return out;
 }
 
 /** Metadata about the call, always returned, success or failure. */
@@ -551,9 +564,17 @@ export async function completeStructured<T>(
        * `issue.message`, which quotes offending VALUES — and an offending value
        * in a résumé is a person's phone number.
        */
+      const detail = describeSchemaFailure(validated.error.issues);
+      /*
+       * ABSENT RATHER THAN EMPTY. `detail?: string` should mean "a field was
+       * named"; an empty string would mean the same thing while looking like a
+       * value, and it is not something the storage column accepts. Zod reporting
+       * no usable path is a real possibility — a root-level issue carries an
+       * empty path — so it is handled here rather than left to the caller.
+       */
       return {
         ...fail('invalid_structure', false, response.status, observed),
-        detail: describeSchemaFailure(validated.error.issues),
+        ...(detail === '' ? {} : { detail }),
       };
     }
 
