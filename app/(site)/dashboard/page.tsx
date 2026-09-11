@@ -103,7 +103,7 @@ export default async function DashboardPage() {
    * `buildCompletenessReport()` treats as blocking, kept as four cheap counts
    * rather than assembling the whole candidate snapshot for a progress number.
    */
-  const [profileRow, authCount, expCount, prefsRow] = await Promise.all([
+  const [profileRow, authCount, expCount, prefsRow, jobsCount] = await Promise.all([
     supabase
       .from('profiles')
       .select('legal_first_name, legal_last_name, contact_email')
@@ -118,6 +118,7 @@ export default async function DashboardPage() {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id),
     supabase.from('job_preferences').select('user_id').eq('user_id', user.id).maybeSingle(),
+    supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
   ]);
 
   const p = profileRow.data;
@@ -130,6 +131,13 @@ export default async function DashboardPage() {
     Number((authCount.count ?? 0) > 0) +
     Number((expCount.count ?? 0) > 0) +
     Number(prefsRow.data !== null);
+  /*
+   * Jobs the candidate has added. Counted rather than listed: the dashboard
+   * only needs to know whether to say "add one" or "you have some", and a head
+   * count under their own session keeps RLS as the ownership check.
+   */
+  const jobCount = jobsCount.count ?? 0;
+
   const profileTotal = 4;
   const profileReady = profileDone === profileTotal;
 
@@ -137,7 +145,7 @@ export default async function DashboardPage() {
     <AuthShell title="Welcome to KIASA" variant="dashboard">
       <p className="kauth__subtitle">
         {profileReady
-          ? 'Your profile is complete. Job discovery and applications are being built next.'
+          ? 'Your profile is complete. Add the jobs you are interested in and KIASA will read them for you.'
           : 'Start by completing your profile — KIASA needs it before it can apply for anything on your behalf.'}
       </p>
 
@@ -153,6 +161,22 @@ export default async function DashboardPage() {
         <span className="kauth__rowLabel">Your profile</span>
         <span className="kauth__email">
           {profileReady ? 'Complete ✓' : `${profileDone} of ${profileTotal} steps done →`}
+        </span>
+      </Link>
+
+      {/*
+        Job discovery. Reading a posting is all this does today — there is no
+        Apply button anywhere in the product, and applications are a later
+        milestone that will always ask first.
+      */}
+      <Link
+        href="/jobs"
+        className="kauth__row"
+        style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
+      >
+        <span className="kauth__rowLabel">Your jobs</span>
+        <span className="kauth__email">
+          {jobCount === 0 ? 'Add a job link →' : `${jobCount} added →`}
         </span>
       </Link>
 

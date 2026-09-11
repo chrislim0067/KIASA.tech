@@ -55,7 +55,8 @@
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
     "video:studio": "remotion studio video/index.ts --config=video/remotion.config.ts",
     "video:render": "node scripts/render-promo.mjs",
-    "video:preview": "node scripts/render-promo.mjs --preview"
+    "video:preview": "node scripts/render-promo.mjs --preview",
+    "test:jobs:ui": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-job-discovery-ui.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
