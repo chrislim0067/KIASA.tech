@@ -58,6 +58,37 @@ for (const [file, anchor, label] of [
   fs.writeFileSync(file, css);
 }
 
+/* ------------------------------------------------ hero video: let it be seen */
+/*
+ * The original dimmed its stock footage to a texture — 22% opacity, greyed
+ * and darkened, under a gradient — because it was anonymous B-roll behind a
+ * headline. The launch film is not: it has the founder's face in it, and at
+ * 22% nobody can see him. Lift the video to a level where it reads as a film
+ * and keep the gradient, which is what keeps the headline legible over it.
+ */
+for (const [file, from, to, label] of [
+  [
+    path.join(ROOT, 'public', 'generated', 'about', 'page.css'),
+    'opacity: 0.22; z-index: 1; pointer-events: none; filter: grayscale(0.15) contrast(1.05) brightness(0.9);',
+    'opacity: 0.6; z-index: 1; pointer-events: none; filter: contrast(1.05);',
+    'about hero video: visibility',
+  ],
+  [
+    path.join(ROOT, 'public', 'generated', 'home', 'page.css'),
+    'object-position: 50% 22%; opacity: 0.38; }',
+    'object-position: 50% 22%; opacity: 0.62; }',
+    'home reel video: visibility',
+  ],
+]) {
+  let css = fs.readFileSync(file, 'utf8');
+  if (css.includes(to)) {
+    console.log(`${label}: already patched, skipping`);
+    continue;
+  }
+  css = replaceOnce(css, from, to, label);
+  fs.writeFileSync(file, css);
+}
+
 /* ------------------------------------------------- hero wordmark: W -> KIASA */
 
 let hero = fs.readFileSync(HERO, 'utf8');
