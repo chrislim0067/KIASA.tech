@@ -198,6 +198,12 @@ jobs:
       - name: Worker HTTP endpoints (offline)
         run: npm run test:endpoints
 
+      # The candidate-facing job surface: URL and address rules asserted at the
+      # layer that owns each, status copy, and that a posting is rendered as
+      # text rather than markup.
+      - name: Job discovery surface (offline)
+        run: npm run test:jobs:ui
+
       - name: Worker task lifecycle (offline)
         run: npm run test:tasks
 
