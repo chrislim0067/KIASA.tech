@@ -359,10 +359,16 @@ let snapshotId = null;
 
 section('5. Extraction of a page with no structured data');
 {
-  const plain = await jobs.submitJob(A.client, A.id, { url: 'https://boards.greenhouse.io/acme/jobs/9003' }, A.actor);
+  /*
+   * A NEUTRAL HOST: this covers a PAGE that fetches fine and holds no posting.
+   * A Greenhouse URL now goes to the board API instead, which would make this
+   * a fetch failure rather than the empty-extraction case under test.
+   */
+  const EMPTY_URL = 'https://careers.example.test/roles/9003';
+  const plain = await jobs.submitJob(A.client, A.id, { url: EMPTY_URL }, A.actor);
   const id = plain.data.job.id;
   const fetched = await jobs.fetchJob(A.client, A.id, id,
-    fixtureFetcher({ 'https://boards.greenhouse.io/acme/jobs/9003': { body: '<html><body>nothing</body></html>' } }), A.actor);
+    fixtureFetcher({ [EMPTY_URL]: { body: '<html><body>nothing</body></html>' } }), A.actor);
   const extracted = await jobs.extractJob(A.client, A.id, id, fetched.data.snapshot.id, A.actor);
   check('extraction completes without throwing', extracted.ok, extracted.ok ? '' : extracted.error.message);
   check('  the job is parked at extraction_incomplete',
