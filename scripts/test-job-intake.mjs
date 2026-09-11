@@ -91,7 +91,8 @@ const fixtureFetcher = (pages) => ({
       outcome: entry.outcome ?? 'ok',
       httpStatus: entry.status ?? 200,
       finalUrl: url,
-      contentType: 'text/html',
+      // Honoured from the fixture so a JSON payload is not described as HTML.
+      contentType: entry.contentType ?? 'text/html',
       byteSize: body ? Buffer.byteLength(body, 'utf8') : 0,
       contentHash: body ? require('node:crypto').createHash('sha256').update(body).digest('hex') : null,
       body,
@@ -240,9 +241,18 @@ section('3. State machine: legal transitions, illegal ones fail loudly');
 section('4. Fetch and extraction stages');
 let snapshotId = null;
 {
-  const fresh = await jobs.submitJob(A.client, A.id, { url: 'https://boards.greenhouse.io/acme/jobs/9001' }, A.actor);
+  /*
+   * A NEUTRAL HOST, BECAUSE THIS SECTION IS ABOUT THE HTML PATH.
+   *
+   * A Greenhouse URL is now read through the board's own public JSON endpoint
+   * — see lib/jobs/vendor-api.ts — so using one here would exercise the API
+   * path and none of the JSON-LD assertions below would apply. The API path has
+   * its own block immediately after this one.
+   */
+  const PAGE_URL = 'https://careers.example.test/roles/9001';
+  const fresh = await jobs.submitJob(A.client, A.id, { url: PAGE_URL }, A.actor);
   const id = fresh.data.job.id;
-  const fetcher = fixtureFetcher({ 'https://boards.greenhouse.io/acme/jobs/9001': { body: GOOD_PAGE } });
+  const fetcher = fixtureFetcher({ [PAGE_URL]: { body: GOOD_PAGE } });
 
   const fetched = await jobs.fetchJob(A.client, A.id, id, fetcher, A.actor);
   check('fetchJob succeeds', fetched.ok, fetched.ok ? '' : fetched.error.message);
@@ -272,6 +282,61 @@ let snapshotId = null;
     && again.data.facts.title === extracted.data.facts.title
     && again.data.facts.company_name === extracted.data.facts.company_name);
 
+  /*
+   * THE BOARD API PATH, END TO END.
+   *
+   * The fixture is keyed ONLY on the derived endpoint. If `fetchJob` asked for
+   * the page URL instead, there would be no fixture entry and the fetch would
+   * fail — so this passing is itself the proof that the derivation happened.
+   */
+  {
+    const apiJob = await jobs.submitJob(
+      A.client, A.id, { url: 'https://boards.greenhouse.io/acme/jobs/8800' }, A.actor);
+    const apiId = apiJob.data.job.id;
+
+    const payload = JSON.stringify({
+      id: 8800,
+      title: 'Staff Platform Engineer',
+      location: { name: 'Singapore' },
+      absolute_url: 'https://boards.greenhouse.io/acme/jobs/8800',
+      content: '&lt;p&gt;Build and run the platform.&lt;/p&gt;',
+    });
+
+    const apiFetcher = fixtureFetcher({
+      'https://boards-api.greenhouse.io/v1/boards/acme/jobs/8800': {
+        body: payload, contentType: 'application/json',
+      },
+    });
+
+    const apiFetched = await jobs.fetchJob(A.client, A.id, apiId, apiFetcher, A.actor);
+    check('a Greenhouse job is fetched from the board API, not the page',
+      apiFetched.ok, apiFetched.ok ? '' : apiFetched.error.message);
+    check('  and the snapshot records the API as the final URL',
+      apiFetched.ok && (apiFetched.data.snapshot.final_url ?? '').includes('boards-api.greenhouse.io'),
+      apiFetched.ok ? String(apiFetched.data.snapshot.final_url) : '');
+
+    if (apiFetched.ok) {
+      const apiExtracted = await jobs.extractJob(
+        A.client, A.id, apiId, apiFetched.data.snapshot.id, A.actor);
+      check('  the JSON payload extracts', apiExtracted.ok,
+        apiExtracted.ok ? '' : apiExtracted.error.message);
+      check('  the title comes from the API',
+        apiExtracted.ok && apiExtracted.data.facts.title === 'Staff Platform Engineer',
+        apiExtracted.ok ? String(apiExtracted.data.facts.title) : '');
+      check('  the description is decoded to text',
+        apiExtracted.ok &&
+          (apiExtracted.data.facts.description_text ?? '').includes('Build and run the platform'),
+        apiExtracted.ok ? String(apiExtracted.data.facts.description_text) : '');
+      /*
+       * The endpoint does not state a company, and the board token is a slug
+       * rather than a name. Null is the honest answer.
+       */
+      check('  and the company stays NULL rather than the board token',
+        apiExtracted.ok && apiExtracted.data.facts.company_name === null,
+        apiExtracted.ok ? String(apiExtracted.data.facts.company_name) : '');
+    }
+  }
+
   // A failed fetch still records evidence and parks the job.
   const bad = await jobs.submitJob(A.client, A.id, { url: 'https://boards.greenhouse.io/acme/jobs/9002' }, A.actor);
   const badFetch = await jobs.fetchJob(A.client, A.id, bad.data.job.id, fixtureFetcher({}), A.actor);
@@ -294,10 +359,16 @@ let snapshotId = null;
 
 section('5. Extraction of a page with no structured data');
 {
-  const plain = await jobs.submitJob(A.client, A.id, { url: 'https://boards.greenhouse.io/acme/jobs/9003' }, A.actor);
+  /*
+   * A NEUTRAL HOST: this covers a PAGE that fetches fine and holds no posting.
+   * A Greenhouse URL now goes to the board API instead, which would make this
+   * a fetch failure rather than the empty-extraction case under test.
+   */
+  const EMPTY_URL = 'https://careers.example.test/roles/9003';
+  const plain = await jobs.submitJob(A.client, A.id, { url: EMPTY_URL }, A.actor);
   const id = plain.data.job.id;
   const fetched = await jobs.fetchJob(A.client, A.id, id,
-    fixtureFetcher({ 'https://boards.greenhouse.io/acme/jobs/9003': { body: '<html><body>nothing</body></html>' } }), A.actor);
+    fixtureFetcher({ [EMPTY_URL]: { body: '<html><body>nothing</body></html>' } }), A.actor);
   const extracted = await jobs.extractJob(A.client, A.id, id, fetched.data.snapshot.id, A.actor);
   check('extraction completes without throwing', extracted.ok, extracted.ok ? '' : extracted.error.message);
   check('  the job is parked at extraction_incomplete',

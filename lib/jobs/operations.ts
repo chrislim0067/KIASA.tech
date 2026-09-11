@@ -21,6 +21,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { canonicaliseUrl } from './url';
 import { canTransition, type ActorType, type JobEventType, type JobStatus } from './state';
 import { extractJobFacts } from './extract';
+import { vendorApiEndpoint, greenhouseFacts, isVendorApiUrl } from './vendor-api';
 import type { FetchAttempt, JobFetcher } from './fetcher';
 
 export type JobsClient = SupabaseClient<Database>;
@@ -365,12 +366,37 @@ export async function fetchJob(
     const started = await transitionJob(client, id.data, jobId, 'fetching', checkedActor.data);
     if (!started.ok) return started;
   }
+  /*
+   * PREFER THE BOARD'S OWN PUBLIC JSON, WHEN ONE CAN BE DERIVED.
+   *
+   * A Greenhouse posting renders its description in the browser, so fetching
+   * the page server-side returns a shell and the read comes back partial. The
+   * same posting is published as JSON at a documented endpoint, and
+   * `vendorApiEndpoint` derives that endpoint from the canonical URL alone —
+   * fixed host, strictly matched board token and job id, nothing from a query
+   * string or a payload.
+   *
+   * The derived URL goes through THIS SAME FETCHER. It gets the scheme policy,
+   * the DNS and address checks, the redirect limit, robots, the timeout, the
+   * size cap, the content-type allowlist and the rate limiter exactly as any
+   * other URL would. Deriving a URL does not make it trusted.
+   *
+   * When no endpoint can be derived — an embedded posting carries the job id
+   * but not the board token — this falls back to the page, which is the
+   * existing behaviour and is explicitly not claimed to be complete.
+   */
+  const endpoint = vendorApiEndpoint(current.data.canonical_url);
+  const target = endpoint.ok ? endpoint.url : current.data.canonical_url;
+
   const fetchStarted = await appendEvent(client, id.data, jobId, {
-    type: 'fetch_started', actor: checkedActor.data, detail: { url: current.data.canonical_url },
+    type: 'fetch_started',
+    actor: checkedActor.data,
+    // Both, so the audit trail says what was asked for AND what was read.
+    detail: { url: current.data.canonical_url, fetched: target },
   });
   if (!fetchStarted.ok) return fetchStarted;
 
-  const attempt = await fetcher.fetch(current.data.canonical_url);
+  const attempt = await fetcher.fetch(target);
 
   const snapshot = await client
     .from('job_snapshots')
@@ -444,7 +470,15 @@ export async function extractJob(
   });
   if (!startEvent.ok) return startEvent;
 
-  const result = extractJobFacts(snapshot.data.body);
+  /*
+   * The parser follows the source. A snapshot taken from a vendor API is JSON
+   * in that vendor's shape, not a web page with structured data embedded in it,
+   * and running the HTML extractor over it would find nothing.
+   */
+  const result =
+    isVendorApiUrl(snapshot.data.final_url) === 'greenhouse'
+      ? greenhouseFacts(snapshot.data.body ?? '')
+      : extractJobFacts(snapshot.data.body);
 
   const stored = await client
     .from('job_facts')
