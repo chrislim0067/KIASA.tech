@@ -47,4 +47,6 @@ export {
 export type { JobFetcher, FetchAttempt, FetchOutcome, FetchOptions, HostVerdict } from './fetcher';
 
 export { extractJobFacts } from './extract';
+export { vendorApiEndpoint, greenhouseFacts, isVendorApiUrl } from './vendor-api';
+export type { VendorEndpoint, EndpointRefusal } from './vendor-api';
 export type { ExtractedFacts, ExtractionResult, ExtractionMethod, ExtractionReason } from './extract';

@@ -201,6 +201,12 @@ jobs:
       # The candidate-facing job surface: URL and address rules asserted at the
       # layer that owns each, status copy, and that a posting is rendered as
       # text rather than markup.
+      # Deriving a board API endpoint from a candidate URL, and parsing the
+      # payload. The derivation is the security-critical part: fixed host,
+      # strictly matched board token and job id, refusal rather than a guess.
+      - name: Job vendor API (offline)
+        run: npm run test:jobs:api
+
       - name: Job discovery surface (offline)
         run: npm run test:jobs:ui
 
