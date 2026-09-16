@@ -32,6 +32,7 @@ export interface AdminNavItem {
 const NAV: readonly AdminNavItem[] = Object.freeze([
   { href: '/admin', label: 'Overview' },
   { href: '/admin/users', label: 'Users' },
+  { href: '/admin/jobs', label: 'Job board' },
   { href: '/admin/audit', label: 'Audit' },
 ]);
 
