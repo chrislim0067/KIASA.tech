@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 import type { JobOpportunity } from '@/lib/jobboard/types';
 import OpportunityRow from './OpportunityRow';
@@ -39,7 +38,6 @@ export default function JobBoardWorkspace({
   jobs: readonly JobOpportunity[];
   truncated: boolean;
 }) {
-  const router = useRouter();
   const [query, setQuery] = useState('');
   const [workplace, setWorkplace] = useState<'any' | 'remote' | 'hybrid' | 'onsite'>('any');
   const [sort, setSort] = useState<Sort>('recent');
@@ -162,11 +160,7 @@ export default function JobBoardWorkspace({
         <>
           <div className="kjb__rows">
             {paged.map((job) => (
-              <OpportunityRow
-                key={job.id}
-                job={job}
-                onOpen={() => router.push(`/job-board/${job.id}`)}
-              />
+              <OpportunityRow key={job.id} job={job} />
             ))}
           </div>
 

@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import type { JobOpportunity } from '@/lib/jobboard/types';
 import { formatSalary, formatExperience, relativeDate, humanise } from '@/lib/jobboard/format';
 
@@ -12,20 +14,37 @@ import { formatSalary, formatExperience, relativeDate, humanise } from '@/lib/jo
  * query never selected them. Rendering somebody's pipeline here would not be a
  * mistake a reviewer has to catch — it would not compile.
  *
- * A button rather than a link, matching the administrator row: the whole card
- * is the target, and a nested anchor for the posting URL would sit inside it.
- * The external link lives on the detail page instead.
+ * TWO TARGETS, NO NESTED BUTTONS. The card opens the detail page and the link
+ * opens the employer's posting, and an anchor inside a button is invalid HTML
+ * that screen readers and middle-click both handle badly. So the card is a
+ * plain element, the title is a real link, and CSS stretches that link over the
+ * whole card (`.kjb__title::after`). "Open posting" sits above it on the
+ * z-axis, which is what makes it a second target rather than a hole in the
+ * first.
+ *
+ * EVERY CARD IS THE SAME HEIGHT. A posting with no salary, no location and no
+ * skills is common — extraction is only ever as good as the page — and letting
+ * each card shrink to its content produced a ragged list where nothing lined
+ * up. Each slot is always rendered and reserves its space; missing values leave
+ * their row empty rather than collapsing it.
  */
-export default function OpportunityRow({
-  job,
-  onOpen,
-}: {
-  job: JobOpportunity;
-  onOpen: () => void;
-}) {
+
+/**
+ * A location with no letters or digits says nothing.
+ *
+ * Postings really do carry "-" and "—" in that field. Printing it produced
+ * "Claritev · -", which reads as a bug rather than as an absence.
+ */
+function meaningful(value: string | null): string | null {
+  if (!value) return null;
+  return /[\p{L}\p{N}]/u.test(value) ? value : null;
+}
+
+export default function OpportunityRow({ job }: { job: JobOpportunity }) {
   const salary = formatSalary(job);
   const experience = formatExperience(job);
   const employment = humanise(job.employment_type);
+  const location = meaningful(job.location);
 
   /* Initials when the posting carried no logo. Two letters, from the company
      name the extraction found — never from the domain, which is a brand nobody
@@ -37,9 +56,17 @@ export default function OpportunityRow({
     .map((word) => word[0]?.toUpperCase() ?? '')
     .join('');
 
+  const facts = [
+    job.workplace_type ? humanise(job.workplace_type) : null,
+    employment,
+    experience,
+    job.sponsorship_available ? 'Sponsors visas' : null,
+    job.security_clearance_required ? 'Clearance required' : null,
+  ].filter((f): f is string => Boolean(f));
+
   return (
-    <button type="button" className="kjb__row" onClick={onOpen}>
-      <span className="kjb__mark">
+    <article className="kjb__row">
+      <span className="kjb__mark" aria-hidden="true">
         {job.company_logo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={job.company_logo_url} alt="" loading="lazy" />
@@ -48,43 +75,62 @@ export default function OpportunityRow({
         )}
       </span>
 
-      <span className="kjb__main">
-        <span className="kjb__title">{job.title ?? 'Untitled posting'}</span>
-        <span className="kjb__company">
+      <div className="kjb__main">
+        {/* The stretched link. Everything the card shows is inside it for a
+            screen reader, so the accessible name is the title, not the wall of
+            text that follows. */}
+        <h3 className="kjb__title">
+          <Link href={`/job-board/${job.id}`}>{job.title ?? 'Untitled posting'}</Link>
+        </h3>
+
+        <p className="kjb__company">
           {job.company ?? job.domain}
-          {job.location ? ` · ${job.location}` : ''}
-        </span>
+          {location ? ` · ${location}` : ''}
+        </p>
 
-        <span className="kjb__facts">
-          {job.workplace_type ? (
-            <span className="kjb__fact">{humanise(job.workplace_type)}</span>
+        <p className="kjb__facts">
+          {facts.map((fact) => (
+            <span key={fact} className="kjb__fact">
+              {fact}
+            </span>
+          ))}
+        </p>
+
+        <p className="kjb__skills">
+          {job.skills.slice(0, 6).map((skill) => (
+            <span key={skill} className="kjb__skill">
+              {skill}
+            </span>
+          ))}
+          {job.skills.length > 6 ? (
+            <span className="kjb__skill kjb__skill--more">+{job.skills.length - 6}</span>
           ) : null}
-          {employment ? <span className="kjb__fact">{employment}</span> : null}
-          {experience ? <span className="kjb__fact">{experience}</span> : null}
-          {job.sponsorship_available ? <span className="kjb__fact">Sponsors visas</span> : null}
-          {job.security_clearance_required ? (
-            <span className="kjb__fact">Clearance required</span>
-          ) : null}
-        </span>
+        </p>
+      </div>
 
-        {job.skills.length > 0 ? (
-          <span className="kjb__skills">
-            {job.skills.slice(0, 8).map((skill) => (
-              <span key={skill} className="kjb__skill">
-                {skill}
-              </span>
-            ))}
-            {job.skills.length > 8 ? (
-              <span className="kjb__skill">+{job.skills.length - 8}</span>
-            ) : null}
-          </span>
-        ) : null}
-      </span>
-
-      <span className="kjb__aside">
-        {salary ? <span className="kjb__salary">{salary}</span> : null}
+      <div className="kjb__aside">
+        {/* Always rendered, empty when there is no figure, so the date below it
+            sits at the same height on every card. */}
+        <span className="kjb__salary">{salary ?? ''}</span>
         <span className="kjb__when">{relativeDate(job.saved_at)}</span>
-      </span>
-    </button>
+
+        {job.url ? (
+          /*
+           * rel="noreferrer" as well as noopener: the referrer would tell the
+           * employer's site that somebody arrived from KIASA, which is the
+           * candidate's business and nobody else's.
+           */
+          <a
+            className="kjb__open"
+            href={job.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(event) => event.stopPropagation()}
+          >
+            Open posting ↗
+          </a>
+        ) : null}
+      </div>
+    </article>
   );
 }

@@ -114,33 +114,39 @@
   gap: 10px;
 }
 
+/*
+ * EVERY CARD IS THE SAME HEIGHT, and that is the whole point of this block.
+ *
+ * Extraction is only ever as good as the page it read, so a posting with no
+ * salary, no location and no skills is common. Letting each card shrink to its
+ * content produced a ragged list where no two rows lined up and the eye had
+ * nothing to track down the page.
+ *
+ * So the geometry is fixed rather than intrinsic: three columns of known width,
+ * content aligned to the TOP rather than centred — centring is what made the
+ * date float to a different height on every card — and four rows inside the
+ * main column that reserve their space whether or not they have anything in
+ * them.
+ */
 .kjb__row {
+  position: relative;
   background: var(--kprof-surface);
   border: 1px solid var(--kprof-line-soft);
   border-radius: var(--kprof-radius);
   display: grid;
   gap: var(--kjb-gap);
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) 132px;
+  align-items: start;
   padding: 14px;
-  text-align: left;
   transition:
     border-color 160ms var(--kprof-ease),
     background 160ms var(--kprof-ease);
-  width: 100%;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
 }
 
 .kjb__row:hover,
-.kjb__row:focus-visible {
+.kjb__row:focus-within {
   background: var(--kprof-accent-dim);
   border-color: var(--kprof-line);
-}
-
-.kjb__row:focus-visible {
-  outline: 2px solid var(--kprof-accent);
-  outline-offset: 2px;
 }
 
 /* The company mark: a logo when the posting carried one, initials otherwise. */
@@ -154,6 +160,7 @@
   justify-content: center;
   overflow: hidden;
   width: 44px;
+  flex: 0 0 auto;
 }
 
 .kjb__mark img {
@@ -169,37 +176,69 @@
   letter-spacing: 0.04em;
 }
 
+/* Four rows, each reserving its height so absent values leave a gap rather
+   than collapsing the card. */
 .kjb__main {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-rows: 1.35rem 1.15rem 1.1rem 1.5rem;
+  gap: 5px;
   min-width: 0;
 }
 
 .kjb__title {
-  color: var(--kprof-text);
+  margin: 0;
   font-size: 0.98rem;
   font-weight: 600;
-  margin: 0;
+  line-height: 1.35rem;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.kjb__title a {
+  color: var(--kprof-text);
+  text-decoration: none;
+}
+
+/*
+ * THE STRETCHED LINK. The whole card opens the detail page, without wrapping
+ * the card in a button and nesting an anchor inside it — which is invalid HTML
+ * and breaks middle-click and screen-reader navigation. "Open posting" lifts
+ * itself above this overlay, which is what makes it a second target rather than
+ * a hole in the first.
+ */
+.kjb__title a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--kprof-radius);
+}
+
+.kjb__row:focus-within .kjb__title a:focus-visible::after {
+  outline: 2px solid var(--kprof-accent);
+  outline-offset: 2px;
+}
+
 .kjb__company {
+  margin: 0;
   color: var(--kprof-muted);
   font-size: 0.84rem;
+  line-height: 1.15rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .kjb__facts {
+  margin: 0;
   color: var(--kprof-muted);
   display: flex;
-  flex-wrap: wrap;
-  font-size: 0.8rem;
-  gap: 4px 14px;
+  font-size: 0.78rem;
+  line-height: 1.1rem;
+  gap: 14px;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .kjb__fact {
@@ -208,11 +247,15 @@
   gap: 5px;
 }
 
+/* One line, clipped. A card that grew a second row of chips was the other half
+   of the ragged-height problem. */
 .kjb__skills {
+  margin: 0;
   display: flex;
-  flex-wrap: wrap;
   gap: 5px;
-  margin-top: 2px;
+  overflow: hidden;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .kjb__skill {
@@ -220,39 +263,64 @@
   border: 1px solid var(--kprof-line-soft);
   border-radius: 999px;
   color: var(--kprof-muted);
+  flex: 0 0 auto;
   font-size: 0.72rem;
-  padding: 2px 8px;
+  line-height: 1.15rem;
+  padding: 0 8px;
+  white-space: nowrap;
 }
 
+.kjb__skill--more {
+  color: var(--kprof-accent);
+}
+
+/* The right rail: salary, date, link — always in that order, always at the
+   same height, because each slot is rendered even when it is empty. */
 .kjb__aside {
   align-items: flex-end;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  justify-content: center;
+  justify-content: flex-start;
   text-align: right;
   white-space: nowrap;
 }
 
 .kjb__salary {
   color: var(--kprof-success);
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 600;
+  line-height: 1.35rem;
+  min-height: 1.35rem;
 }
 
 .kjb__when {
   color: var(--kprof-muted);
   font-size: 0.76rem;
+  line-height: 1.15rem;
 }
 
-.kjb__tag {
+.kjb__open {
+  position: relative;
+  /* Above the stretched link, which is the only reason this is clickable. */
+  z-index: 1;
+  margin-top: auto;
   border: 1px solid var(--kprof-line);
-  border-radius: 999px;
+  border-radius: var(--kprof-radius-sm);
   color: var(--kprof-accent);
-  font-size: 0.7rem;
-  letter-spacing: 0.05em;
-  padding: 2px 8px;
-  text-transform: uppercase;
+  font-size: 0.75rem;
+  padding: 5px 10px;
+  text-decoration: none;
+  transition: background 160ms var(--kprof-ease);
+}
+
+.kjb__open:hover {
+  background: var(--kprof-accent-dim);
+}
+
+.kjb__open:focus-visible {
+  outline: 2px solid var(--kprof-accent);
+  outline-offset: 1px;
 }
 
 /* ------------------------------------------------------------------ pager */
@@ -323,6 +391,19 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/*
+ * The list clips facts and skills to one line each, because that is what keeps
+ * every card the same height. The detail page has one posting and all the room
+ * in the world, so it undoes exactly that and lets both wrap.
+ */
+.kjb__detail .kjb__facts,
+.kjb__detail .kjb__skills {
+  flex-wrap: wrap;
+  overflow: visible;
+  white-space: normal;
+  row-gap: 8px;
 }
 
 .kjb__detailHead {
@@ -402,12 +483,24 @@
     width: 36px;
   }
 
-  /* The aside drops under the main column rather than squeezing it. */
+  /* The rail drops under the main column rather than squeezing it, and lies
+     along the bottom instead of stacking. */
   .kjb__aside {
-    align-items: flex-start;
+    align-items: center;
     grid-column: 1 / -1;
     flex-direction: row;
     gap: 12px;
     text-align: left;
+  }
+
+  /* No empty slot to reserve once the rail is horizontal — a blank line would
+     leave a gap in the middle of a row rather than aligning anything. */
+  .kjb__salary:empty {
+    display: none;
+  }
+
+  .kjb__open {
+    margin-top: 0;
+    margin-left: auto;
   }
 }
