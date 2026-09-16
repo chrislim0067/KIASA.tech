@@ -188,7 +188,7 @@
   border-radius: var(--kprof-radius);
   display: grid;
   gap: var(--kjb-gap);
-  grid-template-columns: 44px minmax(0, 1fr) 132px;
+  grid-template-columns: 52px minmax(0, 1fr) 132px;
   align-items: start;
   padding: 14px;
   transition:
@@ -209,16 +209,34 @@
   border: 1px solid var(--kprof-line-soft);
   border-radius: var(--kprof-radius-sm);
   display: flex;
-  height: 44px;
+  height: 52px;
   justify-content: center;
   overflow: hidden;
-  width: 44px;
+  width: 52px;
   flex: 0 0 auto;
 }
 
+/*
+ * A REAL LOGO FILLS THE TILE EDGE TO EDGE.
+ *
+ * `contain` was letterboxing every non-square logo — bars above and below a
+ * wordmark, bars either side of a tall one — and the tile's own border drew a
+ * frame around that. Both read as a gap the layout had left by mistake.
+ *
+ * `cover` fills, at the price of cropping the long edge of a wide wordmark.
+ * That is the trade this makes: a consistently filled tile beats a faithful but
+ * ragged one at 52 pixels, where a wordmark is unreadable either way and the
+ * mark is doing recognition work, not typography.
+ */
+.kjb__mark--logo {
+  background: transparent;
+  border-color: transparent;
+}
+
 .kjb__mark img {
+  display: block;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   width: 100%;
 }
 
@@ -528,12 +546,12 @@
 
 @media (max-width: 640px) {
   .kjb__row {
-    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-columns: 44px minmax(0, 1fr);
   }
 
   .kjb__mark {
-    height: 36px;
-    width: 36px;
+    height: 44px;
+    width: 44px;
   }
 
   /* The rail drops under the main column rather than squeezing it, and lies

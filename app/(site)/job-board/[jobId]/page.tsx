@@ -72,7 +72,9 @@ export default async function OpportunityPage({
     <ProfileShell title={job.title ?? 'Opportunity'} email={user.email ?? null} back>
       <div className="kjb__detail">
         <div className="kjb__detailHead">
-          <span className="kjb__mark">
+          {/* Same treatment as the list: a real logo fills the tile, the frame
+              is only there to hold initials. */}
+          <span className={`kjb__mark${job.company_logo_url ? ' kjb__mark--logo' : ''}`}>
             {job.company_logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={job.company_logo_url} alt="" />

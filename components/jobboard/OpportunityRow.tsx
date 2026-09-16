@@ -66,7 +66,15 @@ export default function OpportunityRow({ job }: { job: JobOpportunity }) {
 
   return (
     <article className="kjb__row">
-      <span className="kjb__mark" aria-hidden="true">
+      {/*
+        The modifier drops the frame when there is a real logo. The border and
+        tinted background exist to give the INITIALS something to sit in; behind
+        an image they read as a gap around it.
+      */}
+      <span
+        className={`kjb__mark${job.company_logo_url ? ' kjb__mark--logo' : ''}`}
+        aria-hidden="true"
+      >
         {job.company_logo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={job.company_logo_url} alt="" loading="lazy" />
