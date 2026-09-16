@@ -754,73 +754,130 @@ section('8. Read-only, and server-side, by construction');
 }
 
 /* ==================================================================== */
-section('9. The live stream carries an operation, never a row');
+section('9. The live relay carries an operation, never a row');
 
 {
-  const route = code(read('app', 'api', 'admin', 'jobs', 'stream', 'route.ts'));
-
-  check(
-    'the guard runs before the credential is built',
-    route.indexOf('guardApi(') !== -1 &&
-      route.indexOf('guardApi(') < route.indexOf('createJobBoardClient('),
-    'authorization is not something the stream gets to do later'
-  );
-  check(
-    '  and a failed guard returns before anything else happens',
-    /if \(!guard\.ok\) return guard\.response;/.test(route)
-  );
-  check(
-    '  with configuration checked only after authorization',
-    route.indexOf('guardApi(') < route.indexOf('isJobBoardConfigured('),
-    'an anonymous caller learns nothing about this deployment'
-  );
+  const relay = code(read('lib', 'jobboard', 'stream.ts'));
+  const adminRoute = code(read('app', 'api', 'admin', 'jobs', 'stream', 'route.ts'));
+  const candidateRoute = code(read('app', 'api', 'job-board', 'stream', 'route.ts'));
+  const hook = code(read('lib', 'jobboard', 'use-live-refresh.ts'));
 
   /*
    * THE PROPERTY THE WHOLE RELAY EXISTS FOR. A connection is held open for
    * hours. If a row crossed it, that stream would be a slow leak of other
    * people's postings into browser memory, proxy buffers and logs. The only
-   * thing read off a change payload is which operation it was.
+   * thing read off a change payload is which operation it was — which is also
+   * what lets ONE relay serve an administrator and a candidate: there is
+   * nothing in the payload to project differently.
    */
-  const payloadReads = [...route.matchAll(/payload\.(\w+)/g)].map((m) => m[1]);
+  const payloadReads = [...relay.matchAll(/payload\.(\w+)/g)].map((m) => m[1]);
   check(
     'nothing is read off a change payload but the operation',
     payloadReads.length > 0 && payloadReads.every((field) => field === 'eventType'),
     payloadReads.join(',') || 'none'
   );
-  check('  so no row, new or old, is on the wire', !/payload\.(?:new|old|record|errors)/.test(route));
+  check('  so no row, new or old, is on the wire', !/payload\.(?:new|old|record|errors)/.test(relay));
 
   check(
     'the stream is never stored on the way to the browser',
-    /'Cache-Control': 'no-store/.test(route) && /'X-Accel-Buffering': 'no'/.test(route)
-  );
-  check('it runs on Node, where a WebSocket client exists', /export const runtime = 'nodejs';/.test(route));
-  check(
-    '  and is neither cached nor statically rendered',
-    /export const dynamic = 'force-dynamic';/.test(route)
+    /'Cache-Control': 'no-store/.test(relay) && /'X-Accel-Buffering': 'no'/.test(relay)
   );
   check(
     'it tells EventSource how soon to come back',
-    /retry: 3000/.test(route),
+    /retry: 3000/.test(relay),
     'a recycled stream is the reconnection strategy'
   );
   check(
     'the relay subscribes and never queries',
-    !/\.(?:insert|update|upsert|delete)\s*\(/.test(route) && !/\.from\(/.test(route),
-    'the page does the reading, under its own guard'
+    !/\.(?:insert|update|upsert|delete)\s*\(/.test(relay) && !/\.from\(/.test(relay),
+    'the pages do the reading, each under its own guard'
   );
+
+  /*
+   * THE RELAY AUTHORIZES NOBODY, on purpose. Both routes guard before calling
+   * it. A check inside the relay would put the decision in two places, and the
+   * two would eventually disagree about who may open a candidate feed.
+   */
+  check(
+    'the shared relay contains no authorization of its own',
+    !/guardApi|resolveJobBoardAccess|requireCandidate|requireAdmin/.test(relay),
+    'each route guards before calling it'
+  );
+  check(
+    '  and the two audiences do not share a channel name',
+    /channelName/.test(relay) &&
+      /'kiasa_admin_saved_jobs'/.test(adminRoute) &&
+      /'kiasa_candidate_saved_jobs'/.test(candidateRoute),
+    'Realtime keys subscriptions by topic'
+  );
+
+  /* ---- the administrator route ---- */
+  check(
+    'the administrator route guards before opening a stream',
+    adminRoute.indexOf('guardApi(') !== -1 &&
+      adminRoute.indexOf('guardApi(') < adminRoute.indexOf('jobBoardEventStream('),
+    'authorization is not something the stream gets to do later'
+  );
+  check(
+    '  and a failed guard returns before anything else happens',
+    /if \(!guard\.ok\) return guard\.response;/.test(adminRoute)
+  );
+  check(
+    '  with configuration checked only after authorization',
+    adminRoute.indexOf('guardApi(') < adminRoute.indexOf('isJobBoardConfigured('),
+    'an anonymous caller learns nothing about this deployment'
+  );
+
+  /* ---- the candidate route ---- */
+  check(
+    'the candidate route checks BOTH gates before opening a stream',
+    candidateRoute.indexOf('resolveJobBoardAccess()') !== -1 &&
+      candidateRoute.indexOf('resolveJobBoardAccess()') <
+        candidateRoute.indexOf('jobBoardEventStream('),
+    'the same function the page awaits: approved account AND the grant'
+  );
+  check(
+    '  and refuses with 403 rather than a silent stream',
+    /if \(!access\.allowed\)/.test(candidateRoute) && /status: 403/.test(candidateRoute),
+    'a feed that never sends is indistinguishable from one with nothing to send'
+  );
+  check(
+    '  logging no candidate identity',
+    !/actor_user_id|user\.id|user\.email/.test(candidateRoute),
+    'whose websocket failed is not a fact a log line needs'
+  );
+
+  for (const [name, source] of [
+    ['administrator', adminRoute],
+    ['candidate', candidateRoute],
+  ]) {
+    check(
+      `the ${name} stream runs on Node, where a WebSocket client exists`,
+      /export const runtime = 'nodejs';/.test(source)
+    );
+    check(
+      `  and the ${name} stream is neither cached nor statically rendered`,
+      /export const dynamic = 'force-dynamic';/.test(source)
+    );
+    check(
+      `  and the ${name} route holds no relay logic of its own`,
+      !/new ReadableStream|addEventListener\('abort'/.test(source),
+      'one relay, shared'
+    );
+  }
 
   /*
    * And the browser end cannot be taught to trust a payload that is not there.
    * `router.refresh()` re-runs the same authorized server query that painted
-   * the page, so one code path decides what a job looks like.
+   * the page, so one code path decides what a job looks like — and on the
+   * candidate board that path selects the candidate column set.
    */
-  const live = code(read('components', 'admin', 'jobs', 'JobsLive.tsx'));
   check(
     'the client parses nothing off the event',
-    !/JSON\.parse\(/.test(live) && /addEventListener\('change', \(\) =>/.test(live),
+    !/JSON\.parse\(/.test(hook) && /addEventListener\('change', \(\) =>/.test(hook),
     'the change listener takes no event argument at all'
   );
-  check('  and reacts by re-running the server query', /routerRef\.current\.refresh\(\)/.test(live));
+  check('  and reacts by re-running the server query', /routerRef\.current\.refresh\(\)/.test(hook));
 
   /*
    * THE RECONNECT LOOP THIS PREVENTS. `router.refresh()` updates the router
@@ -829,15 +886,34 @@ section('9. The live stream carries an operation, never a row');
    */
   check(
     'the subscription effect closes over nothing that changes on render',
-    !/\brouter\.refresh\(\)/.test(live) && /\}, \[\]\);/.test(live),
+    !/\brouter\.refresh\(\)/.test(hook) && /\}, \[\]\);/.test(hook),
     'everything mutable is reached through a ref'
   );
+  check(
+    '  including the URL, which each board passes in',
+    /urlRef\.current/.test(hook) && !/new EventSource\(url\)/.test(hook),
+    'a dependency on it would rebuild the connection too'
+  );
 
-  const onerror = live.match(/source\.onerror = \(\)[\s\S]*?\n\s*\};/);
+  const onerror = hook.match(/source\.onerror = \(\)[\s\S]*?\n\s*\};/);
   check(
     '  and an error does not permanently close a stream the server merely recycled',
     onerror !== null && !/close\(/.test(onerror[0]),
     onerror ? 'handler found' : 'the onerror handler could not be located'
+  );
+
+  /* Both indicators use the one hook, each pointed at its own relay. */
+  const jobsLive = code(read('components', 'admin', 'jobs', 'JobsLive.tsx'));
+  const boardLive = code(read('components', 'jobboard', 'JobBoardLive.tsx'));
+  check(
+    'both boards share the connection logic',
+    /useLiveRefresh\(/.test(jobsLive) && /useLiveRefresh\(/.test(boardLive) &&
+      !/new EventSource/.test(jobsLive) && !/new EventSource/.test(boardLive),
+    'two copies of that effect would be two chances to reintroduce the loop'
+  );
+  check(
+    '  each pointed at its own relay',
+    /'\/api\/admin\/jobs\/stream'/.test(jobsLive) && /'\/api\/job-board\/stream'/.test(boardLive)
   );
 }
 

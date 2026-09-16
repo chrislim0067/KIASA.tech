@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 
 import type { JobOpportunity } from '@/lib/jobboard/types';
 import OpportunityRow from './OpportunityRow';
+import JobBoardLive from './JobBoardLive';
 
 type Sort = 'recent' | 'salary' | 'company';
 
@@ -19,12 +20,16 @@ const PAGE_SIZE = 25;
  *   * No status filter and no pipeline view. Those describe whose application
  *     is where, which is exactly what this audience does not see.
  *   * No owner filter. There is no owner on the type.
- *   * No live stream. The administrator board holds one Server-Sent Events
- *     connection per viewer, which is affordable for a handful of
- *     administrators and is not for every permitted candidate — each open
- *     stream pins a server invocation for its lifetime. A candidate browsing
- *     opportunities does not need sub-second freshness; the page is
- *     `force-dynamic`, so every visit and every navigation back is current.
+ *
+ * It IS live, through `/api/job-board/stream` — the same relay the
+ * administrator board uses, sending the same event: an operation and a
+ * timestamp, never a row. The refresh it triggers re-runs this page's own
+ * server query, which selects the candidate column set and no other, so
+ * being live changes nothing about what a candidate can see.
+ *
+ * The cost is real and worth naming: each viewer holds an open connection for
+ * as long as the tab is open, and each one pins a server invocation. That is
+ * the reason to watch this surface if the candidate list ever grows large.
  *
  * Filtering and paging are client-side because the whole set is already in
  * memory — the server component fetched it. What paging buys is the DOM, not
@@ -96,6 +101,7 @@ export default function JobBoardWorkspace({
       <div className="kjb__head">
         <p className="kjb__count">
           <strong>{visible.length}</strong> of {jobs.length} opportunities
+          <JobBoardLive />
         </p>
       </div>
 

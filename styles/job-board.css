@@ -47,6 +47,59 @@
   font-weight: 600;
 }
 
+/*
+ * The live indicator.
+ *
+ * Muted until the relay CONFIRMS the database feed is subscribed — not when the
+ * HTTP response arrives, which is a weaker claim. Saying "Live" on the strength
+ * of an open socket is how the original board came to show a green dot above a
+ * list that never moved.
+ */
+.kjb__live {
+  align-items: center;
+  color: var(--kprof-muted);
+  display: inline-flex;
+  font-size: 0.74rem;
+  gap: 5px;
+  letter-spacing: 0.04em;
+  margin-left: 10px;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.kjb__live--on {
+  color: var(--kprof-success);
+}
+
+.kjb__liveDot {
+  background: currentColor;
+  border-radius: 50%;
+  display: inline-block;
+  height: 6px;
+  width: 6px;
+}
+
+.kjb__live--on .kjb__liveDot {
+  animation: kjb-pulse 2.4s var(--kprof-ease) infinite;
+}
+
+@keyframes kjb-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* A dot that pulses forever is motion nobody asked for. */
+@media (prefers-reduced-motion: reduce) {
+  .kjb__live--on .kjb__liveDot {
+    animation: none;
+  }
+}
+
 /* ----------------------------------------------------------------- filters */
 
 .kjb__filters {
