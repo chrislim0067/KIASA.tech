@@ -151,8 +151,14 @@ export default async function OpportunityPage({
             employer's site that somebody arrived from a KIASA admin-adjacent
             URL, which is nobody's business but the candidate's.
           */
-          <a className="kjb__apply" href={job.url} target="_blank" rel="noopener noreferrer">
-            Open the original posting ↗
+          <a
+            className="kjb__apply"
+            href={job.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Opens the employer's posting in a new tab — you apply there"
+          >
+            Apply ↗
           </a>
         ) : null}
 

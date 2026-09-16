@@ -133,9 +133,17 @@ export default function OpportunityRow({ job }: { job: JobOpportunity }) {
             href={job.url}
             target="_blank"
             rel="noopener noreferrer"
+            /*
+             * "Apply" is where this LEADS, not something KIASA does. The link
+             * opens the employer's own posting in a new tab and the candidate
+             * applies there, in their own name — nothing is submitted on their
+             * behalf, here or anywhere else in the product. The title says so,
+             * because a button labelled Apply invites exactly that assumption.
+             */
+            title="Opens the employer's posting in a new tab — you apply there"
             onClick={(event) => event.stopPropagation()}
           >
-            Open posting ↗
+            Apply ↗
           </a>
         ) : null}
       </div>
