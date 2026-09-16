@@ -210,6 +210,14 @@ jobs:
       - name: Job discovery surface (offline)
         run: npm run test:jobs:ui
 
+      # The administrator's view of the job board, which reads another Supabase
+      # project with a key that bypasses its row-level security. Proves what the
+      # projection does with a row from a schema this repository does not own,
+      # that a private note's text never reaches the list, and that neither the
+      # credential nor a row crosses to a browser.
+      - name: Admin job board boundary (offline)
+        run: npm run test:jobs:board
+
       - name: Worker task lifecycle (offline)
         run: npm run test:tasks
 

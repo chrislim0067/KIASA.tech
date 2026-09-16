@@ -71,8 +71,13 @@ const code = (text) => text.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/[
 /**
  * A distinctive secret. Nothing this suite prints or throws may contain it, and
  * the configuration checks assert exactly that.
+ *
+ * SHAPED LIKE A REAL KEY ON PURPOSE. A fixture that did not look like one would
+ * not prove much — and the secret scanner is right to notice it, so the line
+ * carries an exemption scoped to that one rule with the reason attached. There
+ * is no project behind this value.
  */
-const SECRET = 'sb_secret_TESTONLY_dGhpcy1tdXN0LW5ldmVyLWJlLXByaW50ZWQ';
+const SECRET = 'sb_secret_TESTONLY_dGhpcy1tdXN0LW5ldmVyLWJlLXByaW50ZWQ'; // secret-scan:allow supabase-secret -- a fixture, not a key; no project behind it
 const BOARD_URL = 'https://jobboard.test.supabase.co';
 
 process.env.JOBBOARD_SUPABASE_URL = BOARD_URL;
