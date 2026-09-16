@@ -908,9 +908,16 @@ section('10. Display: absent stays absent');
 
   check('an absent date is an em dash', formatDate(null) === '—', formatDate(null));
   check('  as is an unreadable one', formatDate('not a date') === '—', formatDate('not a date'));
+  /*
+   * The month abbreviation is ICU's, not ours, and its LENGTH is not stable
+   * across platforms: en-GB September is "Sep" on Windows and "Sept" on the
+   * CI runner, because CLDR 42 changed it and the two ship different data.
+   * Pinning three letters made this suite pass locally and fail in CI. What
+   * the check is actually for is the SHAPE — day, month, year, in that order.
+   */
   check(
-    'a real date is written out',
-    /^\d{2} \w{3} \d{4}$/.test(formatDate('2026-09-01T00:00:00.000Z')),
+    'a real date is written out as day, month, year',
+    /^\d{2} [A-Za-z]{3,5} \d{4}$/.test(formatDate('2026-09-01T00:00:00.000Z')),
     formatDate('2026-09-01T00:00:00.000Z')
   );
 
