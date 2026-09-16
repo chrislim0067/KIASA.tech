@@ -437,6 +437,106 @@ async function main() {
     `status ${adminDetailPage.status}`
   );
 
+  /* ------------------------------------------------------------ job board */
+  section('The job board — a second project, read with its own secret key');
+
+  /*
+   * /admin/jobs reads ANOTHER Supabase project's `saved_jobs` with a key that
+   * bypasses that project's row-level security. Nothing over there knows what a
+   * KIASA administrator is, so the guard on these routes is the only thing
+   * between a caller and everybody's saved postings.
+   *
+   * scripts/test-admin-jobs.mjs proves what the projection does with a row.
+   * These prove the door in front of it is shut.
+   */
+
+  /*
+   * The stream is a long-lived response, so each request to it is aborted the
+   * moment its headers arrive — `fetch` resolves on the headers, which is all
+   * these checks read. Leaving the body open would hold the connection for the
+   * remainder of the run.
+   */
+  async function openStream(cookie) {
+    const controller = new AbortController();
+    try {
+      const response = await fetch(`${BASE}/api/admin/jobs/stream`, {
+        redirect: 'manual',
+        headers: cookie ? { cookie } : {},
+        signal: controller.signal,
+      });
+      return { status: response.status, type: response.headers.get('content-type') ?? '' };
+    } finally {
+      controller.abort();
+    }
+  }
+
+  const anonJobsPage = await req('/admin/jobs');
+  check(
+    'anonymous GET /admin/jobs redirects to login',
+    anonJobsPage.status === 307 && (anonJobsPage.headers.get('location') ?? '').includes('/login'),
+    `status ${anonJobsPage.status} -> ${anonJobsPage.headers.get('location')}`
+  );
+
+  const anonJobDetail = await req(`/admin/jobs/${randomUUID()}`);
+  check(
+    '  and so does a job detail page, whatever id is guessed',
+    anonJobDetail.status === 307,
+    `status ${anonJobDetail.status}`
+  );
+
+  const anonStream = await openStream(null);
+  check('anonymous cannot open the live stream', anonStream.status === 401, `status ${anonStream.status}`);
+  check(
+    '  and is not handed an event stream to sit on',
+    !anonStream.type.includes('text/event-stream'),
+    anonStream.type || 'no content-type'
+  );
+
+  const userJobsPage = await req('/admin/jobs', { cookie: userCookie });
+  check(
+    'an ordinary signed-in user is redirected away from /admin/jobs',
+    userJobsPage.status === 307 &&
+      (userJobsPage.headers.get('location') ?? '').includes('/dashboard'),
+    `status ${userJobsPage.status} -> ${userJobsPage.headers.get('location')}`
+  );
+
+  const userStream = await openStream(userCookie);
+  check(
+    'an ordinary signed-in user is refused the live stream',
+    userStream.status === 403,
+    `status ${userStream.status}`
+  );
+  check(
+    '  and is not handed one either',
+    !userStream.type.includes('text/event-stream'),
+    userStream.type || 'no content-type'
+  );
+
+  const adminJobsPage = await req('/admin/jobs', { cookie: adminCookie });
+  check(
+    'administrator can open /admin/jobs',
+    adminJobsPage.status === 200,
+    `status ${adminJobsPage.status}`
+  );
+
+  /*
+   * An administrator gets past the guard. What they meet next depends on
+   * whether this deployment holds the job board's credentials — the suite does
+   * not set them, so the expected answer is 503 `unconfigured`. Either way, the
+   * distinction that matters is that authorization is not what stopped them.
+   */
+  const adminStream = await openStream(adminCookie);
+  check(
+    'an administrator is not refused by the guard',
+    adminStream.status !== 401 && adminStream.status !== 403,
+    `status ${adminStream.status}`
+  );
+  check(
+    '  and meets either a live stream or an honest "not configured"',
+    adminStream.status === 503 || adminStream.type.includes('text/event-stream'),
+    `status ${adminStream.status}, ${adminStream.type || 'no content-type'}`
+  );
+
   /* ---------------------------------------------------- destructive guards */
   section('Deletion guards');
 

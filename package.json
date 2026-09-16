@@ -57,7 +57,8 @@
     "video:render": "node scripts/render-promo.mjs",
     "video:preview": "node scripts/render-promo.mjs --preview",
     "test:jobs:ui": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-job-discovery-ui.mjs",
-    "test:jobs:api": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-job-vendor-api.mjs"
+    "test:jobs:api": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-job-vendor-api.mjs",
+    "test:jobs:board": "node --import ./scripts/lib/register-hooks.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-admin-jobs.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
