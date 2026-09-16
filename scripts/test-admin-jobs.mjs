@@ -84,9 +84,18 @@ process.env.JOBBOARD_SUPABASE_URL = BOARD_URL;
 process.env.JOBBOARD_SUPABASE_SECRET_KEY = SECRET;
 
 const stub = await import(STUB);
-const { listSavedJobs, getSavedJob } = await import(url('lib', 'jobboard', 'queries.ts'));
-const { JOB_STATUSES, JOB_STATUS_LABELS, JOB_SUMMARY_COLUMNS, JOB_DETAIL_COLUMNS, isJobStatus } =
-  await import(url('lib', 'jobboard', 'types.ts'));
+const { listSavedJobs, getSavedJob, listJobOpportunities, getJobOpportunity } = await import(
+  url('lib', 'jobboard', 'queries.ts')
+);
+const {
+  JOB_STATUSES,
+  JOB_STATUS_LABELS,
+  JOB_SUMMARY_COLUMNS,
+  JOB_DETAIL_COLUMNS,
+  JOB_OPPORTUNITY_COLUMNS,
+  JOB_OPPORTUNITY_DETAIL_COLUMNS,
+  isJobStatus,
+} = await import(url('lib', 'jobboard', 'types.ts'));
 const { formatSalary, formatExperience, relativeDate, formatDate, hostOf, seniorityOf, humanise } =
   await import(url('lib', 'jobboard', 'format.ts'));
 const { missingJobBoardEnv, isJobBoardConfigured, requireJobBoardEnv, JobBoardConfigError } =
@@ -274,10 +283,26 @@ section('2. A row of any shape becomes a summary the UI can render');
     job.saved_at === new Date(0).toISOString() && job.updated_at === job.saved_at,
     String(job.saved_at)
   );
+  /*
+   * NO ADDRESS COMES BACK, EVER. The board used to resolve every `user_id`
+   * through the job board project's Auth admin API and print the address on
+   * each row. Both the lookup and the field are gone, and these two checks are
+   * what stop either coming back.
+   */
   check(
-    'the owner is resolved to an email',
-    job.owner_email === 'owner@example.test',
-    String(job.owner_email)
+    'no owner address is on the row',
+    !('owner_email' in job),
+    Object.keys(job).filter((k) => /owner|email/i.test(k)).join(',') || 'none'
+  );
+  check(
+    '  and no directory lookup was made to find one',
+    stub.seen.listUsers === 0,
+    `${stub.seen.listUsers} lookup(s) — the page makes one query, not two`
+  );
+  check(
+    '  while the opaque owner id survives, for counting accounts',
+    job.user_id === 'owner-1',
+    String(job.user_id)
   );
 
   /* Zero is a value. A salary of 0 is not a missing salary. */
@@ -515,50 +540,32 @@ section('6. Failure degrades; it does not blank the page');
   );
 
   /*
-   * THE DIRECTORY IS NOT THE BOARD. Owner emails come from the auth admin API,
-   * a separate call to a separate service. When it fails the board still
-   * renders — a name nobody could look up is worth less than the list of jobs
-   * the page exists to show.
+   * THE DIRECTORY IS NOT CONSULTED AT ALL ANY MORE, so there is no longer a
+   * fail-soft path to test — there is an absence to enforce. A stub that hands
+   * back a full directory must change nothing about what the board returns.
    */
-  stub.reset({ rows: [HOSTILE_ROW], usersError: 'service unavailable' });
-  const noDirectory = await listSavedJobs();
-  check(
-    'a failed owner lookup still renders the jobs',
-    noDirectory.jobs.length === 1 && noDirectory.error === null
-  );
-  check(
-    '  with the owner simply unknown',
-    noDirectory.jobs[0].owner_email === null,
-    String(noDirectory.jobs[0].owner_email)
-  );
-
-  stub.reset({ rows: [HOSTILE_ROW], throwAt: 'listUsers' });
-  const threwDirectory = await listSavedJobs();
-  check(
-    'a thrown owner lookup does the same',
-    threwDirectory.jobs.length === 1 && threwDirectory.jobs[0].owner_email === null
-  );
-
-  stub.reset({ rows: [HOSTILE_ROW], users: [{ id: 'someone-else', email: 'other@example.test' }] });
-  const stranger = await listSavedJobs();
-  check(
-    'an owner missing from the directory is not given somebody else’s email',
-    stranger.jobs[0].owner_email === null,
-    String(stranger.jobs[0].owner_email)
-  );
-
   stub.reset({
     rows: [HOSTILE_ROW],
     users: [
-      { id: 'owner-1', email: null },
-      { id: null, email: 'x@example.test' },
+      { id: 'owner-1', email: 'owner@example.test' },
+      { id: 'owner-2', email: 'other@example.test' },
     ],
   });
-  const halfRow = await listSavedJobs();
+  const withDirectory = await listSavedJobs();
   check(
-    '  nor is a directory entry that has no email',
-    halfRow.jobs[0].owner_email === null,
-    String(halfRow.jobs[0].owner_email)
+    'a directory full of addresses changes nothing',
+    withDirectory.jobs.length === 1 && !('owner_email' in withDirectory.jobs[0]),
+    Object.keys(withDirectory.jobs[0]).filter((k) => /owner|email/i.test(k)).join(',') || 'none'
+  );
+  check(
+    '  because it is never asked',
+    stub.seen.listUsers === 0,
+    `${stub.seen.listUsers} lookup(s)`
+  );
+  check(
+    '  and no address appears anywhere in what reaches the client',
+    !JSON.stringify(withDirectory.jobs).includes('@example.test'),
+    'the board is a list of openings, not a directory of who is job hunting'
   );
 }
 
@@ -583,7 +590,12 @@ section('7. One job, fetched by an id that cannot steer the query');
   const detail = await getSavedJob('7');
   check(
     'the detail carries the summary through unchanged',
-    detail?.id === '7' && detail?.status === 'saved' && detail?.owner_email === 'owner@example.test'
+    detail?.id === '7' && detail?.status === 'saved' && detail?.user_id === 'owner-1'
+  );
+  check(
+    '  and still names nobody',
+    !('owner_email' in (detail ?? {})) && !JSON.stringify(detail).includes('@example.test'),
+    'opening one posting does not reveal who saved it'
   );
   check('  plus the long-form text', detail?.description === 'Build things.');
   check(
@@ -692,6 +704,31 @@ section('8. Read-only, and server-side, by construction');
       'types and format only'
     );
   }
+
+  /*
+   * NO SURFACE NAMES WHO SAVED A POSTING.
+   *
+   * The field and the lookup are both gone, so this cannot regress by accident
+   * — but it could regress deliberately, one `listUsers()` call at a time. The
+   * board is a list of openings; turning it back into a readable record of who
+   * is looking for work should fail here first.
+   */
+  check(
+    'nothing in lib/jobboard reads the auth directory',
+    [...sources.values()].every((s) => !/auth\.admin\.listUsers|resolveOwners/.test(s)),
+    'one query per render, and no address to resolve'
+  );
+  for (const file of readdirSync(path.join(ROOT, 'components', 'admin', 'jobs'))) {
+    check(
+      `components/admin/jobs/${file} prints no owner`,
+      !/owner_email/.test(code(read('components', 'admin', 'jobs', file)))
+    );
+  }
+  check(
+    '  and neither do the administrator pages',
+    !/owner_email/.test(code(read('app', '(site)', 'admin', 'jobs', 'page.tsx'))) &&
+      !/owner_email/.test(code(read('app', '(site)', 'admin', 'jobs', '[jobId]', 'page.tsx')))
+  );
 
   const client = code(read('lib', 'jobboard', 'client.ts'));
   check(
@@ -908,6 +945,275 @@ section('10. Display: absent stays absent');
 
   check('an enum reads as words', humanise('full_time') === 'full time', String(humanise('full_time')));
   check('  and nothing stays nothing', humanise(null) === null);
+}
+
+/* ==================================================================== */
+section('11. The candidate projection carries nobody’s pipeline');
+
+{
+  /*
+   * THE SECOND AUDIENCE. A permitted candidate sees the same postings as a
+   * shared pool of openings. What they must never see is whose posting it is,
+   * where that person is in the process, or that they wrote a note about it —
+   * so this is a different function, a different column list and a different
+   * type, and these checks exist to keep it that way.
+   */
+  stub.reset({ rows: [HOSTILE_ROW], users: [{ id: 'owner-1', email: 'owner@example.test' }] });
+  const { jobs, error, truncated } = await listJobOpportunities();
+  const job = jobs[0];
+
+  check('the board reads as opportunities', error === null && jobs.length === 1, String(error));
+  check('  and nothing was truncated', truncated === false);
+
+  /* The fields that must not exist, named one at a time so a failure says which. */
+  for (const field of ['user_id', 'owner_email', 'status', 'has_notes', 'notes', 'fingerprint']) {
+    check(`  no ${field} on a candidate row`, !(field in job), `keys: ${Object.keys(job).length}`);
+  }
+
+  check(
+    'the note text is nowhere in what reaches the candidate',
+    !JSON.stringify(jobs).includes('Recruiter said comp is negotiable'),
+    'the column was never even selected'
+  );
+  check(
+    '  because the candidate query does not ask for notes at all',
+    !JOB_OPPORTUNITY_COLUMNS.split(',').includes('notes'),
+    JOB_OPPORTUNITY_COLUMNS.split(',').filter((c) => /note/.test(c)).join(',') || 'none'
+  );
+  check(
+    '  nor for the owner, nor the status',
+    !['user_id', 'status'].some((c) => JOB_OPPORTUNITY_COLUMNS.split(',').includes(c))
+  );
+  check(
+    'and that is the column list it actually sent',
+    stub.seen.queries[0].columns === JOB_OPPORTUNITY_COLUMNS,
+    String(stub.seen.queries[0].columns).slice(0, 60)
+  );
+
+  /*
+   * A DIFFERENT LIST, NOT A SUBSET BY ACCIDENT. If the candidate columns were
+   * ever derived from the administrator's, a personal field added there would
+   * arrive here silently. These two must be independently maintained.
+   */
+  check(
+    'the candidate column list is strictly smaller than the administrator one',
+    JOB_OPPORTUNITY_COLUMNS.split(',').length < JOB_SUMMARY_COLUMNS.split(',').length,
+    `${JOB_OPPORTUNITY_COLUMNS.split(',').length} vs ${JOB_SUMMARY_COLUMNS.split(',').length}`
+  );
+  check(
+    '  and every candidate column is one the administrator also reads',
+    JOB_OPPORTUNITY_COLUMNS.split(',').every((c) => JOB_SUMMARY_COLUMNS.split(',').includes(c)),
+    'a column no other audience sees would be a second schema'
+  );
+
+  /* The drift guard, as the administrator projection has. */
+  const selected = JOB_OPPORTUNITY_COLUMNS.split(',');
+  const projected = Object.keys(job);
+  check(
+    'every projected field is a column the candidate query selects',
+    projected.every((k) => selected.includes(k)),
+    projected.filter((k) => !selected.includes(k)).join(',') || 'none'
+  );
+  check(
+    '  and every selected column is projected',
+    selected.every((c) => projected.includes(c)),
+    selected.filter((c) => !projected.includes(c)).join(',') || 'none'
+  );
+
+  /* Coercion is shared, so the hostile row degrades identically. */
+  check('a hostile row coerces the same way it does for an administrator',
+    job.id === '7' && job.salary_min === 120000 && job.workplace_type === null &&
+      Array.isArray(job.skills) && job.skills.length === 0,
+    JSON.stringify({ id: job.id, salary: job.salary_min, workplace: job.workplace_type }));
+  check('  and a missing timestamp is still sortable',
+    job.saved_at === new Date(0).toISOString(), String(job.saved_at));
+
+  /* No directory lookup: there is no owner to name, so none is fetched. */
+  check(
+    'the candidate list never reads the auth directory',
+    stub.seen.listUsers === 0,
+    `${stub.seen.listUsers} lookup(s) — an owner nobody sees is an owner nobody resolves`
+  );
+
+  /* Bounds and failure behave as the administrator list does. */
+  stub.reset({ rows: Array.from({ length: 501 }, (_, i) => ({ ...HOSTILE_ROW, id: i })) });
+  const over = await listJobOpportunities();
+  check('501 rows are cut to 500 and admitted',
+    over.jobs.length === 500 && over.truncated === true, String(over.jobs.length));
+
+  stub.reset({ error: 'permission denied for table saved_jobs' });
+  const denied = await listJobOpportunities();
+  check('a failed read returns no rows and an error',
+    denied.jobs.length === 0 && typeof denied.error === 'string', String(denied.error));
+
+  stub.reset({ throwAt: 'createClient' });
+  const unreachable = await listJobOpportunities();
+  check('  and an unreachable project is caught, not thrown at the page',
+    unreachable.jobs.length === 0 && typeof unreachable.error === 'string');
+}
+
+/* ==================================================================== */
+section('12. One opportunity, with no pipeline attached');
+
+{
+  stub.reset({
+    rows: [
+      {
+        ...HOSTILE_ROW,
+        description: 'Build things.',
+        responsibilities: ['Ship', 7, null],
+        required_qualifications: null,
+        preferred_qualifications: ['Postgres'],
+        applied_at: '2026-09-01T00:00:00.000Z',
+      },
+    ],
+    users: [{ id: 'owner-1', email: 'owner@example.test' }],
+  });
+
+  const detail = await getJobOpportunity('7');
+
+  check('the long-form text is there', detail?.description === 'Build things.');
+  check('  with list fields coerced',
+    JSON.stringify(detail?.responsibilities) === '["Ship"]' &&
+      JSON.stringify(detail?.required_qualifications) === '[]',
+    JSON.stringify(detail?.responsibilities));
+
+  /*
+   * Opening one posting is a deliberate act — but by somebody who did not save
+   * it, so it reveals no more than the list did.
+   */
+  for (const field of ['notes', 'status', 'owner_email', 'user_id', 'applied_at', 'has_notes']) {
+    check(`  still no ${field} on the detail`, !(field in (detail ?? {})));
+  }
+  check('the detail query asked for the candidate detail columns',
+    stub.seen.queries[0].columns === JOB_OPPORTUNITY_DETAIL_COLUMNS);
+  check('  which include no notes and no applied date',
+    !JOB_OPPORTUNITY_DETAIL_COLUMNS.split(',').some((c) => c === 'notes' || c === 'applied_at'),
+    JOB_OPPORTUNITY_DETAIL_COLUMNS.split(',').filter((c) => /note|applied/.test(c)).join(',') || 'none');
+
+  const CRAFTED = "7' or '1'='1";
+  stub.reset({ rows: [] });
+  await getJobOpportunity(CRAFTED);
+  check('a crafted id is bound, not spliced',
+    stub.seen.queries[0].eq[0]?.[1] === CRAFTED, JSON.stringify(stub.seen.queries[0].eq));
+
+  stub.reset({ rows: [] });
+  check('an id that matches nothing is null, for the page to 404',
+    (await getJobOpportunity('missing')) === null);
+  stub.reset({ error: 'permission denied' });
+  check('  as is a failed read', (await getJobOpportunity('7')) === null);
+}
+
+/* ==================================================================== */
+section('13. The second gate is a gate');
+
+{
+  const jobBoard = code(read('lib', 'auth', 'job-board.ts'));
+  const guard = code(read('lib', 'candidate', 'job-board.ts'));
+  const page = code(read('app', '(site)', 'job-board', 'page.tsx'));
+  const detailPage = code(read('app', '(site)', 'job-board', '[jobId]', 'page.tsx'));
+  const route = code(read('app', 'api', 'admin', 'users', '[userId]', 'job-board', 'route.ts'));
+  const migration = read('supabase', 'migrations', '20260916000032_job_board_access.sql');
+
+  /* Absence is no access, in the model and in the guard that reads it. */
+  check('absence of a grant means no access',
+    /DEFAULT_JOB_BOARD_ACCESS: JobBoardStatus = 'revoked'/.test(jobBoard),
+    'the same direction user_access and user_roles fail in');
+  check('  and only "granted" passes',
+    /return status === 'granted';/.test(jobBoard));
+  check('  with the guard defaulting to that on a failed read',
+    /DEFAULT_JOB_BOARD_ACCESS/.test(guard) && /!error && data/.test(guard),
+    'an error is not a reason to open the board');
+
+  /* Both gates, on both pages, not in a layout. */
+  for (const [name, source] of [['the list', page], ['the detail', detailPage]]) {
+    check(`${name} page awaits the candidate gate`, /await requireCandidate\(\)/.test(source));
+    check(`  and ${name} page awaits the board gate`,
+      /await resolveJobBoardAccess\(\)/.test(source));
+    check(`  and ${name} page refuses before reading anything`,
+      source.indexOf('resolveJobBoardAccess()') < source.indexOf('access.allowed') &&
+        /if \(!access\.allowed\)/.test(source),
+      'a detail page reached by URL is how a list-only check is walked past');
+  }
+  check('neither page reads the administrator projection',
+    !/listSavedJobs|getSavedJob\b/.test(page) && !/listSavedJobs|getSavedJob\b/.test(detailPage),
+    'that one carries owner, status and notes');
+
+  /* A candidate cannot write the table, and the migration proves it. */
+  check('authenticated may only SELECT the grant table',
+    /grant select on public\.job_board_access to authenticated;/.test(migration) &&
+      !/grant[^;]*(insert|update|delete)[^;]*to authenticated/i.test(migration),
+    'granting yourself the board is the threat this table exists to prevent');
+  check('  under a policy scoped to your own row',
+    /using \(\(select auth\.uid\(\)\) = user_id\)/.test(migration));
+  check('  with row level security forced',
+    /force row level security/.test(migration));
+  check('  and no backfill, so the gate starts shut',
+    !/insert into public\.job_board_access/i.test(migration),
+    'a gate that admits everyone on day one is not a gate');
+
+  /* The write path is capability-guarded and audited. */
+  check('the grant endpoint guards on its own capability',
+    /guardApi\('jobboard\.grant'\)/.test(route));
+  check('  before it touches anything',
+    route.indexOf('guardApi(') < route.indexOf('setJobBoardAccess('));
+  check('  and refuses a status outside the vocabulary',
+    /status !== 'granted' && status !== 'revoked'/.test(route));
+  check('  and audits both outcomes',
+    (route.match(/recordAudit\(/g) ?? []).length === 2,
+    'a log that records only successes cannot answer "who tried"');
+
+  /* The vocabulary is mirrored on both sides of the boundary. */
+  const audit = read('lib', 'admin', 'audit.ts');
+  for (const action of ['user.job_board_granted', 'user.job_board_revoked']) {
+    check(`the audit action ${action} exists in both the CHECK and the TypeScript`,
+      migration.includes(`'${action}'`) && audit.includes(`'${action}'`));
+  }
+
+  const roles = read('lib', 'auth', 'roles.ts');
+  check('the capability is declared once and held only by administrators',
+    /'jobboard\.grant'/.test(roles) && /user: Object\.freeze\(\[\]\)/.test(roles),
+    'an ordinary user holds no capability at all');
+}
+
+/* ==================================================================== */
+section('14. The candidate components cannot render a pipeline');
+
+{
+  const files = readdirSync(path.join(ROOT, 'components', 'jobboard'));
+  check('there are candidate-specific components', files.length > 0, files.join(','));
+
+  for (const file of files) {
+    const source = code(read('components', 'jobboard', file));
+
+    /*
+     * These are typed to `JobOpportunity`. Reaching for a field it does not
+     * carry would not compile — but a component that imported `JobSummary`
+     * would compile fine and quietly render an owner's email, so the import is
+     * what is checked here.
+     */
+    check(`components/jobboard/${file} is typed to the candidate shape`,
+      !/JobSummary|JobDetail\b/.test(source),
+      'JobOpportunity only');
+    check(`  and ${file} names no personal field`,
+      !/owner_email|has_notes|\.notes\b|job\.status/.test(source),
+      'none of these exist on the type either');
+    check(`  and ${file} reaches no privileged module`,
+      !/@\/lib\/jobboard\/(?:client|queries|env)/.test(source));
+  }
+
+  /*
+   * And the stylesheet has no pipeline colours, because there is no pipeline.
+   * Comment-stripped: the header explains at length why it does NOT use the
+   * admin tokens, and naming them there must not read as using them.
+   */
+  const css = code(read('styles', 'job-board.css'));
+  check('the candidate stylesheet defines no status colours',
+    !/--kjb-(?:saved|applied|interviewing|offer|rejected|archived)/.test(css),
+    'a style for something the page can never render');
+  check('  and draws entirely from the profile palette',
+    !/--kadmin-/.test(css),
+    'those tokens are defined on .kadmin, which this page is not inside');
 }
 
 console.log(`\n${'='.repeat(56)}`);

@@ -1,0 +1,413 @@
+/*
+ * The shared job board, as a candidate sees it.
+ *
+ * A SECOND STYLESHEET RATHER THAN A REUSE OF admin-jobs.css, and the reason is
+ * structural, not aesthetic. That file is scoped under `.kjobs` and draws every
+ * colour from the `--kadmin-*` tokens `styles/admin.css` defines on `.kadmin`.
+ * This board renders inside `.kprof`, where those tokens do not exist — the
+ * page would load with the right layout and no palette at all.
+ *
+ * So the layout here is the candidate surface's own: `--kprof-*` tokens, the
+ * profile typography, the profile card treatment. Nothing new is introduced.
+ *
+ * WHAT IS MISSING FROM THIS FILE IS THE POINT. There are no pipeline status
+ * colours, no owner column, no note indicator. They are absent because the data
+ * behind them is absent — `JobOpportunity` does not carry them and the query
+ * does not select them. A style for a status here would be a style for
+ * something this page can never render.
+ */
+
+.kjb {
+  --kjb-gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-family: var(--kprof-ui);
+}
+
+/* ------------------------------------------------------------------ header */
+
+.kjb__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.kjb__count {
+  margin: 0;
+  color: var(--kprof-muted);
+  font-size: 0.86rem;
+  letter-spacing: 0.01em;
+}
+
+.kjb__count strong {
+  color: var(--kprof-text);
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------------- filters */
+
+.kjb__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.kjb__search {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.kjb__input,
+.kjb__select {
+  background: var(--kprof-surface);
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius-sm);
+  color: var(--kprof-text);
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 9px 11px;
+}
+
+.kjb__input:focus-visible,
+.kjb__select:focus-visible {
+  outline: 2px solid var(--kprof-accent);
+  outline-offset: 1px;
+}
+
+.kjb__input::placeholder {
+  color: var(--kprof-muted);
+}
+
+.kjb__select {
+  cursor: pointer;
+}
+
+.kjb__button {
+  background: transparent;
+  border: 1px solid var(--kprof-line);
+  border-radius: var(--kprof-radius-sm);
+  color: var(--kprof-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+  padding: 9px 14px;
+  transition: background 160ms var(--kprof-ease);
+}
+
+.kjb__button:hover:not(:disabled) {
+  background: var(--kprof-accent-dim);
+}
+
+.kjb__button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* ------------------------------------------------------------------- rows */
+
+.kjb__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kjb__row {
+  background: var(--kprof-surface);
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius);
+  display: grid;
+  gap: var(--kjb-gap);
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  padding: 14px;
+  text-align: left;
+  transition:
+    border-color 160ms var(--kprof-ease),
+    background 160ms var(--kprof-ease);
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.kjb__row:hover,
+.kjb__row:focus-visible {
+  background: var(--kprof-accent-dim);
+  border-color: var(--kprof-line);
+}
+
+.kjb__row:focus-visible {
+  outline: 2px solid var(--kprof-accent);
+  outline-offset: 2px;
+}
+
+/* The company mark: a logo when the posting carried one, initials otherwise. */
+.kjb__mark {
+  align-items: center;
+  background: var(--kprof-accent-dim);
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius-sm);
+  display: flex;
+  height: 44px;
+  justify-content: center;
+  overflow: hidden;
+  width: 44px;
+}
+
+.kjb__mark img {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.kjb__markText {
+  color: var(--kprof-accent);
+  font-family: var(--kprof-head);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.kjb__main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.kjb__title {
+  color: var(--kprof-text);
+  font-size: 0.98rem;
+  font-weight: 600;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kjb__company {
+  color: var(--kprof-muted);
+  font-size: 0.84rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kjb__facts {
+  color: var(--kprof-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  gap: 4px 14px;
+}
+
+.kjb__fact {
+  align-items: center;
+  display: inline-flex;
+  gap: 5px;
+}
+
+.kjb__skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.kjb__skill {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: 999px;
+  color: var(--kprof-muted);
+  font-size: 0.72rem;
+  padding: 2px 8px;
+}
+
+.kjb__aside {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.kjb__salary {
+  color: var(--kprof-success);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.kjb__when {
+  color: var(--kprof-muted);
+  font-size: 0.76rem;
+}
+
+.kjb__tag {
+  border: 1px solid var(--kprof-line);
+  border-radius: 999px;
+  color: var(--kprof-accent);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ pager */
+
+.kjb__pager {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  padding-top: 4px;
+}
+
+.kjb__pagerCount {
+  color: var(--kprof-muted);
+  font-size: 0.8rem;
+}
+
+.kjb__pagerLinks {
+  display: flex;
+  gap: 8px;
+}
+
+/* ------------------------------------------------- empty and locked states */
+
+.kjb__empty,
+.kjb__locked {
+  background: var(--kprof-surface);
+  border: 1px solid var(--kprof-line-soft);
+  border-radius: var(--kprof-radius);
+  color: var(--kprof-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 34px 24px;
+  text-align: center;
+  align-items: center;
+}
+
+.kjb__locked h2 {
+  color: var(--kprof-text);
+  font-family: var(--kprof-head);
+  font-size: 0.96rem;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.kjb__locked p,
+.kjb__empty p {
+  margin: 0;
+  max-width: 54ch;
+  line-height: 1.6;
+}
+
+.kjb__notice {
+  background: rgba(240, 201, 119, 0.08);
+  border: 1px solid rgba(240, 201, 119, 0.3);
+  border-radius: var(--kprof-radius-sm);
+  color: var(--kprof-warn);
+  font-size: 0.82rem;
+  margin: 0;
+  padding: 10px 13px;
+}
+
+/* ----------------------------------------------------------------- detail */
+
+.kjb__detail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.kjb__detailHead {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.kjb__detailTitle {
+  color: var(--kprof-text);
+  font-family: var(--kprof-head);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  margin: 0 0 4px;
+}
+
+.kjb__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kjb__sectionTitle {
+  color: var(--kprof-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.kjb__prose {
+  color: var(--kprof-text);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.kjb__list {
+  color: var(--kprof-text);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  gap: 6px;
+  line-height: 1.6;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.kjb__apply {
+  align-self: flex-start;
+  background: var(--kprof-accent-dim);
+  border: 1px solid var(--kprof-line);
+  border-radius: var(--kprof-radius-sm);
+  color: var(--kprof-text);
+  font-size: 0.86rem;
+  padding: 10px 16px;
+  text-decoration: none;
+  transition: background 160ms var(--kprof-ease);
+}
+
+.kjb__apply:hover {
+  background: rgba(203, 170, 247, 0.2);
+}
+
+/* ------------------------------------------------------------------ small */
+
+@media (max-width: 640px) {
+  .kjb__row {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .kjb__mark {
+    height: 36px;
+    width: 36px;
+  }
+
+  /* The aside drops under the main column rather than squeezing it. */
+  .kjb__aside {
+    align-items: flex-start;
+    grid-column: 1 / -1;
+    flex-direction: row;
+    gap: 12px;
+    text-align: left;
+  }
+}

@@ -84,14 +84,77 @@ export interface JobSummary {
    * a deliberate act and shows it; the list only reports that it exists.
    */
   readonly has_notes: boolean;
-  /**
-   * Resolved from the job board project's `auth.users`, not stored on the row.
-   *
-   * An administrator looking at everyone's postings needs to know whose each
-   * one is, and a bare UUID does not answer that. Null when the lookup could
-   * not run or the account no longer exists.
-   */
-  readonly owner_email: string | null;
+}
+
+/*
+ * THERE IS NO `owner_email`, AND THAT IS DELIBERATE.
+ *
+ * An earlier version resolved every `user_id` through the job board project's
+ * Auth admin API and printed the address on each row. It was removed: naming
+ * the person beside every posting turned a list of openings into a record of
+ * who is looking for work, readable at a glance by anyone with the
+ * administrator surface open — on a shared screen, in a screenshot, over a
+ * shoulder.
+ *
+ * `user_id` survives because counting DISTINCT owners answers "how many people
+ * is this" without answering "which people". If a future surface genuinely
+ * needs to act on one person's postings, it should resolve that one id
+ * deliberately rather than restore a directory lookup for the whole page.
+ */
+
+/**
+ * What a CANDIDATE sees — the same postings, stripped of everybody's pipeline.
+ *
+ * A separate interface rather than `Omit<JobSummary, …>`, and the difference
+ * matters. `Omit` tracks whatever `JobSummary` happens to contain, so a field
+ * added there for the administrator surface would silently appear here too, on
+ * a page shown to every permitted candidate. Written out, a new personal field
+ * has to be typed into this file by somebody deciding it belongs in front of an
+ * audience who did not save the posting.
+ *
+ * WHAT IS DELIBERATELY ABSENT, and why each one:
+ *
+ *   * `user_id` and `owner_email` — whose posting this is. The board is a pool
+ *     of opportunities here, not a directory of who is looking for work.
+ *   * `status` — `applied`, `interviewing`, `rejected`. Somebody's progress
+ *     with an employer is the most personal thing in the table.
+ *   * `has_notes` — even the EXISTENCE of a private note says something about
+ *     how closely a person is tracking a company.
+ *   * `fingerprint` — a dedupe hash nothing on this page renders.
+ *
+ * `saved_at` survives as the listing date, because "newest first" is the order
+ * anyone browsing a job list wants and the date alone identifies nobody.
+ */
+export interface JobOpportunity {
+  readonly id: string;
+  readonly url: string;
+  readonly domain: string;
+  readonly provider: string | null;
+  readonly title: string | null;
+  readonly company: string | null;
+  readonly company_logo_url: string | null;
+  readonly location: string | null;
+  readonly workplace_type: WorkplaceType | null;
+  readonly employment_type: string | null;
+  readonly salary_min: number | null;
+  readonly salary_max: number | null;
+  readonly salary_currency: string | null;
+  readonly salary_period: string | null;
+  readonly experience_min_years: number | null;
+  readonly experience_max_years: number | null;
+  readonly skills: readonly string[];
+  readonly sponsorship_available: boolean | null;
+  readonly security_clearance_required: boolean | null;
+  readonly extraction_confidence: number | null;
+  readonly saved_at: string;
+}
+
+/** The long-form content of one opportunity. Still carries no pipeline. */
+export interface JobOpportunityDetail extends JobOpportunity {
+  readonly description: string | null;
+  readonly responsibilities: readonly string[];
+  readonly required_qualifications: readonly string[];
+  readonly preferred_qualifications: readonly string[];
 }
 
 /**
@@ -147,6 +210,48 @@ export const JOB_SUMMARY_COLUMNS = [
   // the client. Short, user-typed text — nothing like the kilobytes of
   // `description` this list is careful not to fetch.
   'notes',
+].join(',');
+
+/**
+ * Columns the CANDIDATE list selects. Kept in step with {@link JobOpportunity}.
+ *
+ * Written out rather than derived from {@link JOB_SUMMARY_COLUMNS}, for the
+ * reason the interface is written out: a column added for the administrator
+ * must not arrive here by inheritance. `notes` is not merely dropped after the
+ * fact — it is never asked for, so the note text does not cross the network
+ * into this process at all.
+ */
+export const JOB_OPPORTUNITY_COLUMNS = [
+  'id',
+  'url',
+  'domain',
+  'provider',
+  'title',
+  'company',
+  'company_logo_url',
+  'location',
+  'workplace_type',
+  'employment_type',
+  'salary_min',
+  'salary_max',
+  'salary_currency',
+  'salary_period',
+  'experience_min_years',
+  'experience_max_years',
+  'skills',
+  'sponsorship_available',
+  'security_clearance_required',
+  'extraction_confidence',
+  'saved_at',
+].join(',');
+
+/** The candidate detail query adds the long-form columns. Still no notes. */
+export const JOB_OPPORTUNITY_DETAIL_COLUMNS = [
+  JOB_OPPORTUNITY_COLUMNS,
+  'description',
+  'responsibilities',
+  'required_qualifications',
+  'preferred_qualifications',
 ].join(',');
 
 /** The detail query adds the long-form columns to the summary set. */

@@ -21,8 +21,20 @@
  * `/pending` is the waiting screen for an account that has confirmed its email
  * but has not been approved. It needs a session to say anything useful, so it
  * belongs here too — and the approval gate itself lives in the page, not here.
+ *
+ * `/job-board` is the shared board of postings. Same reasoning: it needs a
+ * session to show anything, so bouncing an anonymous visitor here saves a
+ * render. The SECOND gate — the per-candidate grant from migration 32 — lives
+ * in the page, because listing a prefix here has never been what makes a route
+ * private to anyone in particular.
  */
-export const PROTECTED_PREFIXES = ['/dashboard', '/admin', '/pending', '/profile'] as const;
+export const PROTECTED_PREFIXES = [
+  '/dashboard',
+  '/admin',
+  '/pending',
+  '/profile',
+  '/job-board',
+] as const;
 
 /** Signed-in visitors are redirected to DASHBOARD — no point showing these. */
 export const AUTH_ONLY_ROUTES = ['/login', '/signup'] as const;

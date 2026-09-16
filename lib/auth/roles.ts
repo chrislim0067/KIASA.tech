@@ -55,6 +55,7 @@ export const CAPABILITIES = [
   'users.delete',      // may delete a user
   'roles.grant',       // may change another user's role
   'audit.read',        // may read the administrative audit log
+  'jobboard.grant',    // may grant or revoke a candidate's view of the job board
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 

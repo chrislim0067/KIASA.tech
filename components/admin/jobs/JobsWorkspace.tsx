@@ -9,7 +9,7 @@ import JobCard from './JobCard';
 import JobsLive from './JobsLive';
 import { PAGE_SIZES, setStoredPageSize, usePageSize } from './use-page-size';
 
-type Sort = 'recent' | 'salary' | 'company' | 'owner';
+type Sort = 'recent' | 'salary' | 'company';
 
 /**
  * How many cards a board column renders.
@@ -51,7 +51,6 @@ export default function JobsWorkspace({
   const [statusFilter, setStatusFilter] = useState<'all' | JobStatus>('all');
   const [query, setQuery] = useState('');
   const [workplace, setWorkplace] = useState<'any' | 'remote' | 'hybrid' | 'onsite'>('any');
-  const [owner, setOwner] = useState<'all' | string>('all');
   const [sort, setSort] = useState<Sort>('recent');
   const [page, setPage] = useState(0);
 
@@ -71,12 +70,18 @@ export default function JobsWorkspace({
     setPage(0);
   }
 
-  /** Every distinct owner on the board, for the filter. */
-  const owners = useMemo(() => {
-    const seen = new Set<string>();
-    for (const job of jobs) if (job.owner_email) seen.add(job.owner_email);
-    return [...seen].sort((a, b) => a.localeCompare(b));
-  }, [jobs]);
+  /**
+   * HOW MANY people are on the board, never WHICH.
+   *
+   * Counted over `user_id`, which is an opaque identifier from another
+   * project's `auth.users` — it says two accounts are represented without
+   * saying whose. The addresses that used to fill an owner filter here are gone
+   * along with the column; see the note at the bottom of lib/jobboard/types.ts.
+   */
+  const ownerCount = useMemo(
+    () => new Set(jobs.map((job) => job.user_id)).size,
+    [jobs]
+  );
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -84,10 +89,9 @@ export default function JobsWorkspace({
     const filtered = jobs.filter((job) => {
       if (statusFilter !== 'all' && job.status !== statusFilter) return false;
       if (workplace !== 'any' && job.workplace_type !== workplace) return false;
-      if (owner !== 'all' && job.owner_email !== owner) return false;
       if (!needle) return true;
 
-      return [job.title, job.company, job.location, job.domain, job.owner_email, ...job.skills]
+      return [job.title, job.company, job.location, job.domain, ...job.skills]
         .filter((value): value is string => typeof value === 'string')
         .some((value) => value.toLowerCase().includes(needle));
     });
@@ -97,10 +101,9 @@ export default function JobsWorkspace({
         return (b.salary_max ?? b.salary_min ?? 0) - (a.salary_max ?? a.salary_min ?? 0);
       }
       if (sort === 'company') return (a.company ?? '').localeCompare(b.company ?? '');
-      if (sort === 'owner') return (a.owner_email ?? '').localeCompare(b.owner_email ?? '');
       return new Date(b.saved_at).getTime() - new Date(a.saved_at).getTime();
     });
-  }, [jobs, query, statusFilter, workplace, owner, sort]);
+  }, [jobs, query, statusFilter, workplace, sort]);
 
   const byStatus = useMemo(() => {
     const grouped = new Map<JobStatus, JobSummary[]>(JOB_STATUSES.map((status) => [status, []]));
@@ -124,13 +127,12 @@ export default function JobsWorkspace({
   const current = Math.min(page, pages - 1);
 
   const filtersActive =
-    query.length > 0 || workplace !== 'any' || owner !== 'all' || statusFilter !== 'all';
+    query.length > 0 || workplace !== 'any' || statusFilter !== 'all';
 
   function clearFilters() {
     applyFilter(() => {
       setQuery('');
       setWorkplace('any');
-      setOwner('all');
       setStatusFilter('all');
     });
   }
@@ -142,7 +144,7 @@ export default function JobsWorkspace({
       <div className="kjobs__head">
         <p className="kjobs__count">
           <strong>{visible.length}</strong> of {jobs.length} saved
-          {owners.length > 0 ? ` · ${owners.length} ${owners.length === 1 ? 'owner' : 'owners'}` : ''}
+          {ownerCount > 0 ? ` · ${ownerCount} ${ownerCount === 1 ? 'account' : 'accounts'}` : ''}
           <JobsLive />
         </p>
 
@@ -169,7 +171,7 @@ export default function JobsWorkspace({
       {truncated ? (
         <p className="kadmin__notice kadmin__notice--warn">
           Showing the most recent 500 postings. Older ones exist but are not loaded — narrow by
-          owner or status once paging across the whole table is needed.
+          status once paging across the whole table is needed.
         </p>
       ) : null}
 
@@ -177,7 +179,7 @@ export default function JobsWorkspace({
         <input
           className="kadmin__input kjobs__search"
           type="search"
-          placeholder="Search title, company, location, owner or skill"
+          placeholder="Search title, company, location or skill"
           value={query}
           onChange={(event) => applyFilter(() => setQuery(event.target.value))}
           aria-label="Search saved jobs"
@@ -211,20 +213,6 @@ export default function JobsWorkspace({
 
         <select
           className="kadmin__select"
-          value={owner}
-          onChange={(event) => applyFilter(() => setOwner(event.target.value))}
-          aria-label="Filter by owner"
-        >
-          <option value="all">All owners</option>
-          {owners.map((email) => (
-            <option key={email} value={email}>
-              {email}
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="kadmin__select"
           value={sort}
           onChange={(event) => applyFilter(() => setSort(event.target.value as Sort))}
           aria-label="Sort"
@@ -232,8 +220,7 @@ export default function JobsWorkspace({
           <option value="recent">Newest first</option>
           <option value="salary">Highest salary</option>
           <option value="company">Company A–Z</option>
-          <option value="owner">Owner A–Z</option>
-        </select>
+          </select>
 
         {filtersActive ? (
           <button

@@ -72,8 +72,6 @@ export default async function AdminJobDetailPage({
         <>
           {companyName}
           {companyName !== host && host ? ` · ${host}` : ''}
-          {' · saved by '}
-          {job.owner_email ?? 'an unknown account'}
         </>
       }
       actorEmail={ctx.user.email ?? null}
@@ -90,7 +88,6 @@ export default async function AdminJobDetailPage({
           </span>
 
           <dl className="kadmin__dl">
-            <Row label="Owner" value={job.owner_email} />
             <Row label="Company" value={job.company} />
             <Row label="Location" value={job.location} />
             <Row label="Workplace" value={job.workplace_type} />
@@ -178,7 +175,7 @@ export default async function AdminJobDetailPage({
         <section className="kadmin__panel">
           <h2 className="kadmin__sectionTitle">Owner&rsquo;s note</h2>
           <p className="kadmin__lede">
-            Written by {job.owner_email ?? 'the account holder'}, not extracted from the posting.
+Written by the account that saved this posting, not extracted from the posting itself.
           </p>
           <p className="kjobs__description">{job.notes}</p>
         </section>

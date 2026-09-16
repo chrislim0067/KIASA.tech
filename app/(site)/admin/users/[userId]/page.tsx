@@ -6,6 +6,7 @@ import AdminShell from '@/components/admin/AdminShell';
 import DeleteUserDialog from '@/components/admin/DeleteUserDialog';
 import RoleControl from '@/components/admin/RoleControl';
 import AccessControl from '@/components/admin/AccessControl';
+import JobBoardControl from '@/components/admin/JobBoardControl';
 import { isAccessStatus, DEFAULT_ACCESS } from '@/lib/auth/access';
 import { requireAdminPage } from '@/lib/admin/page-guard';
 import {
@@ -18,6 +19,7 @@ import {
   getRecentAudit,
   EMPTY_STATS,
 } from '@/lib/admin/queries';
+import { getJobBoardStatus } from '@/lib/admin/users';
 import { isUuid, logAdminError } from '@/lib/admin/api';
 
 /**
@@ -118,14 +120,16 @@ export default async function AdminUserDetailPage({
   if (!account) notFound();
 
   // Every remaining panel is independent: one failing must not blank the page.
-  const [profileR, automationR, skillsR, statsR, appsR, auditR] = await Promise.allSettled([
-    getUserProfile(userId),
-    getUserAutomation(userId),
-    getUserSkills(userId),
-    getApplicationStats(userId),
-    getRecentApplications(userId, 25),
-    getRecentAudit(10, userId),
-  ]);
+  const [profileR, automationR, skillsR, statsR, appsR, auditR, jobBoardR] =
+    await Promise.allSettled([
+      getUserProfile(userId),
+      getUserAutomation(userId),
+      getUserSkills(userId),
+      getApplicationStats(userId),
+      getRecentApplications(userId, 25),
+      getRecentAudit(10, userId),
+      getJobBoardStatus(userId),
+    ]);
 
   for (const [name, result] of [
     ['profile', profileR],
@@ -158,6 +162,9 @@ export default async function AdminUserDetailPage({
   const accessDecidedAt = (account.access_decided_at as string | null) ?? null;
   const accessReason = (account.access_reason as string | null) ?? null;
   const isSelf = userId === actor.id;
+  // Fails closed: a rejected settle reads as no grant, the same reading every
+  // other absence gets in this model.
+  const jobBoardStatus = jobBoardR.status === 'fulfilled' ? jobBoardR.value : 'revoked';
 
   return (
     <AdminShell
@@ -190,6 +197,7 @@ export default async function AdminUserDetailPage({
         {!isSelf ? (
           <div className="kadmin__chips">
             <AccessControl userId={userId} status={accessStatus} />
+            <JobBoardControl userId={userId} status={jobBoardStatus} />
             <RoleControl userId={userId} currentRole={role === 'admin' ? 'admin' : 'user'} />
             <DeleteUserDialog userId={userId} email={email} displayName={displayName} />
           </div>

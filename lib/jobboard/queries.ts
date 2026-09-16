@@ -3,9 +3,13 @@ import 'server-only';
 import { createJobBoardClient } from '@/lib/jobboard/client';
 import {
   JOB_DETAIL_COLUMNS,
+  JOB_OPPORTUNITY_COLUMNS,
+  JOB_OPPORTUNITY_DETAIL_COLUMNS,
   JOB_SUMMARY_COLUMNS,
   isJobStatus,
   type JobDetail,
+  type JobOpportunity,
+  type JobOpportunityDetail,
   type JobSummary,
   type WorkplaceType,
 } from '@/lib/jobboard/types';
@@ -30,24 +34,39 @@ import {
 const LIST_LIMIT = 500;
 
 /**
- * Coerces whatever Postgres returned into the summary the UI is typed against.
+ * Coercion, shared by every projection in this file.
  *
  * Written defensively because this schema belongs to another repository. A
  * `status` outside the CHECK constraint, a null `skills` array, a numeric that
  * arrived as a string — none of them should blank the whole page, so each is
  * given a safe reading rather than trusted.
+ *
+ * Shared on purpose: two audiences see different FIELDS, but a numeric that
+ * arrived as a string means the same thing to both, and two copies of these
+ * rules would eventually disagree about it. What must not be shared is the
+ * field list — see the note above the candidate projection at the bottom.
  */
-function toSummary(row: Record<string, unknown>, ownerEmail: string | null): JobSummary {
-  const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null);
-  const num = (v: unknown): number | null => {
-    if (v === null || v === undefined || v === '') return null;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
-  };
-  const bool = (v: unknown): boolean | null => (typeof v === 'boolean' ? v : null);
+const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null);
 
-  const workplace = str(row.workplace_type);
+const num = (v: unknown): number | null => {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
 
+const bool = (v: unknown): boolean | null => (typeof v === 'boolean' ? v : null);
+
+const list = (v: unknown): readonly string[] =>
+  Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string') : [];
+
+/** Only the three lowercase values the UI filters on; anything else is unknown. */
+const workplaceOf = (v: unknown): WorkplaceType | null => {
+  const w = str(v);
+  return w === 'remote' || w === 'hybrid' || w === 'onsite' ? (w as WorkplaceType) : null;
+};
+
+/** Coerces a row into the summary the ADMINISTRATOR surface is typed against. */
+function toSummary(row: Record<string, unknown>): JobSummary {
   return {
     id: String(row.id),
     user_id: String(row.user_id),
@@ -60,10 +79,7 @@ function toSummary(row: Record<string, unknown>, ownerEmail: string | null): Job
     company: str(row.company),
     company_logo_url: str(row.company_logo_url),
     location: str(row.location),
-    workplace_type:
-      workplace === 'remote' || workplace === 'hybrid' || workplace === 'onsite'
-        ? (workplace as WorkplaceType)
-        : null,
+    workplace_type: workplaceOf(row.workplace_type),
     employment_type: str(row.employment_type),
     salary_min: num(row.salary_min),
     salary_max: num(row.salary_max),
@@ -71,9 +87,7 @@ function toSummary(row: Record<string, unknown>, ownerEmail: string | null): Job
     salary_period: str(row.salary_period),
     experience_min_years: num(row.experience_min_years),
     experience_max_years: num(row.experience_max_years),
-    skills: Array.isArray(row.skills)
-      ? row.skills.filter((s): s is string => typeof s === 'string')
-      : [],
+    skills: list(row.skills),
     sponsorship_available: bool(row.sponsorship_available),
     security_clearance_required: bool(row.security_clearance_required),
     extraction_confidence: num(row.extraction_confidence),
@@ -85,42 +99,22 @@ function toSummary(row: Record<string, unknown>, ownerEmail: string | null): Job
     updated_at: String(row.updated_at ?? row.saved_at ?? new Date(0).toISOString()),
     // The note's EXISTENCE crosses to the client; its text does not.
     has_notes: typeof row.notes === 'string' && row.notes.trim().length > 0,
-    owner_email: ownerEmail,
   };
 }
 
-/**
- * Maps owner UUID to email, for the whole page in one call.
+/*
+ * NO OWNER DIRECTORY LOOKUP LIVES HERE ANY MORE.
  *
- * An administrator looking at every candidate's postings needs to know whose
- * each one is, and `user_id` alone does not answer that. The job board project
- * does not expose `auth.users` to the Data API — no project does — so this goes
- * through the Auth admin API, which the secret key already permits.
+ * There used to be a `resolveOwners()` that read the job board project’s
+ * `auth.users` through the Auth admin API and attached an email to every row.
+ * It is gone, along with the email itself — see the note at the bottom of
+ * `lib/jobboard/types.ts` for why.
  *
- * FAILS SOFT. If the lookup errors the board still renders, with owners shown
- * as unknown. A directory problem should not take down the list of jobs, which
- * is the thing the page is actually for.
+ * Two things follow, and both are improvements. The page now makes ONE query
+ * instead of two, dropping a round trip to a different service from every
+ * render. And the only address that ever crossed this boundary no longer
+ * crosses it at all, so there is nothing left to fail soft about.
  */
-async function resolveOwners(): Promise<Map<string, string>> {
-  const emails = new Map<string, string>();
-
-  try {
-    const client = createJobBoardClient();
-    // One page of 1000 covers this board comfortably. Paginating would mean
-    // several round trips on every render to resolve names for rows that are
-    // mostly the same handful of people.
-    const { data, error } = await client.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    if (error) return emails;
-
-    for (const user of data?.users ?? []) {
-      if (user.id && user.email) emails.set(user.id, user.email);
-    }
-  } catch {
-    // Unconfigured or unreachable. The caller renders without owner names.
-  }
-
-  return emails;
-}
 
 export interface JobListResult {
   readonly jobs: readonly JobSummary[];
@@ -160,15 +154,10 @@ export async function listSavedJobs(): Promise<JobListResult> {
     };
   }
 
-  const truncated = rows.length > LIST_LIMIT;
-  const owners = await resolveOwners();
-
   return {
-    jobs: rows
-      .slice(0, LIST_LIMIT)
-      .map((row) => toSummary(row, owners.get(String(row.user_id)) ?? null)),
+    jobs: rows.slice(0, LIST_LIMIT).map(toSummary),
     error: null,
-    truncated,
+    truncated: rows.length > LIST_LIMIT,
   };
 }
 
@@ -191,14 +180,9 @@ export async function getSavedJob(id: string): Promise<JobDetail | null> {
     if (error || !data) return null;
 
     const row = data as unknown as Record<string, unknown>;
-    const owners = await resolveOwners();
-    const summary = toSummary(row, owners.get(String(row.user_id)) ?? null);
-
-    const list = (v: unknown): readonly string[] =>
-      Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string') : [];
 
     return {
-      ...summary,
+      ...toSummary(row),
       description: typeof row.description === 'string' ? row.description : null,
       responsibilities: list(row.responsibilities),
       required_qualifications: list(row.required_qualifications),
@@ -207,6 +191,126 @@ export async function getSavedJob(id: string): Promise<JobDetail | null> {
       // administrator deliberately opened.
       notes: typeof row.notes === 'string' && row.notes.trim().length > 0 ? row.notes : null,
       applied_at: typeof row.applied_at === 'string' ? row.applied_at : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* ==========================================================================
+ * The CANDIDATE projection.
+ *
+ * Same table, different audience, and therefore a different function, a
+ * different column list and a different type. Nothing below reuses `toSummary`
+ * or `JOB_SUMMARY_COLUMNS`: a field added there for an administrator must not
+ * reach a page shown to every permitted candidate merely because the two shared
+ * a helper.
+ *
+ * `notes` is not selected at all here — not fetched and then dropped, simply
+ * never asked for. The same goes for `user_id` and `status`. What cannot be
+ * read cannot be leaked by a later mistake in a component.
+ * ======================================================================== */
+
+/** Coerces a row into the shape the candidate board is typed against. */
+function toOpportunity(row: Record<string, unknown>): JobOpportunity {
+  return {
+    id: String(row.id),
+    url: String(row.url ?? ''),
+    domain: String(row.domain ?? ''),
+    provider: str(row.provider),
+    title: str(row.title),
+    company: str(row.company),
+    company_logo_url: str(row.company_logo_url),
+    location: str(row.location),
+    workplace_type: workplaceOf(row.workplace_type),
+    employment_type: str(row.employment_type),
+    salary_min: num(row.salary_min),
+    salary_max: num(row.salary_max),
+    salary_currency: str(row.salary_currency),
+    salary_period: str(row.salary_period),
+    experience_min_years: num(row.experience_min_years),
+    experience_max_years: num(row.experience_max_years),
+    skills: list(row.skills),
+    sponsorship_available: bool(row.sponsorship_available),
+    security_clearance_required: bool(row.security_clearance_required),
+    extraction_confidence: num(row.extraction_confidence),
+    saved_at: String(row.saved_at ?? new Date(0).toISOString()),
+  };
+}
+
+export interface OpportunityListResult {
+  readonly jobs: readonly JobOpportunity[];
+  readonly error: string | null;
+  readonly truncated: boolean;
+}
+
+/**
+ * Every posting on the board, as opportunities.
+ *
+ * No owner filter, because there is no owner to filter on — the board is a
+ * shared pool here. THE CALLER MUST HAVE CHECKED `resolveJobBoardAccess()`
+ * FIRST; this function knows nothing about who is asking, exactly as
+ * `listSavedJobs()` knows nothing about administrators. Authorization is the
+ * page's job and the guard's job, and keeping it out of here is what stops a
+ * second call site from inventing its own idea of who may read this.
+ *
+ * No owner directory lookup either, which makes this strictly cheaper than the
+ * administrator list: one query, no Auth admin round trip.
+ */
+export async function listJobOpportunities(): Promise<OpportunityListResult> {
+  let rows: Record<string, unknown>[];
+
+  try {
+    const client = createJobBoardClient();
+    const { data, error } = await client
+      .from('saved_jobs')
+      .select(JOB_OPPORTUNITY_COLUMNS)
+      .limit(LIST_LIMIT + 1)
+      .order('saved_at', { ascending: false });
+
+    if (error) return { jobs: [], error: error.message, truncated: false };
+    rows = (data ?? []) as unknown as Record<string, unknown>[];
+  } catch (error) {
+    return {
+      jobs: [],
+      error: error instanceof Error ? error.message : 'The job board could not be reached.',
+      truncated: false,
+    };
+  }
+
+  return {
+    jobs: rows.slice(0, LIST_LIMIT).map(toOpportunity),
+    error: null,
+    truncated: rows.length > LIST_LIMIT,
+  };
+}
+
+/**
+ * One opportunity, with its long-form content.
+ *
+ * The candidate counterpart of `getSavedJob()`, and it returns a strictly
+ * smaller thing: no note, no pipeline status, no applied date, no owner. Null
+ * when the id does not exist, which the page turns into a 404.
+ */
+export async function getJobOpportunity(id: string): Promise<JobOpportunityDetail | null> {
+  try {
+    const client = createJobBoardClient();
+    const { data, error } = await client
+      .from('saved_jobs')
+      .select(JOB_OPPORTUNITY_DETAIL_COLUMNS)
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    const row = data as unknown as Record<string, unknown>;
+
+    return {
+      ...toOpportunity(row),
+      description: typeof row.description === 'string' ? row.description : null,
+      responsibilities: list(row.responsibilities),
+      required_qualifications: list(row.required_qualifications),
+      preferred_qualifications: list(row.preferred_qualifications),
     };
   } catch {
     return null;

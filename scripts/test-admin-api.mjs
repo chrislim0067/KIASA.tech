@@ -537,6 +537,121 @@ async function main() {
     `status ${adminStream.status}, ${adminStream.type || 'no content-type'}`
   );
 
+  /* ------------------------------------------------- the second gate */
+  section('The job board grant — a second permission, separately guarded');
+
+  /*
+   * Approving an account and granting the job board are different decisions
+   * writing different tables. These prove the second one is a real gate over
+   * HTTP: that nobody can grant themselves, that an approved candidate does not
+   * get the board for free, and that /job-board refuses without it.
+   */
+
+  const anonGrant = await req(`/api/admin/users/${ordinary.id}/job-board`, {
+    method: 'PUT',
+    body: { status: 'granted' },
+  });
+  check('anonymous cannot grant the job board', anonGrant.status === 401, `status ${anonGrant.status}`);
+
+  const selfGrant = await req(`/api/admin/users/${ordinary.id}/job-board`, {
+    cookie: userCookie,
+    method: 'PUT',
+    body: { status: 'granted' },
+  });
+  check(
+    'an ordinary user cannot grant themselves the job board',
+    selfGrant.status === 403,
+    `status ${selfGrant.status}`
+  );
+
+  const grantedRows = sql(
+    `select count(*) from public.job_board_access where user_id = '${ordinary.id}'`
+  );
+  check('and no grant was written', grantedRows === '0', `rows: ${grantedRows}`);
+
+  /*
+   * THE HEART OF IT. This account is APPROVED — the checks above put it back to
+   * approved — and still must not see the board, because approval is the first
+   * gate and this is the second.
+   */
+  const boardBeforeGrant = await req('/job-board', { cookie: userCookie });
+  const beforeBody = boardBeforeGrant.status === 200 ? await boardBeforeGrant.text() : '';
+  check(
+    'an approved candidate without the grant does not get the board',
+    boardBeforeGrant.status === 307 || /do not have access to the job board/i.test(beforeBody),
+    `status ${boardBeforeGrant.status}`
+  );
+  check(
+    '  and no posting data is in that response',
+    !/opportunities<\/|kjb__rows/.test(beforeBody),
+    'a locked panel, not a hidden list'
+  );
+
+  const anonBoard = await req('/job-board');
+  check(
+    'anonymous is bounced from /job-board to login',
+    anonBoard.status === 307 && (anonBoard.headers.get('location') ?? '').includes('/login'),
+    `status ${anonBoard.status} -> ${anonBoard.headers.get('location')}`
+  );
+
+  const badStatus = await req(`/api/admin/users/${ordinary.id}/job-board`, {
+    cookie: adminCookie,
+    method: 'PUT',
+    body: { status: 'approved' },
+  });
+  check(
+    'a status from the OTHER gate’s vocabulary is rejected',
+    badStatus.status === 400,
+    `status ${badStatus.status}`
+  );
+
+  const granted = await req(`/api/admin/users/${ordinary.id}/job-board`, {
+    cookie: adminCookie,
+    method: 'PUT',
+    body: { status: 'granted' },
+  });
+  check('an administrator can grant it', granted.status === 200, `status ${granted.status}`);
+
+  const grantedRow = sql(
+    `select status from public.job_board_access where user_id = '${ordinary.id}'`
+  );
+  check('and the row says granted', grantedRow === 'granted', `status: ${grantedRow}`);
+
+  // Granting the board must not have touched the account-approval gate.
+  const accessUntouched = sql(
+    `select status from public.user_access where user_id = '${ordinary.id}'`
+  );
+  check(
+    'the two gates are independent — approval was not rewritten',
+    accessUntouched === 'approved',
+    `user_access: ${accessUntouched}`
+  );
+
+  const boardAfterGrant = await req('/job-board', { cookie: userCookie });
+  check(
+    'and now the candidate reaches the board',
+    boardAfterGrant.status === 200,
+    `status ${boardAfterGrant.status}`
+  );
+
+  const revoked = await req(`/api/admin/users/${ordinary.id}/job-board`, {
+    cookie: adminCookie,
+    method: 'PUT',
+    body: { status: 'revoked' },
+  });
+  check('it can be revoked again', revoked.status === 200, `status ${revoked.status}`);
+  check(
+    '  and the row is kept rather than deleted',
+    sql(`select status from public.job_board_access where user_id = '${ordinary.id}'`) === 'revoked',
+    'a withdrawn grant is history, not an absence'
+  );
+
+  const grantAudit = sql(
+    `select count(*) from public.admin_audit_log ` +
+      `where action in ('user.job_board_granted', 'user.job_board_revoked')`
+  );
+  check('both decisions were audited', Number(grantAudit) >= 2, `${grantAudit} row(s)`);
+
   /* ---------------------------------------------------- destructive guards */
   section('Deletion guards');
 

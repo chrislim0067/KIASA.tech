@@ -400,15 +400,10 @@
   border-top: 1px solid var(--kadmin-line-soft);
 }
 
-.kjobs__owner {
+/* .kjobs__owner is gone: the board no longer prints who saved a posting.
+   The footer’s spacer takes the space it used to fill. */
+.kjobs__footSpacer {
   flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--kadmin-num);
-  font-size: 0.75rem;
-  color: var(--kadmin-muted);
 }
 
 /* ─── Status pills and dots ──────────────────────────────────────────────── */
@@ -666,13 +661,11 @@
   border-top: 1px solid var(--kadmin-line-soft);
 }
 
-.kjobs__tileOwner {
+.kjobs__tileNote {
   font-family: var(--kadmin-num);
   font-size: 0.68rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--kadmin-muted);
   white-space: nowrap;
-  max-width: 60%;
 }
 
 .kjobs__tileSalary {

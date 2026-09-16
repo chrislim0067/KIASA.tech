@@ -471,3 +471,94 @@ export async function setUserRole(params: {
 
   return { ok: true, value: { userId: targetUserId, role } };
 }
+
+// ---------------------------------------------------------------------------
+// Job board access — the second gate
+// ---------------------------------------------------------------------------
+/**
+ * Grant or revoke a candidate's view of the shared job board.
+ *
+ * A SEPARATE decision from {@link setUserAccess}. Approving somebody for KIASA
+ * does not give them the board, and taking the board away does not lock them
+ * out of the product — which is exactly why `job_board_access` is its own table
+ * rather than a column on `user_access`.
+ *
+ * Revoking writes `revoked` rather than deleting the row. Absence and `revoked`
+ * mean the same thing to the guard, but only one of them records that somebody
+ * once had access and an administrator took it back.
+ *
+ * Writes with the service key, which is the only credential that can:
+ * `authenticated` holds SELECT and nothing else on that table (migration 32),
+ * so a candidate cannot grant themselves the board through PostgREST.
+ */
+export async function setJobBoardAccess(params: {
+  readonly targetUserId: string;
+  readonly actingAdminId: string;
+  readonly status: 'granted' | 'revoked';
+  readonly reason?: string | null;
+}): Promise<AdminOpResult<{ userId: string; status: string; email: string | null }>> {
+  const { targetUserId, actingAdminId, status } = params;
+  const admin = createAdminClient();
+
+  let target: ExistingAccount | null;
+  try {
+    target = await findAccountById(targetUserId);
+  } catch {
+    return fail('upstream_error', 'Could not load that account.');
+  }
+  if (!target) return fail('not_found', 'That account no longer exists.');
+
+  const reason = params.reason?.trim().slice(0, 500) || null;
+
+  const { error } = await admin.from('job_board_access').upsert(
+    {
+      user_id: targetUserId,
+      status,
+      decided_by: actingAdminId,
+      decided_at: new Date().toISOString(),
+      reason,
+    },
+    { onConflict: 'user_id' }
+  );
+
+  if (error) {
+    logAdminError('users.set_job_board_access', error, {
+      target_user_id: targetUserId,
+      status,
+    });
+    return fail(
+      'upstream_error',
+      `The job board could not be ${status === 'granted' ? 'granted' : 'revoked'}.`
+    );
+  }
+
+  return { ok: true, value: { userId: targetUserId, status, email: target.email } };
+}
+
+/**
+ * One account's job board grant, for the administrator's detail page.
+ *
+ * A separate query rather than a column on `admin_user_directory`. That view is
+ * the user list's projection and adding to it would put the grant on every row
+ * of a page that has no control for it; this is read once, on the one page that
+ * can change it.
+ *
+ * FAILS CLOSED. No row, a malformed value or a failed read all resolve to
+ * `revoked` — the same reading the candidate-side guard takes, so the two can
+ * never disagree about what absence means.
+ */
+export async function getJobBoardStatus(userId: string): Promise<'granted' | 'revoked'> {
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from('job_board_access')
+      .select('status')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error || !data) return 'revoked';
+    return data.status === 'granted' ? 'granted' : 'revoked';
+  } catch {
+    return 'revoked';
+  }
+}

@@ -132,12 +132,12 @@ export default function JobRow({ job, onOpen }: { job: JobSummary; onOpen: () =>
               {JOB_STATUS_LABELS[job.status]}
             </span>
 
-            {/* Whose pipeline this is. The reason the administrator view needs
-                it at all: a board of everyone's postings with no owner on the
-                row is a list of jobs belonging to nobody. */}
-            <span className="kjobs__owner" title={job.owner_email ?? 'Owner unknown'}>
-              {job.owner_email ?? 'Unknown owner'}
-            </span>
+            {/* No owner is printed here. An earlier version showed the address
+                beside every posting; it made the board a readable record of
+                who is looking for work. See the note at the bottom of
+                lib/jobboard/types.ts. The spacer keeps the link on the right,
+                where the owner used to push it. */}
+            <span className="kjobs__footSpacer" />
 
             <a
               className="kadmin__button kadmin__button--small kadmin__button--ghost"

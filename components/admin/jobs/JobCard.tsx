@@ -36,9 +36,11 @@ export default function JobCard({ job, onOpen }: { job: JobSummary; onOpen: () =
         {salary ? <span className="kjobs__tileSalary">{salary}</span> : null}
       </span>
 
+      {/* The owner's address used to sit on the right of this row. It is gone
+          for the reason given at the bottom of lib/jobboard/types.ts. */}
       <span className="kjobs__tileMeta kjobs__tileMeta--foot">
         <span>{relativeDate(job.saved_at)}</span>
-        <span className="kjobs__tileOwner">{job.owner_email ?? 'Unknown owner'}</span>
+        {job.has_notes ? <span className="kjobs__tileNote">Has a note</span> : null}
       </span>
     </button>
   );

@@ -15,6 +15,8 @@ import {
   DEFAULT_ACCESS,
   PENDING_ROUTE,
 } from '@/lib/auth/access';
+import { JOB_BOARD_ROUTE } from '@/lib/auth/job-board';
+import { resolveJobBoardAccess } from '@/lib/candidate/job-board';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,6 +95,10 @@ export default async function DashboardPage() {
 
   // The gate, applied after the role is known so administrators are exempt.
   if (!showAdminLink && !canUseProduct(accessStatus)) redirect(PENDING_ROUTE);
+
+  // Read only after the gate above, so an unapproved account never reaches it.
+  // Shares this request's cached auth round trip.
+  const jobBoardAccess = await resolveJobBoardAccess();
 
   /**
    * How far through the profile they are.
@@ -179,6 +185,26 @@ export default async function DashboardPage() {
           {jobCount === 0 ? 'Add a job link →' : `${jobCount} added →`}
         </span>
       </Link>
+
+      {/*
+        The SHARED board, which is a different thing from "your jobs" above:
+        openings the extension collected, pooled. Shown only to somebody who
+        holds the separate grant, because linking to a page that answers "you do
+        not have access" is a worse experience than not mentioning it.
+
+        Hiding the link is presentation, not the control. The page re-checks —
+        see app/(site)/job-board/page.tsx.
+      */}
+      {jobBoardAccess.allowed ? (
+        <Link
+          href={JOB_BOARD_ROUTE}
+          className="kauth__row"
+          style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
+        >
+          <span className="kauth__rowLabel">Job board</span>
+          <span className="kauth__email">Browse openings →</span>
+        </Link>
+      ) : null}
 
       {fullName ? (
         <div className="kauth__row">

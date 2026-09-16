@@ -496,6 +496,44 @@ export type Database = {
           },
         ]
       }
+      job_board_access: {
+        Row: {
+          created_at: string
+          decided_at: string
+          decided_by: string | null
+          reason: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string
+          decided_by?: string | null
+          reason?: string | null
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string
+          decided_by?: string | null
+          reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_board_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_user_directory"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       job_events: {
         Row: {
           actor_id: string | null
