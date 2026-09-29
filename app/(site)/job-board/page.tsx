@@ -5,12 +5,17 @@ import JobBoardWorkspace from '@/components/jobboard/JobBoardWorkspace';
 import { requireCandidate } from '@/lib/candidate/session';
 import { resolveJobBoardAccess } from '@/lib/candidate/job-board';
 import { listJobOpportunities } from '@/lib/jobboard/queries';
+import { resolveJobBoardOwner } from '@/lib/jobboard/owner';
 import { isJobBoardConfigured } from '@/lib/jobboard/env';
 import { JOB_BOARD_LOCKED } from '@/lib/auth/job-board';
 import '@/styles/job-board.css';
 
 /**
- * /job-board — the shared pool of postings the extension has collected.
+ * /job-board — the postings THIS user's browser extension has saved.
+ *
+ * Not a shared pool. The extension writes to its own Supabase project, whose
+ * accounts are matched to KIASA's by confirmed email — see
+ * `lib/jobboard/owner.ts`. Every query below is filtered to that one owner.
  *
  * NOT /jobs. That is the candidate's OWN list, in KIASA's own database, of
  * postings they added themselves. This is a different table in a different
@@ -35,8 +40,7 @@ import '@/styles/job-board.css';
  *
  * WHAT THIS AUDIENCE DOES NOT SEE. `listJobOpportunities()` selects a different
  * column set from the administrator's query: no `user_id`, no `status`, no
- * `notes`. The board is a pool of openings here, not a window onto whose
- * application is where. See the note above the candidate projection in
+ * `notes`. See the note above the candidate projection in
  * `lib/jobboard/queries.ts`.
  */
 
@@ -77,7 +81,33 @@ export default async function JobBoardPage() {
     );
   }
 
-  const { jobs, error, truncated } = await listJobOpportunities();
+  const owner = await resolveJobBoardOwner(user);
+
+  if (!owner.ok) {
+    return (
+      <ProfileShell title="Job board" email={user.email ?? null} back>
+        <div className="kjb__locked">
+          {owner.reason === 'lookup_failed' ? (
+            <>
+              <h2>The board could not be read</h2>
+              <p>Something went wrong reading the postings. Try again shortly.</p>
+            </>
+          ) : (
+            <>
+              <h2>No extension account found</h2>
+              <p>
+                Your board shows the jobs your KIASA browser extension saves. Sign in to the
+                extension with {user.email ? <strong>{user.email}</strong> : 'this email'}, confirm
+                that address, and save a job — it will appear here.
+              </p>
+            </>
+          )}
+        </div>
+      </ProfileShell>
+    );
+  }
+
+  const { jobs, error, truncated } = await listJobOpportunities(owner.ownerId);
 
   return (
     <ProfileShell

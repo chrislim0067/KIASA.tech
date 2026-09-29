@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { resolveJobBoardAccess } from '@/lib/candidate/job-board';
 import { isJobBoardConfigured } from '@/lib/jobboard/env';
 import { jobBoardEventStream } from '@/lib/jobboard/stream';
+import { resolveJobBoardOwner } from '@/lib/jobboard/owner';
+import { resolveCandidate } from '@/lib/candidate/session';
 import { logAdminError } from '@/lib/admin/api';
 
 /**
@@ -62,8 +64,23 @@ export async function GET(request: Request) {
     );
   }
 
+  // Cached: the same lookup `resolveJobBoardAccess()` just made.
+  const candidate = await resolveCandidate();
+  const owner = candidate.ok
+    ? await resolveJobBoardOwner(candidate.session.user)
+    : ({ ok: false, reason: 'no_extension_account' } as const);
+
+  if (!owner.ok) {
+    return NextResponse.json(
+      { ok: false as const, code: 'no_owner', message: 'No extension account is linked to you.' },
+      { status: 404, headers: { 'Cache-Control': 'no-store, max-age=0, must-revalidate' } }
+    );
+  }
+
   return jobBoardEventStream({
     signal: request.signal,
+    // Only this person's saves wake their board.
+    filter: `user_id=eq.${owner.ownerId}`,
     /*
      * A different channel name from the administrator feed. Supabase Realtime
      * keys subscriptions by topic, and one shared name would mean one channel

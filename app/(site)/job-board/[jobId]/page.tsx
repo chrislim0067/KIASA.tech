@@ -6,6 +6,7 @@ import ProfileShell from '@/components/profile/ProfileShell';
 import { requireCandidate } from '@/lib/candidate/session';
 import { resolveJobBoardAccess } from '@/lib/candidate/job-board';
 import { getJobOpportunity } from '@/lib/jobboard/queries';
+import { resolveJobBoardOwner } from '@/lib/jobboard/owner';
 import { isJobBoardConfigured } from '@/lib/jobboard/env';
 import { JOB_BOARD_LOCKED } from '@/lib/auth/job-board';
 import { formatSalary, formatExperience, formatDate, humanise, hostOf } from '@/lib/jobboard/format';
@@ -19,11 +20,9 @@ import '@/styles/job-board.css';
  * the path is guessable in the sense that it is a value somebody may have been
  * given. Both gates are re-awaited before a single field is read.
  *
- * WHAT IS STILL ABSENT. `getJobOpportunity()` returns `JobOpportunityDetail`,
- * which carries the description and the qualification lists and nothing else:
- * no private note, no pipeline status, no applied date, no owner. Opening one
- * posting is a deliberate act, but it is a deliberate act by somebody who did
- * not save it, and it reveals no more than the list did.
+ * OWNERSHIP IS PART OF THE LOOKUP. `getJobOpportunity()` filters on the id AND
+ * the caller's extension account, so another user's posting is a 404 exactly
+ * like one that does not exist — a known id is not a way in.
  */
 
 export const dynamic = 'force-dynamic';
@@ -54,8 +53,11 @@ export default async function OpportunityPage({
 
   if (!isJobBoardConfigured()) notFound();
 
+  const owner = await resolveJobBoardOwner(user);
+  if (!owner.ok) notFound();
+
   const { jobId } = await params;
-  const job = await getJobOpportunity(jobId);
+  const job = await getJobOpportunity(jobId, owner.ownerId);
   if (!job) notFound();
 
   const salary = formatSalary(job);

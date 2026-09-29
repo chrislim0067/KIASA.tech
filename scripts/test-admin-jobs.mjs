@@ -712,12 +712,23 @@ section('8. Read-only, and server-side, by construction');
    * — but it could regress deliberately, one `listUsers()` call at a time. The
    * board is a list of openings; turning it back into a readable record of who
    * is looking for work should fail here first.
+   *
+   * ONE EXCEPTION, AND IT POINTS THE OTHER WAY. `owner.ts` reads the directory
+   * to turn the CALLER's own confirmed email into their extension id, so the
+   * board can be filtered to them. It returns an id, never an address.
    */
   check(
-    'nothing in lib/jobboard reads the auth directory',
-    [...sources.values()].every((s) => !/auth\.admin\.listUsers|resolveOwners/.test(s)),
+    'nothing in lib/jobboard but owner.ts reads the auth directory',
+    [...sources.entries()]
+      .filter(([file]) => path.basename(file) !== 'owner.ts')
+      .every(([, s]) => !/auth\.admin\.listUsers|resolveOwners/.test(s)),
     'one query per render, and no address to resolve'
   );
+  {
+    const owner = code(read('lib', 'jobboard', 'owner.ts'));
+    check('  and owner.ts hands back an id, never an email',
+      /ownerId: matches\[0\]/.test(owner) && !/email:\s*(?:candidate|matches)/.test(owner));
+  }
   for (const file of readdirSync(path.join(ROOT, 'components', 'admin', 'jobs'))) {
     check(
       `components/admin/jobs/${file} prints no owner`,
@@ -1035,14 +1046,13 @@ section('11. The candidate projection carries nobody’s pipeline');
 
 {
   /*
-   * THE SECOND AUDIENCE. A permitted candidate sees the same postings as a
-   * shared pool of openings. What they must never see is whose posting it is,
-   * where that person is in the process, or that they wrote a note about it —
-   * so this is a different function, a different column list and a different
-   * type, and these checks exist to keep it that way.
+   * THE SECOND AUDIENCE. A permitted candidate sees only the postings their
+   * own extension account saved, and even then through a narrower projection
+   * than the administrator's — a different function, a different column list
+   * and a different type, and these checks exist to keep it that way.
    */
   stub.reset({ rows: [HOSTILE_ROW], users: [{ id: 'owner-1', email: 'owner@example.test' }] });
-  const { jobs, error, truncated } = await listJobOpportunities();
+  const { jobs, error, truncated } = await listJobOpportunities('owner-1');
   const job = jobs[0];
 
   check('the board reads as opportunities', error === null && jobs.length === 1, String(error));
@@ -1071,6 +1081,11 @@ section('11. The candidate projection carries nobody’s pipeline');
     'and that is the column list it actually sent',
     stub.seen.queries[0].columns === JOB_OPPORTUNITY_COLUMNS,
     String(stub.seen.queries[0].columns).slice(0, 60)
+  );
+  check(
+    'the list is scoped to the caller’s own extension account',
+    JSON.stringify(stub.seen.queries[0].eq) === JSON.stringify([['user_id', 'owner-1']]),
+    'the secret key bypasses RLS, so this filter is the only ownership check'
   );
 
   /*
@@ -1120,17 +1135,17 @@ section('11. The candidate projection carries nobody’s pipeline');
 
   /* Bounds and failure behave as the administrator list does. */
   stub.reset({ rows: Array.from({ length: 501 }, (_, i) => ({ ...HOSTILE_ROW, id: i })) });
-  const over = await listJobOpportunities();
+  const over = await listJobOpportunities('owner-1');
   check('501 rows are cut to 500 and admitted',
     over.jobs.length === 500 && over.truncated === true, String(over.jobs.length));
 
   stub.reset({ error: 'permission denied for table saved_jobs' });
-  const denied = await listJobOpportunities();
+  const denied = await listJobOpportunities('owner-1');
   check('a failed read returns no rows and an error',
     denied.jobs.length === 0 && typeof denied.error === 'string', String(denied.error));
 
   stub.reset({ throwAt: 'createClient' });
-  const unreachable = await listJobOpportunities();
+  const unreachable = await listJobOpportunities('owner-1');
   check('  and an unreachable project is caught, not thrown at the page',
     unreachable.jobs.length === 0 && typeof unreachable.error === 'string');
 }
@@ -1153,7 +1168,7 @@ section('12. One opportunity, with no pipeline attached');
     users: [{ id: 'owner-1', email: 'owner@example.test' }],
   });
 
-  const detail = await getJobOpportunity('7');
+  const detail = await getJobOpportunity('7', 'owner-1');
 
   check('the long-form text is there', detail?.description === 'Build things.');
   check('  with list fields coerced',
@@ -1161,10 +1176,7 @@ section('12. One opportunity, with no pipeline attached');
       JSON.stringify(detail?.required_qualifications) === '[]',
     JSON.stringify(detail?.responsibilities));
 
-  /*
-   * Opening one posting is a deliberate act — but by somebody who did not save
-   * it, so it reveals no more than the list did.
-   */
+  /* Opening one posting reveals no more than the list did. */
   for (const field of ['notes', 'status', 'owner_email', 'user_id', 'applied_at', 'has_notes']) {
     check(`  still no ${field} on the detail`, !(field in (detail ?? {})));
   }
@@ -1176,15 +1188,18 @@ section('12. One opportunity, with no pipeline attached');
 
   const CRAFTED = "7' or '1'='1";
   stub.reset({ rows: [] });
-  await getJobOpportunity(CRAFTED);
+  await getJobOpportunity(CRAFTED, 'owner-1');
   check('a crafted id is bound, not spliced',
     stub.seen.queries[0].eq[0]?.[1] === CRAFTED, JSON.stringify(stub.seen.queries[0].eq));
+  check('  and the detail is scoped to its owner, so a known id is not a way in',
+    JSON.stringify(stub.seen.queries[0].eq[1]) === JSON.stringify(['user_id', 'owner-1']),
+    JSON.stringify(stub.seen.queries[0].eq));
 
   stub.reset({ rows: [] });
   check('an id that matches nothing is null, for the page to 404',
-    (await getJobOpportunity('missing')) === null);
+    (await getJobOpportunity('missing', 'owner-1')) === null);
   stub.reset({ error: 'permission denied' });
-  check('  as is a failed read', (await getJobOpportunity('7')) === null);
+  check('  as is a failed read', (await getJobOpportunity('7', 'owner-1')) === null);
 }
 
 /* ==================================================================== */
@@ -1297,6 +1312,67 @@ section('14. The candidate components cannot render a pipeline');
   check('  and draws entirely from the profile palette',
     !/--kadmin-/.test(css),
     'those tokens are defined on .kadmin, which this page is not inside');
+}
+
+/* ==================================================================== */
+section('15. A KIASA account sees only its own extension account’s jobs');
+
+{
+  const { resolveJobBoardOwner } = await import(url('lib', 'jobboard', 'owner.ts'));
+  const CONFIRMED = '2026-09-01T00:00:00.000Z';
+  const me = { email: 'Me@Example.test', email_confirmed_at: CONFIRMED };
+
+  stub.reset({
+    users: [
+      { id: 'other', email: 'someone@example.test', email_confirmed_at: CONFIRMED },
+      { id: 'mine', email: 'me@example.test ', email_confirmed_at: CONFIRMED },
+    ],
+  });
+  const found = await resolveJobBoardOwner(me);
+  check('a confirmed email finds its extension account, case- and space-insensitively',
+    found.ok && found.ownerId === 'mine', JSON.stringify(found));
+
+  stub.reset({ users: [{ id: 'mine', email: 'me@example.test', email_confirmed_at: CONFIRMED }] });
+  const unconfirmedKiasa = await resolveJobBoardOwner({ email: me.email, email_confirmed_at: null });
+  check('an unconfirmed KIASA email matches nothing',
+    !unconfirmedKiasa.ok && unconfirmedKiasa.reason === 'unverified_email');
+  check('  and never even reads the directory', stub.seen.listUsers === 0);
+
+  stub.reset({ users: [{ id: 'squatter', email: 'me@example.test', email_confirmed_at: null }] });
+  const squatter = await resolveJobBoardOwner(me);
+  check('an unconfirmed extension account is not matched',
+    !squatter.ok && squatter.reason === 'no_extension_account',
+    'an unverified signup must not plant postings on someone else’s board');
+
+  stub.reset({
+    users: [
+      { id: 'a', email: 'me@example.test', email_confirmed_at: CONFIRMED },
+      { id: 'b', email: 'ME@example.test', email_confirmed_at: CONFIRMED },
+    ],
+  });
+  const ambiguous = await resolveJobBoardOwner(me);
+  check('two matches are no match, never a guess', !ambiguous.ok);
+
+  stub.reset({ users: [] });
+  const none = await resolveJobBoardOwner(me);
+  check('no extension account is no match', !none.ok && none.reason === 'no_extension_account');
+
+  stub.reset({ usersError: 'forbidden' });
+  const failedLookup = await resolveJobBoardOwner(me);
+  check('a failed lookup is no match, not the whole board',
+    !failedLookup.ok && failedLookup.reason === 'lookup_failed');
+
+  stub.reset({ throwAt: 'listUsers' });
+  const thrown = await resolveJobBoardOwner(me);
+  check('  and a thrown lookup is caught', !thrown.ok && thrown.reason === 'lookup_failed');
+
+  /* The candidate live feed wakes only for this owner's rows. */
+  const candidateRoute = code(read('app', 'api', 'job-board', 'stream', 'route.ts'));
+  check('the candidate stream filters to its owner',
+    /filter: `user_id=eq\.\$\{owner\.ownerId\}`/.test(candidateRoute));
+  check('  and refuses when there is no owner',
+    candidateRoute.indexOf('if (!owner.ok)') > -1 &&
+      candidateRoute.indexOf('if (!owner.ok)') < candidateRoute.indexOf('jobBoardEventStream('));
 }
 
 console.log(`\n${'='.repeat(56)}`);

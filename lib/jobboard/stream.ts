@@ -56,11 +56,17 @@ export interface StreamOptions {
    * name. Two audiences sharing one topic would be one channel serving both.
    */
   readonly channelName: string;
+  /**
+   * A Realtime row filter, e.g. `user_id=eq.<id>`. The candidate feed passes
+   * its owner so it only wakes for that person's saves; the administrator feed
+   * omits it and hears every change.
+   */
+  readonly filter?: string;
   /** Server-side logging. Never called with anything that reaches the browser. */
   readonly log: (operation: string, error: unknown) => void;
 }
 
-export function jobBoardEventStream({ signal, channelName, log }: StreamOptions): Response {
+export function jobBoardEventStream({ signal, channelName, filter, log }: StreamOptions): Response {
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -132,7 +138,7 @@ export function jobBoardEventStream({ signal, channelName, log }: StreamOptions)
           .channel(channelName)
           .on(
             'postgres_changes',
-            { event: '*', schema: 'public', table: 'saved_jobs' },
+            { event: '*', schema: 'public', table: 'saved_jobs', ...(filter ? { filter } : {}) },
             (payload) => {
               if (coalesce) clearTimeout(coalesce);
               coalesce = setTimeout(() => {

@@ -257,14 +257,17 @@ export interface OpportunityListResult {
  * No owner directory lookup either, which makes this strictly cheaper than the
  * administrator list: one query, no Auth admin round trip.
  */
-export async function listJobOpportunities(): Promise<OpportunityListResult> {
+export async function listJobOpportunities(ownerId: string): Promise<OpportunityListResult> {
   let rows: Record<string, unknown>[];
 
   try {
     const client = createJobBoardClient();
+    // The secret key bypasses RLS, so this filter IS the ownership check: a
+    // candidate sees only what their own extension account saved.
     const { data, error } = await client
       .from('saved_jobs')
       .select(JOB_OPPORTUNITY_COLUMNS)
+      .eq('user_id', ownerId)
       .limit(LIST_LIMIT + 1)
       .order('saved_at', { ascending: false });
 
@@ -292,13 +295,19 @@ export async function listJobOpportunities(): Promise<OpportunityListResult> {
  * smaller thing: no note, no pipeline status, no applied date, no owner. Null
  * when the id does not exist, which the page turns into a 404.
  */
-export async function getJobOpportunity(id: string): Promise<JobOpportunityDetail | null> {
+export async function getJobOpportunity(
+  id: string,
+  ownerId: string
+): Promise<JobOpportunityDetail | null> {
   try {
     const client = createJobBoardClient();
+    // Scoped to the owner as well as the id: someone else's posting is a 404,
+    // indistinguishable from one that does not exist.
     const { data, error } = await client
       .from('saved_jobs')
       .select(JOB_OPPORTUNITY_DETAIL_COLUMNS)
       .eq('id', id)
+      .eq('user_id', ownerId)
       .maybeSingle();
 
     if (error || !data) return null;
